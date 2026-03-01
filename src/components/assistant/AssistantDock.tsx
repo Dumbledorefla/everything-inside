@@ -52,7 +52,7 @@ export default function AssistantDock() {
           className="rounded-full p-1 backdrop-blur-xl"
           style={{
             background: "radial-gradient(circle, hsl(0 0% 5% / 0.9) 40%, transparent 100%)",
-            boxShadow: `0 0 40px -10px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.4)`,
+            boxShadow: `0 0 40px -10px hsl(${isGlobal ? "25 90% 50%" : "30 95% 50%"} / 0.5)`,
           }}
         >
           <BlackHoleShader

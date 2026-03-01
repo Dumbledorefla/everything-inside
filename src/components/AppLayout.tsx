@@ -64,7 +64,7 @@ export default function AppLayout() {
           >
             <BlackHoleShader
               mode={agentMode === "global" ? "global" : "project"}
-              size={22}
+              size={28}
               thinking={false}
             />
             <span className="hidden sm:inline">
