@@ -4,6 +4,7 @@ import { Search, Bell, Plus, Command, LogOut } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import AppSidebar from "./AppSidebar";
 import AssistantDock from "./assistant/AssistantDock";
+import ImmersiveDirector from "./assistant/ImmersiveDirector";
 import CommandPalette from "./CommandPalette";
 import StarField from "./StarField";
 import PageTransition from "./PageTransition";
@@ -113,6 +114,7 @@ export default function AppLayout() {
       </div>
 
       <CommandPalette />
+      <ImmersiveDirector />
     </div>
   );
 }
