@@ -3,10 +3,10 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 // ═══════════════════════════════════════════════════════════════
-// RAY-MARCHED BLACK HOLE — "Singularity Engine"
-// Physically-inspired: Schwarzschild shadow, photon sphere,
-// volumetric accretion disk with Perlin noise, relativistic beaming,
-// gravitational lensing distortion
+// RAY-MARCHED BLACK HOLE — "Singularity Engine" v2
+// Gargantua-inspired: bright turbulent accretion disk,
+// strong gravitational lensing (top/bottom ring wrap),
+// visible plasma rotation, Doppler beaming, photon sphere
 // ═══════════════════════════════════════════════════════════════
 
 const vertexShader = `
@@ -25,12 +25,10 @@ uniform float uMode;
 uniform float uThinking;
 uniform float uAudioLevel;
 uniform vec2 uResolution;
-uniform float uLOD; // 0.0 = minimal, 1.0 = maximum quality
 
 #define PI 3.14159265359
-#define TAU 6.28318530718
 
-// ── Noise Functions ──────────────────────────────────────
+// ── Noise ──
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
@@ -79,9 +77,9 @@ float snoise(vec3 v) {
   return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
 }
 
-float fbm3(vec3 p) {
+float fbm(vec3 p) {
   float v = 0.0, a = 0.5;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     v += a * snoise(p);
     p = p * 2.1 + vec3(0.13, -0.27, 0.41);
     a *= 0.5;
@@ -89,21 +87,41 @@ float fbm3(vec3 p) {
   return v;
 }
 
-// ── Color palettes ───────────────────────────────────────
-void getPalette(float mode, out vec3 hot, out vec3 warm, out vec3 cool, out vec3 rim) {
+// ── Color palettes ──
+void getPalette(float mode, out vec3 white_hot, out vec3 hot, out vec3 warm, out vec3 cool, out vec3 rim) {
   if (mode < 0.5) {
     // Project: Cyan / Electric Blue
-    hot  = vec3(0.85, 1.0, 1.0);
-    warm = vec3(0.0, 0.85, 1.0);
-    cool = vec3(0.0, 0.25, 0.55);
-    rim  = vec3(0.4, 0.9, 1.0);
+    white_hot = vec3(1.0, 1.0, 1.0);
+    hot   = vec3(0.7, 0.98, 1.0);
+    warm  = vec3(0.0, 0.75, 0.95);
+    cool  = vec3(0.0, 0.2, 0.5);
+    rim   = vec3(0.3, 0.85, 1.0);
   } else {
     // Global: Violet / Ultra-violet
-    hot  = vec3(0.95, 0.7, 1.0);
-    warm = vec3(0.65, 0.15, 0.95);
-    cool = vec3(0.25, 0.0, 0.45);
-    rim  = vec3(0.7, 0.4, 1.0);
+    white_hot = vec3(1.0, 0.95, 1.0);
+    hot   = vec3(0.9, 0.6, 1.0);
+    warm  = vec3(0.6, 0.1, 0.9);
+    cool  = vec3(0.2, 0.0, 0.4);
+    rim   = vec3(0.65, 0.35, 1.0);
   }
+}
+
+// Disk density function — creates structured spiral arms
+float diskDensity(float angle, float r, float time) {
+  // Primary spiral rotation
+  float spiral1 = sin(angle * 3.0 - r * 12.0 + time * 2.5) * 0.5 + 0.5;
+  // Secondary counter-spiral
+  float spiral2 = sin(angle * 5.0 + r * 8.0 - time * 1.8) * 0.5 + 0.5;
+  // Fine turbulence
+  float turb = fbm(vec3(angle * 2.0 + time * 1.5, r * 15.0 - time * 0.8, time * 0.3));
+  // Filament detail
+  float filaments = fbm(vec3(angle * 6.0 - time * 2.0, r * 25.0 + time * 0.5, time * 0.2 + 5.0));
+  
+  float density = spiral1 * 0.4 + spiral2 * 0.25 + turb * 0.25 + filaments * 0.15;
+  // Add bright streaks
+  float streaks = pow(max(0.0, sin(angle * 8.0 + r * 20.0 - time * 3.0)), 4.0) * 0.3;
+  
+  return clamp(density + streaks, 0.0, 1.0);
 }
 
 void main() {
@@ -114,144 +132,156 @@ void main() {
   float dist = length(uv);
   float angle = atan(uv.y, uv.x);
 
-  // Speed driven by thinking + audio
-  float speedMul = 1.0 + uThinking * 3.0 + uAudioLevel * 2.5;
+  // Speed: always visibly rotating, faster when thinking/audio
+  float speedMul = 1.0 + uThinking * 4.0 + uAudioLevel * 3.0;
   float time = uTime * speedMul;
 
-  // ── Color setup ──
-  vec3 hotCol, warmCol, coolCol, rimCol;
-  getPalette(uMode, hotCol, warmCol, coolCol, rimCol);
+  vec3 whiteHot, hotCol, warmCol, coolCol, rimCol;
+  getPalette(uMode, whiteHot, hotCol, warmCol, coolCol, rimCol);
 
   // ── Schwarzschild Shadow ──
-  float rs = 0.10; // Schwarzschild radius
-  float eventHorizon = smoothstep(rs + 0.005, rs - 0.005, dist);
+  float rs = 0.12;
+  float eventHorizon = smoothstep(rs + 0.004, rs - 0.004, dist);
 
-  // ── Photon Sphere (thin bright ring at 1.5 * rs) ──
-  float photonR = rs * 1.5;
-  float photonRing = exp(-pow((dist - photonR) / 0.008, 2.0)) * 2.5;
-  // Diffraction shimmer
-  photonRing *= 0.8 + 0.2 * sin(angle * 30.0 + time * 4.0);
-
-  // ── Gravitational Lensing Distortion ──
-  float lensStrength = rs * rs / (dist * dist + 0.001);
-  vec2 lensedUV = uv * (1.0 + lensStrength * 0.15);
+  // ── Gravitational Lensing ──
+  float lensStrength = rs * rs / (dist * dist + 0.0005);
+  vec2 lensedUV = uv * (1.0 + lensStrength * 0.2);
   float lensedDist = length(lensedUV);
 
-  // ── Volumetric Accretion Disk ──
-  // Inclined disk plane — simulate 3D tilt
-  float diskTilt = 0.28; // tilt angle
-  float cosT = cos(diskTilt), sinT = sin(diskTilt);
-  vec3 rayDir = normalize(vec3(lensedUV, -1.0));
+  // ── Photon Sphere (brilliant thin ring) ──
+  float photonR = rs * 1.45;
+  float photonRing = exp(-pow((dist - photonR) / 0.006, 2.0)) * 3.0;
+  // Shimmer along the ring
+  float shimmer = 0.7 + 0.3 * sin(angle * 20.0 + time * 6.0);
+  float shimmer2 = 0.8 + 0.2 * sin(angle * 35.0 - time * 8.0);
+  photonRing *= shimmer * shimmer2;
 
-  // Disk in tilted plane: y' = y*cos - z*sin
+  // ── FRONT Accretion Disk ──
+  float diskTilt = 0.32;
+  float cosT = cos(diskTilt), sinT = sin(diskTilt);
   float diskY = lensedUV.y * cosT;
   float diskX = lensedUV.x;
-  vec2 diskUV = vec2(diskX, diskY * 2.8); // stretch for elliptical appearance
+  vec2 diskUV = vec2(diskX, diskY * 2.6);
   float diskR = length(diskUV);
-
-  // Disk radial profile: inner edge at ~1.8*rs, outer at ~5*rs
-  float innerEdge = rs * 1.8;
-  float outerEdge = rs * 5.0;
-  float diskProfile = smoothstep(innerEdge, innerEdge + 0.04, diskR)
-                    * smoothstep(outerEdge + 0.02, outerEdge - 0.06, diskR);
-
-  // Turbulent plasma with 3D Simplex noise
   float diskAngle = atan(diskUV.y, diskUV.x);
-  vec3 noiseCoord = vec3(
-    diskAngle * 2.0 + time * 0.6,
-    diskR * 10.0 - time * 0.4,
-    time * 0.15
-  );
-  float plasma = fbm3(noiseCoord) * 0.5 + 0.5;
 
-  // Fine-scale filaments
-  vec3 noiseCoord2 = vec3(
-    diskAngle * 5.0 - time * 1.0,
-    diskR * 20.0 + time * 0.3,
-    time * 0.25 + 3.7
-  );
-  float filaments = fbm3(noiseCoord2) * 0.5 + 0.5;
+  // Radial profile: wide disk
+  float innerEdge = rs * 1.6;
+  float outerEdge = rs * 6.0;
+  float diskProfile = smoothstep(innerEdge - 0.01, innerEdge + 0.06, diskR)
+                    * smoothstep(outerEdge + 0.04, outerEdge - 0.1, diskR);
 
-  // ── Relativistic Beaming (Doppler asymmetry) ──
-  // Left side approaching = brighter + blue-shifted
-  // Right side receding = dimmer + red-shifted
-  float doppler = 0.3 + 0.7 * smoothstep(-1.0, 1.0, -sin(diskAngle + 0.3));
-  float beaming = doppler * doppler; // intensity ~ doppler^2 for realism
+  // Density with spirals + turbulence
+  float density = diskDensity(diskAngle, diskR, time);
 
   // Temperature gradient: hotter near inner edge
   float tempGrad = smoothstep(outerEdge, innerEdge, diskR);
+  float innerGlow = pow(tempGrad, 2.0);
 
-  // Compose disk color with temperature + beaming
-  float diskIntensity = diskProfile * beaming * (0.4 + plasma * 0.6);
-  float innerHeat = diskProfile * tempGrad * (0.5 + filaments * 0.5);
+  // Relativistic beaming (Doppler)
+  float doppler = 0.25 + 0.75 * smoothstep(-1.0, 1.0, -sin(diskAngle + 0.4));
+  float beaming = doppler * doppler;
 
-  vec3 diskColor = mix(coolCol, warmCol, diskIntensity);
-  diskColor = mix(diskColor, hotCol, innerHeat * 0.9);
+  // Disk intensity
+  float diskIntensity = diskProfile * beaming * (0.3 + density * 0.7) * 1.8;
+  float diskHeat = diskProfile * innerGlow * (0.4 + density * 0.6) * 2.0;
 
-  // Red-shift on receding side
-  float redShift = smoothstep(0.0, 1.0, sin(diskAngle + 0.3)) * (1.0 - tempGrad);
-  diskColor = mix(diskColor, vec3(0.8, 0.2, 0.05), redShift * 0.3 * diskProfile);
+  // Color: temperature-mapped
+  vec3 diskColor = mix(coolCol, warmCol, diskIntensity * 0.8);
+  diskColor = mix(diskColor, hotCol, diskHeat * 0.7);
+  diskColor = mix(diskColor, whiteHot, innerGlow * diskProfile * beaming * 0.5);
 
-  float totalDisk = diskIntensity + innerHeat * 0.5;
+  float totalDisk = diskIntensity + diskHeat * 0.6;
 
-  // ── Back-side disk (lensed above/below — "Interstellar" effect) ──
-  float backDiskY = -lensedUV.y * cosT;
-  vec2 backDiskUV = vec2(diskX, backDiskY * 2.8);
-  float backR = length(backDiskUV);
-  float backProfile = smoothstep(innerEdge, innerEdge + 0.04, backR)
-                    * smoothstep(outerEdge + 0.02, outerEdge - 0.06, backR);
-  float backAngle = atan(backDiskUV.y, backDiskUV.x);
-  float backPlasma = fbm3(vec3(backAngle * 2.0 + time * 0.5, backR * 10.0 - time * 0.3, time * 0.1 + 7.0)) * 0.5 + 0.5;
-  float backDoppler = 0.3 + 0.7 * smoothstep(-1.0, 1.0, -sin(backAngle + 0.3));
-  float backIntensity = backProfile * backDoppler * (0.3 + backPlasma * 0.5) * 0.4; // dimmer
-  vec3 backColor = mix(coolCol, warmCol * 0.6, backIntensity);
-  totalDisk += backIntensity * 0.4;
+  // ── BACK Accretion Disk (gravitationally lensed — Interstellar effect) ──
+  float backY = -lensedUV.y * cosT;
+  vec2 backUV = vec2(diskX, backY * 2.6);
+  float backR = length(backUV);
+  float backAngle = atan(backUV.y, backUV.x);
+  float backProfile = smoothstep(innerEdge - 0.01, innerEdge + 0.06, backR)
+                    * smoothstep(outerEdge + 0.04, outerEdge - 0.1, backR);
 
-  // ── Accretion disk corona glow ──
-  float corona = exp(-dist * 5.0) * 0.12 * (1.0 + uThinking * 0.5 + uAudioLevel * 0.8);
+  float backDensity = diskDensity(backAngle, backR, time * 0.9 + 3.0);
+  float backTemp = smoothstep(outerEdge, innerEdge, backR);
+  float backDoppler = 0.25 + 0.75 * smoothstep(-1.0, 1.0, -sin(backAngle + 0.4));
+  float backBeaming = backDoppler * backDoppler;
+  float backIntensity = backProfile * backBeaming * (0.25 + backDensity * 0.6) * 0.7;
+  float backHeat = backProfile * pow(backTemp, 2.0) * (0.3 + backDensity * 0.5) * 0.7;
 
-  // ── Audio/Thinking reactive expansion ──
-  float reactPulse = sin(time * 8.0) * 0.5 + 0.5;
-  float reactive = (uThinking * 0.4 + uAudioLevel * 0.7) * exp(-dist * 3.5)
-                 * (0.7 + reactPulse * 0.3);
+  vec3 backColor = mix(coolCol, warmCol * 0.7, backIntensity);
+  backColor = mix(backColor, hotCol * 0.8, backHeat * 0.6);
+  totalDisk += backIntensity * 0.5 + backHeat * 0.3;
 
-  // ── Quasar Jets (subtle vertical beams when thinking) ──
-  float jetWidth = 0.015 + uThinking * 0.01;
+  // ── Edge brightening — the "ring" effect around the shadow ──
+  float edgeRing = exp(-pow((dist - rs * 1.15) / 0.018, 2.0)) * 1.5;
+  edgeRing *= 0.7 + 0.3 * sin(angle * 12.0 + time * 5.0);
+
+  // ── Corona / ambient glow ──
+  float corona = exp(-dist * 3.5) * 0.2 * (1.0 + uThinking * 0.6 + uAudioLevel * 1.0);
+  // Pulsating corona
+  float coronaPulse = 1.0 + 0.08 * sin(time * 2.0) + 0.05 * sin(time * 3.7);
+  corona *= coronaPulse;
+
+  // ── Outer halo glow (very subtle, makes it feel alive at small sizes) ──
+  float outerHalo = exp(-dist * 2.0) * 0.08;
+
+  // ── Quasar Jets (when thinking) ──
+  float jetWidth = 0.012 + uThinking * 0.012;
   float jet = exp(-pow(abs(lensedUV.x) / jetWidth, 2.0))
-            * smoothstep(rs * 1.5, rs * 3.0, abs(lensedUV.y))
-            * smoothstep(0.5, rs * 2.0, abs(lensedUV.y))
+            * smoothstep(rs * 1.4, rs * 2.5, abs(lensedUV.y))
+            * smoothstep(0.45, rs * 1.8, abs(lensedUV.y))
             * uThinking;
-  vec3 jetColor = mix(warmCol, hotCol, 0.5) * jet * 1.5;
+  // Jet turbulence
+  float jetTurb = fbm(vec3(lensedUV.x * 30.0, lensedUV.y * 8.0 - time * 2.0, time * 0.5));
+  jet *= (0.7 + jetTurb * 0.5);
+  vec3 jetColor = mix(warmCol, whiteHot, 0.4) * jet * 2.0;
+
+  // ── Audio/Thinking reactive pulse ──
+  float reactPulse = sin(time * 10.0) * 0.5 + 0.5;
+  float reactive = (uThinking * 0.5 + uAudioLevel * 0.8) * exp(-dist * 3.0)
+                 * (0.6 + reactPulse * 0.4);
 
   // ── Compose ──
   vec3 col = vec3(0.0);
+
+  // Back disk (behind the black hole, lensed)
+  col += backColor * (backIntensity + backHeat * 0.5);
+  // Front disk
   col += diskColor * totalDisk;
-  col += backColor * backIntensity;
-  col += rimCol * photonRing;
+  // Photon sphere ring
+  col += mix(rimCol, whiteHot, 0.3) * photonRing;
+  // Edge ring
+  col += rimCol * edgeRing;
+  // Corona
   col += warmCol * corona;
+  // Outer halo
+  col += coolCol * outerHalo;
+  // Reactivity
   col += hotCol * reactive;
+  // Jets
   col += jetColor;
 
   // Event horizon blacks everything inside
   col *= (1.0 - eventHorizon);
 
-  // Diffraction halo at horizon edge
-  float haloEdge = exp(-pow((dist - rs) / 0.025, 2.0)) * 0.6;
-  col += rimCol * haloEdge * (1.0 - eventHorizon);
+  // Razor-thin bright edge at horizon boundary
+  float horizonEdge = exp(-pow((dist - rs) / 0.012, 2.0)) * 1.0;
+  col += rimCol * horizonEdge * (1.0 - eventHorizon * 0.5);
 
-  // Ambient glow
-  float ambientGlow = exp(-dist * 4.0) * 0.06;
-  col += warmCol * ambientGlow;
-
-  // Alpha
-  float alpha = totalDisk + backIntensity * 0.5 + photonRing * 0.8
-              + corona * 3.0 + reactive + haloEdge + ambientGlow * 2.0
-              + eventHorizon * 0.95 + jet * 2.0;
+  // Alpha — ensure visibility even at small sizes
+  float alpha = totalDisk + backIntensity * 0.6 + backHeat * 0.4
+              + photonRing * 0.9 + edgeRing * 0.6
+              + corona * 4.0 + outerHalo * 3.0
+              + reactive + horizonEdge * 0.8
+              + eventHorizon * 0.98 + jet * 2.0;
   alpha = clamp(alpha, 0.0, 1.0);
 
-  // Tone mapping (filmic)
-  col = col / (col + 0.8);
-  col = pow(col, vec3(0.9));
+  // Boost brightness for small renders
+  col *= 1.3;
+
+  // Filmic tone mapping
+  col = col / (col + 0.7);
+  col = pow(col, vec3(0.88));
 
   gl_FragColor = vec4(col, alpha);
 }
@@ -261,10 +291,9 @@ interface BlackHoleMeshProps {
   mode: "project" | "global";
   thinking: boolean;
   audioLevel: number;
-  lod: number;
 }
 
-function BlackHoleMesh({ mode, thinking, audioLevel, lod }: BlackHoleMeshProps) {
+function BlackHoleMesh({ mode, thinking, audioLevel }: BlackHoleMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const { size } = useThree();
 
@@ -275,7 +304,6 @@ function BlackHoleMesh({ mode, thinking, audioLevel, lod }: BlackHoleMeshProps) 
       uThinking: { value: 0 },
       uAudioLevel: { value: 0 },
       uResolution: { value: new THREE.Vector2(size.width, size.height) },
-      uLOD: { value: lod },
     }),
     []
   );
@@ -288,14 +316,11 @@ function BlackHoleMesh({ mode, thinking, audioLevel, lod }: BlackHoleMeshProps) 
     uniforms.uResolution.value.set(size.width, size.height);
   }, [size]);
 
-  useEffect(() => {
-    uniforms.uLOD.value = lod;
-  }, [lod]);
-
   useFrame((_, delta) => {
-    uniforms.uTime.value += delta;
-    uniforms.uThinking.value += ((thinking ? 1 : 0) - uniforms.uThinking.value) * 0.06;
-    uniforms.uAudioLevel.value += (audioLevel - uniforms.uAudioLevel.value) * 0.12;
+    // Always animate — base speed is fast enough to see rotation
+    uniforms.uTime.value += delta * 0.8;
+    uniforms.uThinking.value += ((thinking ? 1 : 0) - uniforms.uThinking.value) * 0.08;
+    uniforms.uAudioLevel.value += (audioLevel - uniforms.uAudioLevel.value) * 0.15;
   });
 
   return (
@@ -329,8 +354,8 @@ export default function BlackHoleShader({
   className = "",
   onClick,
 }: BlackHoleShaderProps) {
-  // LOD: smaller sizes get reduced quality
-  const lod = size >= 200 ? 1.0 : size >= 80 ? 0.6 : 0.3;
+  // Higher DPR for small sizes to keep detail crisp
+  const dpr = size <= 64 ? Math.min(window.devicePixelRatio, 3) : Math.min(window.devicePixelRatio, 2);
 
   return (
     <div
@@ -342,9 +367,9 @@ export default function BlackHoleShader({
         gl={{ alpha: true, antialias: true, premultipliedAlpha: false }}
         style={{ width: size, height: size, background: "transparent" }}
         camera={{ position: [0, 0, 1], fov: 50 }}
-        dpr={Math.min(window.devicePixelRatio, 2)}
+        dpr={dpr}
       >
-        <BlackHoleMesh mode={mode} thinking={thinking} audioLevel={audioLevel} lod={lod} />
+        <BlackHoleMesh mode={mode} thinking={thinking} audioLevel={audioLevel} />
       </Canvas>
     </div>
   );
