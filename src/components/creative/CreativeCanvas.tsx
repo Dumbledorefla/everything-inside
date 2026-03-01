@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import { Download, Layers } from "lucide-react";
 import { type NicheStyle, resolveNicheStyle, preloadNicheFonts } from "@/lib/nicheStyles";
+import { cleanFontFamily } from "@/lib/canvasFont";
 
 interface CreativeCanvasProps {
   imageUrl: string | null;
@@ -53,6 +54,9 @@ export default function CreativeCanvas({
     canvas.width = dims.w;
     canvas.height = dims.h;
 
+    // Wait for all fonts to be fully loaded before drawing
+    await document.fonts.ready;
+
     // ═══ LAYER 1: Background (AI Generated Image) ═══
     if (imageUrl) {
       try {
@@ -100,7 +104,7 @@ export default function CreativeCanvas({
     // Headline
     if (headline) {
       const fontSize = Math.round(dims.w * 0.055);
-      ctx.font = `800 ${fontSize}px ${style.fonts.headline}`;
+      ctx.font = `800 ${fontSize}px "${cleanFontFamily(style.fonts.headline)}"`;
       ctx.fillStyle = style.palette.textLight;
       ctx.textAlign = "left";
       const displayHeadline = style.cta.uppercase ? headline.toUpperCase() : headline;
@@ -110,7 +114,8 @@ export default function CreativeCanvas({
     // Body
     if (body) {
       const fontSize = Math.round(dims.w * 0.028);
-      ctx.font = `400 ${fontSize}px ${style.fonts.body}`;
+      ctx.font = `400 ${fontSize}px "${cleanFontFamily(style.fonts.body)}"`;
+
       ctx.fillStyle = hexToRgba(style.palette.textLight, 0.85);
       ctx.textAlign = "left";
       wrapText(ctx, body, mx, dims.h * 0.76, textW, fontSize * 1.4);
@@ -121,7 +126,7 @@ export default function CreativeCanvas({
       const fontSize = Math.round(dims.w * 0.03);
       const py = fontSize * 0.7;
       const px = fontSize * 1.5;
-      ctx.font = `700 ${fontSize}px ${style.fonts.cta}`;
+      ctx.font = `700 ${fontSize}px "${cleanFontFamily(style.fonts.cta)}"`;
       const ctaText = style.cta.uppercase ? cta.toUpperCase() : cta;
       const ctaMetrics = ctx.measureText(ctaText);
       const btnW = ctaMetrics.width + px * 2;
