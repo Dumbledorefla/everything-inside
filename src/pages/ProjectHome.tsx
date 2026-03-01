@@ -196,10 +196,10 @@ export default function ProjectHome() {
       <div className="mb-8 flex items-start justify-between">
         <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}>
           <h1 className="text-xl font-bold tracking-tight font-mono-brand">{project?.name || "..."}</h1>
-          <p className="text-[11px] text-muted-foreground/50 mt-0.5 font-mono-brand tracking-widest uppercase">{project?.niche || ""}</p>
+          <p className="text-[11px] text-muted-foreground/70 mt-0.5 font-mono-brand tracking-widest uppercase">{project?.niche || ""}</p>
         </motion.div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-1.5 rounded-xl border border-border/15 bg-card/15 px-3 py-2 text-xs text-muted-foreground/60 hover:bg-card/30 hover:text-muted-foreground transition-all">
+          <button className="flex items-center gap-1.5 rounded-xl border border-border/15 bg-card/15 px-3 py-2 text-xs text-muted-foreground/70 hover:bg-card/30 hover:text-muted-foreground transition-all">
             <Upload className="h-3.5 w-3.5" />Importar
           </button>
           <button onClick={() => navigate(`/project/${projectId}/production`)}
@@ -218,7 +218,7 @@ export default function ProjectHome() {
               <s.icon className={cn("h-4 w-4", s.color)} />
               <div>
                 <p className="text-2xl font-bold font-mono-brand tracking-tighter">{s.value}</p>
-                <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-mono-brand">{s.label}</p>
+                <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-mono-brand">{s.label}</p>
               </div>
             </div>
           </motion.div>
@@ -233,7 +233,7 @@ export default function ProjectHome() {
             <Brain className="h-4 w-4 text-cos-purple" />
             <div>
               <p className="text-xs font-semibold">Evolução de DNA Detectada</p>
-              <p className="text-[10px] text-muted-foreground/50">{pendingInsights} sugestão(ões) baseada(s) nos seus padrões.</p>
+              <p className="text-[10px] text-muted-foreground/60">{pendingInsights} sugestão(ões) baseada(s) nos seus padrões.</p>
             </div>
           </div>
           <button onClick={() => openDock()}
@@ -262,26 +262,26 @@ export default function ProjectHome() {
         {brandKit ? (
           <div className="space-y-3">
             <div>
-              <p className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40 mb-1.5">Paleta</p>
+              <p className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60 mb-1.5">Paleta</p>
               <div className="flex gap-2">
                 {((brandKit.color_palette as any) || []).map((c: string, i: number) => (
                   <div key={i} className="flex flex-col items-center gap-1">
                     <div className="h-7 w-7 rounded-lg border border-border/10" style={{ backgroundColor: c }} />
-                    <span className="text-[8px] font-mono-brand text-muted-foreground/30">{c}</span>
+                    <span className="text-[8px] font-mono-brand text-muted-foreground/50">{c}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40 mb-1">Tipografia</p>
+              <p className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60 mb-1">Tipografia</p>
               <p className="text-xs">
                 <span className="font-semibold">{(brandKit.typography as any)?.heading || "—"}</span>
                 {" · "}
-                <span className="text-muted-foreground/60">{(brandKit.typography as any)?.body || "—"}</span>
+                <span className="text-muted-foreground/70">{(brandKit.typography as any)?.body || "—"}</span>
               </p>
             </div>
             <div>
-              <p className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40 mb-1.5">Pilares</p>
+              <p className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60 mb-1.5">Pilares</p>
               <div className="flex flex-wrap gap-1.5">
                 {((brandKit.editorial_line as any) || []).map((p: any, i: number) => (
                   <span key={i} className="rounded-lg bg-primary/8 border border-primary/10 px-2 py-0.5 text-[10px] text-primary/70">
@@ -292,7 +292,7 @@ export default function ProjectHome() {
             </div>
           </div>
         ) : (
-          <p className="text-[11px] text-muted-foreground/40">Gere um kit completo com paleta, tipografia e linha editorial baseados no DNA.</p>
+          <p className="text-[11px] text-muted-foreground/60">Gere um kit completo com paleta, tipografia e linha editorial baseados no DNA.</p>
         )}
       </motion.div>
 
@@ -314,9 +314,9 @@ export default function ProjectHome() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-[11px] text-muted-foreground/30 text-center py-10">Sem dados</p>
+            <p className="text-[11px] text-muted-foreground/50 text-center py-10">Sem dados</p>
           )}
-          <p className="text-[9px] text-muted-foreground/30 text-center mt-2 font-mono-brand">
+          <p className="text-[9px] text-muted-foreground/50 text-center mt-2 font-mono-brand">
             Aprovação: {stats && stats.total > 0 ? Math.round(((stats.official + stats.approved) / stats.total) * 100) : 0}%
           </p>
         </motion.div>
@@ -335,15 +335,15 @@ export default function ProjectHome() {
           {barData.length > 0 ? (
             <ResponsiveContainer width="100%" height={130}>
               <BarChart data={barData}>
-                <XAxis dataKey="day" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground) / 0.3)" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground) / 0.3)" }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground) / 0.6)" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground) / 0.6)" }} axisLine={false} tickLine={false} />
                 <Tooltip content={({ active, payload }) => {
                   if (!active || !payload?.[0]) return null;
                   const d = payload[0].payload;
                   return (
                     <div className="rounded-xl border border-border/10 bg-card/80 backdrop-blur-sm px-3 py-2 text-[10px] shadow-lg">
                       <p className="font-medium font-mono-brand">{d.day}</p>
-                      <p className="text-muted-foreground/50">{d.credits}cr · ${d.estimatedUSD}</p>
+                      <p className="text-muted-foreground/60">{d.credits}cr · ${d.estimatedUSD}</p>
                     </div>
                   );
                 }} />
@@ -351,12 +351,12 @@ export default function ProjectHome() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-[11px] text-muted-foreground/30 text-center py-10">Sem dados</p>
+            <p className="text-[11px] text-muted-foreground/50 text-center py-10">Sem dados</p>
           )}
           {Object.keys(byOp).length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {Object.entries(byOp).map(([op, credits]) => (
-                <span key={op} className="rounded-lg bg-card/20 border border-border/10 px-2 py-0.5 text-[9px] font-mono-brand text-muted-foreground/40">
+                <span key={op} className="rounded-lg bg-card/20 border border-border/10 px-2 py-0.5 text-[9px] font-mono-brand text-muted-foreground/60">
                   {op}: {Number(credits).toFixed(1)}
                 </span>
               ))}
@@ -375,20 +375,20 @@ export default function ProjectHome() {
         </div>
         <div className="divide-y divide-border/10">
           {(!recentAssets || recentAssets.length === 0) && (
-            <div className="px-5 py-10 text-center text-[11px] text-muted-foreground/30">Nenhum ativo gerado ainda.</div>
+            <div className="px-5 py-10 text-center text-[11px] text-muted-foreground/50">Nenhum ativo gerado ainda.</div>
           )}
           {recentAssets?.map((asset, i) => (
             <motion.div key={asset.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
               className="flex items-center justify-between px-5 py-3 hover:bg-card/20 transition-colors cursor-pointer">
               <div className="flex items-center gap-3">
-                <span className="rounded-lg bg-card/30 border border-border/10 px-2 py-0.5 text-[9px] font-mono-brand uppercase tracking-wider text-muted-foreground/40">{asset.output}</span>
+                <span className="rounded-lg bg-card/30 border border-border/10 px-2 py-0.5 text-[9px] font-mono-brand uppercase tracking-wider text-muted-foreground/60">{asset.output}</span>
                 <span className="text-[12px] truncate">{asset.title || "Sem título"}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <span className={cn("rounded-lg px-2 py-0.5 text-[9px] font-mono-brand uppercase tracking-wider", statusColors[asset.status] || "")}>
                   {statusLabels[asset.status] || asset.status}
                 </span>
-                <span className="text-[9px] text-muted-foreground/25 font-mono-brand">{formatTime(asset.created_at)}</span>
+                <span className="text-[9px] text-muted-foreground/50 font-mono-brand">{formatTime(asset.created_at)}</span>
               </div>
             </motion.div>
           ))}
@@ -399,12 +399,12 @@ export default function ProjectHome() {
       <div className="mt-6">
         <div className="flex items-center gap-2 mb-3">
           <Bot className="h-3.5 w-3.5 text-primary/50" />
-          <span className="text-[10px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40">Atalhos</span>
+          <span className="text-[10px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Atalhos</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {quickChips.map((chip) => (
             <button key={chip.label} onClick={() => { openDock(); sendMessage(chip.msg); }}
-              className="rounded-xl border border-border/10 bg-card/10 px-3.5 py-2 text-[11px] text-muted-foreground/50 hover:border-primary/20 hover:text-primary/70 hover:bg-primary/5 transition-all">
+              className="rounded-xl border border-border/10 bg-card/10 px-3.5 py-2 text-[11px] text-muted-foreground/70 hover:border-primary/20 hover:text-primary/70 hover:bg-primary/5 transition-all">
               {chip.label}
             </button>
           ))}

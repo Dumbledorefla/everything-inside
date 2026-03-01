@@ -88,7 +88,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight font-mono-brand">Mission Control</h1>
-              <p className="text-[11px] text-muted-foreground/50 font-mono-brand tracking-widest uppercase">Centro de comando</p>
+              <p className="text-[11px] text-muted-foreground/70 font-mono-brand tracking-widest uppercase">Centro de comando</p>
             </div>
           </div>
         </motion.div>
@@ -122,7 +122,7 @@ export default function Dashboard() {
               <s.icon className={cn("h-5 w-5", s.color)} />
               <div>
                 <p className="text-2xl font-bold font-mono-brand tracking-tighter">{s.value}</p>
-                <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-mono-brand">{s.label}</p>
+                <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wider font-mono-brand">{s.label}</p>
               </div>
             </div>
           </motion.div>
@@ -136,9 +136,9 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Globe2 className="h-3.5 w-3.5 text-muted-foreground/40" />
-              <h2 className="text-[10px] font-mono-brand text-muted-foreground/50 uppercase tracking-[0.2em]">Projetos</h2>
+              <h2 className="text-[10px] font-mono-brand text-muted-foreground/70 uppercase tracking-[0.2em]">Projetos</h2>
             </div>
-            <span className="text-[9px] text-muted-foreground/30 font-mono-brand px-2 py-0.5 rounded-full bg-card/20 border border-border/10">
+            <span className="text-[9px] text-muted-foreground/50 font-mono-brand px-2 py-0.5 rounded-full bg-card/20 border border-border/10">
               {projects.length} total
             </span>
           </div>
@@ -182,7 +182,7 @@ export default function Dashboard() {
                 ))}
               </div>
               <h3 className="text-base font-semibold mb-1.5 font-mono-brand">Pronto para a decolagem?</h3>
-              <p className="text-xs text-muted-foreground/50 mb-6 max-w-sm mx-auto leading-relaxed">
+              <p className="text-xs text-muted-foreground/60 mb-6 max-w-sm mx-auto leading-relaxed">
                 Crie seu primeiro projeto e deixe a IA cuidar do resto.
               </p>
               <motion.button
@@ -216,7 +216,7 @@ export default function Dashboard() {
                     <div className="flex items-start justify-between mb-2.5">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm truncate">{project.name}</h3>
-                        <p className="text-[10px] text-muted-foreground/40 mt-0.5 truncate font-mono-brand">
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate font-mono-brand">
                           {project.niche || "sem nicho"}
                         </p>
                       </div>
@@ -224,11 +224,11 @@ export default function Dashboard() {
                         ativo
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground/40 line-clamp-1 mb-3">
+                    <p className="text-[11px] text-muted-foreground/60 line-clamp-1 mb-3">
                       {project.product || project.description || "—"}
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] text-muted-foreground/30 font-mono-brand">
+                      <span className="text-[9px] text-muted-foreground/50 font-mono-brand">
                         {new Date(project.updated_at).toLocaleDateString("pt-BR")}
                       </span>
                       <div className="flex items-center gap-0.5">
@@ -237,7 +237,7 @@ export default function Dashboard() {
                             e.stopPropagation();
                             if (confirm("Excluir projeto?")) deleteMutation.mutate(project.id);
                           }}
-                          className="rounded-lg p-1.5 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                          className="rounded-lg p-1.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -257,7 +257,7 @@ export default function Dashboard() {
         <div className="col-span-12 lg:col-span-4 space-y-3">
           <div className="flex items-center gap-2 mb-1">
             <Activity className="h-3.5 w-3.5 text-muted-foreground/40" />
-            <h2 className="text-[10px] font-mono-brand text-muted-foreground/50 uppercase tracking-[0.2em]">Atividade</h2>
+            <h2 className="text-[10px] font-mono-brand text-muted-foreground/70 uppercase tracking-[0.2em]">Atividade</h2>
           </div>
 
           <div className="rounded-2xl border border-border/10 bg-card/15 backdrop-blur-sm overflow-hidden">
@@ -266,7 +266,7 @@ export default function Dashboard() {
                 <div className="w-10 h-10 mx-auto rounded-full bg-card/30 border border-border/10 flex items-center justify-center mb-3">
                   <Clock className="h-4 w-4 text-muted-foreground/20" />
                 </div>
-                <p className="text-[11px] text-muted-foreground/30">Nenhuma atividade ainda</p>
+                <p className="text-[11px] text-muted-foreground/50">Nenhuma atividade ainda</p>
               </div>
             ) : (
               <div className="divide-y divide-border/10">
@@ -289,11 +289,11 @@ export default function Dashboard() {
                       <p className="text-[11px] font-medium truncate group-hover:text-primary transition-colors">
                         {asset.title || `${asset.output} — ${asset.status}`}
                       </p>
-                      <p className="text-[9px] text-muted-foreground/30 truncate">
+                      <p className="text-[9px] text-muted-foreground/50 truncate">
                         {(asset as any).projects?.name}
                       </p>
                     </div>
-                    <span className="text-[8px] text-muted-foreground/25 font-mono-brand shrink-0">
+                    <span className="text-[8px] text-muted-foreground/50 font-mono-brand shrink-0">
                       {new Date(asset.created_at).toLocaleDateString("pt-BR")}
                     </span>
                   </motion.button>
@@ -306,7 +306,7 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-border/10 bg-card/15 backdrop-blur-sm p-5 space-y-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5 text-primary/50" />
-              <span className="text-[10px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40">Resumo</span>
+              <span className="text-[10px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Resumo</span>
             </div>
             <div className="space-y-3">
               {[
@@ -316,7 +316,7 @@ export default function Dashboard() {
               ].map((item) => (
                 <div key={item.label} className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground/40">{item.label}</span>
+                    <span className="text-[10px] text-muted-foreground/60">{item.label}</span>
                     <span className="text-[11px] font-mono-brand font-bold">{item.value}</span>
                   </div>
                   <div className="h-[3px] w-full rounded-full bg-card/30 overflow-hidden">

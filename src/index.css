@@ -78,17 +78,17 @@
   .dark {
     /* ═══ OBSIDIAN SPACE — Deep Interstellar ═══ */
     --background: 0 0% 2%;
-    --foreground: 220 10% 90%;
+    --foreground: 220 10% 92%;
     --card: 0 0% 6.7%;
-    --card-foreground: 220 10% 90%;
+    --card-foreground: 220 10% 92%;
     --popover: 0 0% 5%;
-    --popover-foreground: 220 10% 90%;
+    --popover-foreground: 220 10% 92%;
     --primary: 187 94% 43%;
     --primary-foreground: 0 0% 2%;
-    --secondary: 220 12% 10%;
-    --secondary-foreground: 220 10% 78%;
-    --muted: 220 12% 10%;
-    --muted-foreground: 215 8% 46%;
+    --secondary: 220 12% 12%;
+    --secondary-foreground: 220 10% 80%;
+    --muted: 220 12% 12%;
+    --muted-foreground: 215 10% 58%;
     --accent: 220 12% 12%;
     --accent-foreground: 220 10% 90%;
     --destructive: 0 72% 51%;
@@ -121,7 +121,7 @@
 
     /* Sidebar */
     --sidebar-background: 0 0% 3%;
-    --sidebar-foreground: 220 10% 82%;
+    --sidebar-foreground: 220 10% 88%;
     --sidebar-primary: 187 94% 43%;
     --sidebar-primary-foreground: 0 0% 2%;
     --sidebar-accent: 220 12% 8%;
