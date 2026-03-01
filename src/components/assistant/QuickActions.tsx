@@ -11,10 +11,19 @@ export default function QuickActions() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const updateAssetStatus = async (assetId: string, status: string, action: string) => {
+  const updateAssetStatus = async (assetId: string, newStatus: string, action: string) => {
     setLoading(action);
     try {
-      const { error } = await supabase.from("assets").update({ status: status as any }).eq("id", assetId);
+      // Determine target folder based on status
+      let folder = "Exploração";
+      if (newStatus === "official") folder = "Ativos Oficiais";
+      else if (newStatus === "archived") folder = "Arquivados";
+      else if (newStatus === "approved") folder = "Exploração"; // stays until promoted
+
+      const { error } = await supabase
+        .from("assets")
+        .update({ status: newStatus as any, folder })
+        .eq("id", assetId);
       if (error) throw error;
 
       // Log activity
@@ -29,6 +38,13 @@ export default function QuickActions() {
       queryClient.invalidateQueries({ queryKey: ["project-assets"] });
       queryClient.invalidateQueries({ queryKey: ["recent-assets"] });
       queryClient.invalidateQueries({ queryKey: ["project-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["library-folders"] });
+
+      // Update selected asset in context
+      if (ctx.selectedAsset) {
+        ctx.selectAsset({ ...ctx.selectedAsset, status: newStatus });
+      }
+
       toast.success(`${action} realizado com sucesso`);
     } catch (e: any) {
       toast.error(e.message);
@@ -47,20 +63,25 @@ export default function QuickActions() {
           output: "both",
           pieceType: "post",
           quantity: 1,
-          profile: "quality",
+          profile: "quality",          // Force quality profile
           provider: "Auto",
           destination: "Feed",
           ratio: "1:1",
           intensity: "Equilibrado",
           useModel: false,
           useVisualProfile: false,
-          regenerateAssetId: assetId,
+          regenerateAssetId: assetId,   // Reference original asset
         },
       });
       if (error) throw error;
+
+      const fallbackInfo = data?.fallbackLog?.length > 0
+        ? ` (fallback: ${data.fallbackLog.join(", ")})`
+        : "";
+
       queryClient.invalidateQueries({ queryKey: ["project-assets"] });
       queryClient.invalidateQueries({ queryKey: ["recent-assets"] });
-      toast.success("Regerado com perfil Qualidade");
+      toast.success(`Regerado com perfil Qualidade${fallbackInfo}`);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -69,11 +90,44 @@ export default function QuickActions() {
   };
 
   const actions = [
-    { id: "approve", label: "Aprovar Ativo", icon: Check, color: "text-cos-success bg-cos-success/10 hover:bg-cos-success/20", fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "approved", "Aprovação") },
-    { id: "promote", label: "Promover a Oficial", icon: Star, color: "text-cos-cyan bg-cos-cyan/10 hover:bg-cos-cyan/20", fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "official", "Promoção a Oficial") },
-    { id: "archive", label: "Arquivar", icon: Archive, color: "text-muted-foreground bg-secondary hover:bg-secondary/80", fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "archived", "Arquivamento") },
-    { id: "regenerate", label: "Regerar", icon: RefreshCw, color: "text-foreground bg-secondary hover:bg-secondary/80", fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "draft", "Regerar") },
-    { id: "regen-quality", label: "Regerar com Qualidade", icon: Sparkles, color: "text-cos-purple bg-cos-purple/10 hover:bg-cos-purple/20", fn: () => ctx.selectedAsset && regenerateWithQuality(ctx.selectedAsset.id) },
+    {
+      id: "approve",
+      label: "Aprovar Ativo",
+      icon: Check,
+      color: "text-cos-success bg-cos-success/10 hover:bg-cos-success/20",
+      fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "approved", "Aprovação"),
+    },
+    {
+      id: "promote",
+      label: "Promover a Oficial",
+      description: "Move para Ativos Oficiais",
+      icon: Star,
+      color: "text-cos-cyan bg-cos-cyan/10 hover:bg-cos-cyan/20",
+      fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "official", "Promoção a Oficial"),
+    },
+    {
+      id: "archive",
+      label: "Arquivar",
+      description: "Move para Arquivados",
+      icon: Archive,
+      color: "text-muted-foreground bg-secondary hover:bg-secondary/80",
+      fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "archived", "Arquivamento"),
+    },
+    {
+      id: "regenerate",
+      label: "Regerar (mesmo perfil)",
+      icon: RefreshCw,
+      color: "text-foreground bg-secondary hover:bg-secondary/80",
+      fn: () => ctx.selectedAsset && updateAssetStatus(ctx.selectedAsset.id, "draft", "Regerar"),
+    },
+    {
+      id: "regen-quality",
+      label: "Regerar com Qualidade",
+      description: "Nova versão com perfil Premium",
+      icon: Sparkles,
+      color: "text-cos-purple bg-cos-purple/10 hover:bg-cos-purple/20",
+      fn: () => ctx.selectedAsset && regenerateWithQuality(ctx.selectedAsset.id),
+    },
   ];
 
   const quickPrompts = [
@@ -86,13 +140,34 @@ export default function QuickActions() {
     <div className="overflow-y-auto p-3 space-y-4">
       <div>
         <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">Ações do Ativo</p>
-        {!ctx.selectedAsset && <p className="text-xs text-muted-foreground/60 italic">Selecione um ativo na Biblioteca para ver ações.</p>}
+        {!ctx.selectedAsset && (
+          <p className="text-xs text-muted-foreground/60 italic">Selecione um ativo na Biblioteca para ver ações.</p>
+        )}
+        {ctx.selectedAsset && (
+          <div className="mb-2 rounded-md border border-border bg-secondary/30 p-2">
+            <p className="text-[10px] text-muted-foreground">Ativo selecionado:</p>
+            <p className="text-xs font-medium truncate">{ctx.selectedAsset.title}</p>
+            <p className="text-[10px] text-muted-foreground">Status: {ctx.selectedAsset.status} · Perfil: {ctx.selectedAsset.profile || "—"}</p>
+          </div>
+        )}
         <div className="space-y-1">
           {actions.map((a) => (
-            <button key={a.id} disabled={!ctx.selectedAsset || loading === a.id} onClick={a.fn}
-              className={cn("w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed", a.color)}>
+            <button
+              key={a.id}
+              disabled={!ctx.selectedAsset || loading === a.id}
+              onClick={a.fn}
+              className={cn(
+                "w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed",
+                a.color
+              )}
+            >
               {loading === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <a.icon className="h-3.5 w-3.5" />}
-              {a.label}
+              <div className="text-left">
+                <span>{a.label}</span>
+                {"description" in a && a.description && (
+                  <span className="block text-[10px] opacity-60">{a.description}</span>
+                )}
+              </div>
             </button>
           ))}
         </div>
@@ -101,7 +176,11 @@ export default function QuickActions() {
         <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">Atalhos Rápidos</p>
         <div className="space-y-1">
           {quickPrompts.map((q) => (
-            <button key={q.label} onClick={() => ctx.sendMessage(q.message)} className="w-full text-left rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors">
+            <button
+              key={q.label}
+              onClick={() => ctx.sendMessage(q.message)}
+              className="w-full text-left rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            >
               {q.label}
             </button>
           ))}

@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-// ── Provider mapping by profile ─────────────────────────────────
+// ── Provider mapping by profile (Nano Banana equivalents) ───────
 const TEXT_MODELS: Record<string, string[]> = {
   economy: ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash"],
   standard: ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"],
@@ -17,12 +17,11 @@ const TEXT_MODELS: Record<string, string[]> = {
 };
 
 const IMAGE_MODELS: Record<string, string[]> = {
-  economy: ["google/gemini-2.5-flash-image"],
-  standard: ["google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
-  quality: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
+  economy: ["google/gemini-2.5-flash-image"],                              // NB 2.5 (economia)
+  standard: ["google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"], // NB 2 (padrão)
+  quality: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],  // NB Pro (qualidade)
 };
 
-// ── Credit costs per model (simplified) ─────────────────────────
 const CREDIT_COSTS: Record<string, number> = {
   "google/gemini-2.5-flash-lite": 1,
   "google/gemini-2.5-flash": 2,
@@ -32,7 +31,6 @@ const CREDIT_COSTS: Record<string, number> = {
   "google/gemini-3-pro-image-preview": 10,
 };
 
-// ── Piece type prompt templates ─────────────────────────────────
 const PIECE_PROMPTS: Record<string, string> = {
   post: "Crie um post para redes sociais com headline impactante, body persuasivo e CTA direto.",
   banner: "Crie um banner publicitário com headline curta e impactante, subtítulo de apoio e CTA.",
@@ -42,6 +40,25 @@ const PIECE_PROMPTS: Record<string, string> = {
   vsl: "Crie um roteiro de VSL (Video Sales Letter) com gancho, problema, solução, prova e CTA.",
 };
 
+// ── Quality finishing instructions ──────────────────────────────
+const QUALITY_FINISHING_TEXT = `
+INSTRUÇÕES DE QUALIDADE PREMIUM:
+- Use palavras de poder e gatilhos mentais sofisticados
+- Aplique storytelling micro (mesmo em textos curtos)
+- Headline com no máximo 8 palavras, alta densidade semântica
+- CTA com urgência sutil, nunca genérico
+- Body com ritmo: frase curta, frase média, frase de impacto
+- Revise a copy como se fosse para uma campanha de R$100k/dia`;
+
+const QUALITY_FINISHING_IMAGE = `
+QUALITY FINISHING INSTRUCTIONS:
+- Ultra high resolution, crisp details, professional lighting
+- Studio-quality composition with perfect visual hierarchy
+- Rich color grading, cinematic contrast
+- Premium typography integration zones
+- Clean negative space for text overlay
+- Commercial photography aesthetic`;
+
 interface GenerateRequest {
   projectId: string;
   mode: "rapido" | "orientado" | "sprint";
@@ -49,16 +66,14 @@ interface GenerateRequest {
   pieceType: string;
   quantity: number;
   profile: "economy" | "standard" | "quality";
-  provider: string; // "Auto" or specific model
+  provider: string;
   destination: string;
   ratio: string;
   intensity: string;
   useModel: boolean;
   useVisualProfile: boolean;
   userPrompt?: string;
-  // For "Regerar com Qualidade"
   regenerateAssetId?: string;
-  // For pipeline composto
   pipelineMode?: "simple" | "outline" | "variants" | "assembly";
   outlineSections?: string[];
 }
@@ -75,7 +90,6 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Auth: extract user from JWT
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -83,14 +97,11 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Service role client for writes
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     const body: GenerateRequest = await req.json();
     const {
       projectId, mode, output, pieceType, quantity, profile,
@@ -98,7 +109,7 @@ serve(async (req) => {
       regenerateAssetId, pipelineMode = "simple",
     } = body;
 
-    // ── 1. Fetch Project DNA ────────────────────────────────────
+    // ── 1. Fetch Project DNA (latest version) ───────────────────
     const { data: dna } = await supabase
       .from("project_dna")
       .select("*")
@@ -112,6 +123,9 @@ serve(async (req) => {
       .select("name, niche, product, description")
       .eq("id", projectId)
       .single();
+
+    // ── DNA Version ID for snapshot ─────────────────────────────
+    const dnaVersionId: string | null = dna?.id ?? null;
 
     // ── 2. Build DNA System Prompt ──────────────────────────────
     const dnaContext = buildDNAPrompt(project, dna);
@@ -135,6 +149,7 @@ serve(async (req) => {
     // ── 5. Generate variations ──────────────────────────────────
     const results = [];
     const totalAttempts: Record<string, number> = {};
+    const fallbackLog: string[] = [];
 
     for (let i = 0; i < quantity; i++) {
       const variation = await generateSingleAsset({
@@ -151,9 +166,10 @@ serve(async (req) => {
         originalAsset,
         variationIndex: i,
         totalAttempts,
+        fallbackLog,
       });
 
-      // ── 6. Save to DB ───────────────────────────────────────
+      // ── 6. Save to DB with DNA snapshot ─────────────────────
       const { data: savedAsset } = await supabase
         .from("assets")
         .insert({
@@ -162,12 +178,14 @@ serve(async (req) => {
           title: variation.headline,
           output,
           status: "draft",
+          folder: "Exploração",                    // Always born in Exploração
           profile_used: profile,
           provider_selected: provider === "Auto" ? null : provider,
           provider_used: variation.providerUsed,
           destination,
           preset: ratio,
           attempts: variation.attempts,
+          dna_version_id: dnaVersionId,            // Snapshot: which DNA generated this
         })
         .select()
         .single();
@@ -186,6 +204,8 @@ serve(async (req) => {
             profile,
             piece_type: pieceType,
             prompt_used: variation.promptUsed,
+            dna_version_id: dnaVersionId,
+            fallback_log: variation.fallbackEvents,
           },
         });
 
@@ -212,39 +232,46 @@ serve(async (req) => {
           profile,
           status: "draft",
           creditCost,
+          dnaVersionId,
+          fallbackEvents: variation.fallbackEvents,
         });
       }
     }
 
-    return new Response(JSON.stringify({ results }), {
+    // Log fallback events to activity_log if any occurred
+    if (fallbackLog.length > 0) {
+      await supabase.from("activity_log").insert({
+        project_id: projectId,
+        user_id: user.id,
+        action: `Fallback de provedor: ${fallbackLog.join("; ")}`,
+        entity_type: "generation",
+        metadata: { fallback_log: fallbackLog },
+      });
+    }
+
+    return new Response(JSON.stringify({ results, fallbackLog }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("cos-generate error:", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
-
-    // Surface rate limit / payment errors
     if (msg.includes("429") || msg.includes("rate limit")) {
-      return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em instantes." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Limite de requisições excedido." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (msg.includes("402") || msg.includes("payment")) {
-      return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione fundos para continuar gerando." }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
 
-// ── DNA Prompt Builder ──────────────────────────────────────────
+// ── DNA Prompt Builder (structured JSON context) ────────────────
 function buildDNAPrompt(project: any, dna: any): string {
   if (!project) return "Projeto sem dados de contexto.";
 
@@ -259,6 +286,7 @@ function buildDNAPrompt(project: any, dna: any): string {
     const identity = dna.identity as any;
     const audience = dna.audience as any;
     const strategy = dna.strategy as any;
+    const visual = dna.visual as any;
 
     if (identity) {
       parts.push(`\n## Identidade`);
@@ -268,22 +296,29 @@ function buildDNAPrompt(project: any, dna: any): string {
     }
     if (audience) {
       parts.push(`\n## Audiência`);
+      if (audience.publico_alvo) parts.push(`Público-alvo: ${audience.publico_alvo}`);
       if (audience.dor_principal) parts.push(`Dor principal: ${audience.dor_principal}`);
       if (audience.desejo_principal) parts.push(`Desejo principal: ${audience.desejo_principal}`);
       if (audience.perfil) parts.push(`Perfil: ${audience.perfil}`);
     }
     if (strategy) {
       parts.push(`\n## Estratégia`);
-      if (strategy.promessa) parts.push(`Promessa: ${strategy.promessa}`);
+      if (strategy.promessa) parts.push(`Promessa (Big Idea): ${strategy.promessa}`);
       if (strategy.diferencial) parts.push(`Diferencial: ${strategy.diferencial}`);
       if (strategy.mecanismo) parts.push(`Mecanismo: ${strategy.mecanismo}`);
+    }
+    if (visual) {
+      parts.push(`\n## Estilo Visual`);
+      if (visual.estilo) parts.push(`Estilo: ${visual.estilo}`);
+      if (visual.cores) parts.push(`Cores: ${visual.cores}`);
+      if (visual.referencia) parts.push(`Referência: ${visual.referencia}`);
     }
   }
 
   return parts.filter(Boolean).join("\n");
 }
 
-// ── Single Asset Generator ──────────────────────────────────────
+// ── Single Asset Generator with Fallback Logging ────────────────
 async function generateSingleAsset(opts: {
   LOVABLE_API_KEY: string;
   dnaContext: string;
@@ -298,11 +333,12 @@ async function generateSingleAsset(opts: {
   originalAsset?: any;
   variationIndex: number;
   totalAttempts: Record<string, number>;
+  fallbackLog: string[];
 }) {
   const {
     LOVABLE_API_KEY, dnaContext, output, pieceType, profile,
     provider, ratio, destination, intensity, userPrompt,
-    originalAsset, variationIndex, totalAttempts,
+    originalAsset, variationIndex, totalAttempts, fallbackLog,
   } = opts;
 
   let headline = "";
@@ -314,6 +350,7 @@ async function generateSingleAsset(opts: {
   let providerUsed = "";
   let attempts = 0;
   let promptUsed = "";
+  const fallbackEvents: string[] = [];
 
   const pieceInstruction = PIECE_PROMPTS[pieceType] || PIECE_PROMPTS.post;
   const variationNote = variationIndex > 0
@@ -323,6 +360,9 @@ async function generateSingleAsset(opts: {
   const regenerateNote = originalAsset
     ? `\nVocê está REFINANDO este ativo existente. Headline original: "${originalAsset.asset_versions?.[0]?.headline}". Body original: "${originalAsset.asset_versions?.[0]?.body}". Melhore a qualidade, contraste e profissionalismo.`
     : "";
+
+  // Quality finishing instructions injected only for quality profile
+  const qualityFinishing = profile === "quality" ? QUALITY_FINISHING_TEXT : "";
 
   const intensityMap: Record<string, string> = {
     Suave: "Use linguagem suave e acolhedora.",
@@ -336,6 +376,7 @@ async function generateSingleAsset(opts: {
       ? [provider]
       : TEXT_MODELS[profile] || TEXT_MODELS.standard;
 
+    let usedFallback = false;
     for (const model of models) {
       attempts++;
       totalAttempts[model] = (totalAttempts[model] || 0) + 1;
@@ -347,6 +388,7 @@ REGRAS:
 - ${pieceInstruction}
 - Destino: ${destination}
 - ${intensityMap[intensity] || intensityMap.Equilibrado}
+${qualityFinishing}
 ${regenerateNote}
 ${variationNote}
 
@@ -375,14 +417,16 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 
         if (!resp.ok) {
           if (resp.status === 429 || resp.status === 402) throw new Error(`${resp.status}`);
-          console.error(`Model ${model} failed with ${resp.status}, trying fallback...`);
+          const event = `Texto: ${model} falhou (HTTP ${resp.status}), tentando fallback`;
+          console.error(event);
+          fallbackEvents.push(event);
+          fallbackLog.push(event);
+          usedFallback = true;
           continue;
         }
 
         const data = await resp.json();
         const raw = data.choices?.[0]?.message?.content || "";
-
-        // Parse JSON from response
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -396,10 +440,19 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 
         textModel = model;
         providerUsed = model;
-        break; // success, stop fallback
+        if (usedFallback) {
+          const event = `Texto: rebaixado para ${model} por erro no provedor primário`;
+          fallbackEvents.push(event);
+          fallbackLog.push(event);
+        }
+        break;
       } catch (e: any) {
         if (e.message === "429" || e.message === "402") throw e;
-        console.error(`Text gen error with ${model}:`, e.message);
+        const event = `Texto: ${model} erro: ${e.message}`;
+        console.error(event);
+        fallbackEvents.push(event);
+        fallbackLog.push(event);
+        usedFallback = true;
         continue;
       }
     }
@@ -417,6 +470,9 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       ? [provider]
       : IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
 
+    const qualityImageFinishing = profile === "quality" ? QUALITY_FINISHING_IMAGE : "";
+
+    let usedFallback = false;
     for (const model of models) {
       attempts++;
 
@@ -424,7 +480,8 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 Style: modern, clean, high-contrast.
 Aspect ratio: ${ratio}.
 Context: ${headline || userPrompt || "marketing digital brasileiro"}.
-${intensity === "Agressivo" ? "Bold colors, strong contrast." : intensity === "Suave" ? "Soft, warm tones." : "Balanced, professional look."}`;
+${intensity === "Agressivo" ? "Bold colors, strong contrast." : intensity === "Suave" ? "Soft, warm tones." : "Balanced, professional look."}
+${qualityImageFinishing}`;
 
       try {
         const resp = await fetch(AI_GATEWAY, {
@@ -442,7 +499,11 @@ ${intensity === "Agressivo" ? "Bold colors, strong contrast." : intensity === "S
 
         if (!resp.ok) {
           if (resp.status === 429 || resp.status === 402) throw new Error(`${resp.status}`);
-          console.error(`Image model ${model} failed with ${resp.status}, trying fallback...`);
+          const event = `Imagem: ${model} falhou (HTTP ${resp.status}), tentando fallback`;
+          console.error(event);
+          fallbackEvents.push(event);
+          fallbackLog.push(event);
+          usedFallback = true;
           continue;
         }
 
@@ -453,11 +514,20 @@ ${intensity === "Agressivo" ? "Bold colors, strong contrast." : intensity === "S
           imageModel = model;
           if (!providerUsed) providerUsed = model;
           else providerUsed += ` + ${model}`;
+          if (usedFallback) {
+            const event = `Imagem: rebaixado para ${model} por erro no provedor primário`;
+            fallbackEvents.push(event);
+            fallbackLog.push(event);
+          }
           break;
         }
       } catch (e: any) {
         if (e.message === "429" || e.message === "402") throw e;
-        console.error(`Image gen error with ${model}:`, e.message);
+        const event = `Imagem: ${model} erro: ${e.message}`;
+        console.error(event);
+        fallbackEvents.push(event);
+        fallbackLog.push(event);
+        usedFallback = true;
         continue;
       }
     }
@@ -468,17 +538,14 @@ ${intensity === "Agressivo" ? "Bold colors, strong contrast." : intensity === "S
   return {
     headline, body, cta, imageUrl,
     textModel, imageModel, providerUsed: providerUsed || "none",
-    attempts, promptUsed,
+    attempts, promptUsed, fallbackEvents,
   };
 }
 
-// ── Pipeline: Outline (step 1 of composite) ────────────────────
+// ── Pipeline: Outline ──────────────────────────────────────────
 async function handleOutline(
-  apiKey: string,
-  dnaContext: string,
-  pieceType: string,
-  userPrompt: string | undefined,
-  cors: Record<string, string>,
+  apiKey: string, dnaContext: string, pieceType: string,
+  userPrompt: string | undefined, cors: Record<string, string>,
 ) {
   const resp = await fetch(AI_GATEWAY, {
     method: "POST",
@@ -502,10 +569,8 @@ Retorne APENAS um JSON: {"sections": [{"id": "hero", "name": "Hero", "descriptio
   });
 
   if (!resp.ok) {
-    const status = resp.status;
-    return new Response(JSON.stringify({ error: `Outline failed: ${status}` }), {
-      status,
-      headers: { ...cors, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: `Outline failed: ${resp.status}` }), {
+      status: resp.status, headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 

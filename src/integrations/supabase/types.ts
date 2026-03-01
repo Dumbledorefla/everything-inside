@@ -107,6 +107,7 @@ export type Database = {
           attempts: number | null
           created_at: string
           destination: string | null
+          dna_version_id: string | null
           fallback_chain: Json | null
           folder: string | null
           id: string
@@ -128,6 +129,7 @@ export type Database = {
           attempts?: number | null
           created_at?: string
           destination?: string | null
+          dna_version_id?: string | null
           fallback_chain?: Json | null
           folder?: string | null
           id?: string
@@ -149,6 +151,7 @@ export type Database = {
           attempts?: number | null
           created_at?: string
           destination?: string | null
+          dna_version_id?: string | null
           fallback_chain?: Json | null
           folder?: string | null
           id?: string
@@ -167,6 +170,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assets_dna_version_id_fkey"
+            columns: ["dna_version_id"]
+            isOneToOne: false
+            referencedRelation: "project_dna"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assets_project_id_fkey"
             columns: ["project_id"]
