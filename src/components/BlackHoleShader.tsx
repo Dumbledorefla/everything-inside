@@ -361,7 +361,7 @@ export default function BlackHoleShader({
     <div
       onClick={onClick}
       className={`cursor-pointer select-none ${className}`}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden" }}
     >
       <Canvas
         gl={{ alpha: true, antialias: true, premultipliedAlpha: false }}
