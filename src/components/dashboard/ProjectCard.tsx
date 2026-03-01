@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getNicheClass, getNicheColor } from "@/lib/nicheAccent";
+import { getNicheClass } from "@/lib/nicheAccent";
 import { cn } from "@/lib/utils";
 
 interface ProjectRow {
@@ -15,7 +15,6 @@ interface ProjectRow {
   is_pinned: boolean;
   workspace_folder: string | null;
   performance_rating: number | null;
-  // joined
   asset_count?: number;
   sprint_status?: string | null;
 }
@@ -31,10 +30,7 @@ export default function ProjectCard({ project, index }: Props) {
 
   const togglePin = useMutation({
     mutationFn: async () => {
-      await supabase
-        .from("projects")
-        .update({ is_pinned: !project.is_pinned } as any)
-        .eq("id", project.id);
+      await supabase.from("projects").update({ is_pinned: !project.is_pinned } as any).eq("id", project.id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
   });
@@ -46,49 +42,40 @@ export default function ProjectCard({ project, index }: Props) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
   });
 
-  const assignFolder = useMutation({
-    mutationFn: async (folder: string) => {
-      await supabase
-        .from("projects")
-        .update({ workspace_folder: folder } as any)
-        .eq("id", project.id);
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
-  });
-
   const stale = Date.now() - new Date(project.updated_at).getTime() > 15 * 86400000;
-  const nicheColor = getNicheColor(project.niche);
 
   const statusBadge = project.sprint_status === "active"
-    ? { label: "Sprint", color: "bg-cos-warning/10 text-cos-warning border-cos-warning/15" }
+    ? { label: "Sprint Ativa", color: "bg-cos-warning/10 text-cos-warning border-cos-warning/15" }
     : stale
-    ? { label: "Inativo", color: "bg-muted/10 text-muted-foreground/50 border-border/10" }
-    : { label: "Ativo", color: "bg-cos-success/10 text-cos-success/70 border-cos-success/10" };
+    ? { label: "Pausado", color: "bg-muted/10 text-muted-foreground/50 border-border/10" }
+    : { label: "Ativo", color: "bg-cos-success/8 text-cos-success/70 border-cos-success/10" };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ delay: index * 0.02 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ delay: index * 0.03 }}
       onClick={() => navigate(`/project/${project.id}/home`)}
       whileHover={{ y: -2 }}
       className={cn(
-        "group cursor-pointer rounded-2xl border border-border/10 bg-card/15 backdrop-blur-sm p-5 transition-all duration-300",
-        "hover:border-primary/15 hover:bg-card/30 hover:shadow-lg hover:shadow-primary/5",
+        "group cursor-pointer rounded-2xl border border-border/10 p-5 transition-all duration-300",
+        "bg-card/20 backdrop-blur-md",
+        "hover:border-primary/15 hover:bg-card/35 hover:shadow-lg hover:shadow-primary/5",
+        "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
         getNicheClass(project.niche)
       )}
     >
       {/* Top row */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2.5">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {project.is_pinned && (
-              <span className="text-[10px] text-primary" title="Fixado">◆</span>
+              <span className="text-[9px] text-primary drop-shadow-[0_0_4px_hsl(var(--primary)/0.5)]">◆</span>
             )}
-            <h3 className="font-semibold text-sm truncate">{project.name}</h3>
+            <h3 className="font-semibold text-sm truncate leading-tight">{project.name}</h3>
           </div>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate font-mono">
+          <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate font-mono-brand">
             {project.niche || "sem nicho"}
             {project.workspace_folder && (
               <span className="ml-2 text-muted-foreground/30">⌂ {project.workspace_folder}</span>
@@ -96,7 +83,7 @@ export default function ProjectCard({ project, index }: Props) {
           </p>
         </div>
         <span className={cn(
-          "shrink-0 ml-2 rounded-full px-2 py-0.5 text-[8px] font-mono uppercase tracking-wider border",
+          "shrink-0 ml-2 rounded-full px-2 py-0.5 text-[8px] font-mono-brand uppercase tracking-wider border",
           statusBadge.color
         )}>
           {statusBadge.label}
@@ -104,33 +91,33 @@ export default function ProjectCard({ project, index }: Props) {
       </div>
 
       {/* Description */}
-      <p className="text-[11px] text-muted-foreground/60 line-clamp-1 mb-3">
+      <p className="text-[11px] text-muted-foreground/60 line-clamp-1 mb-3 leading-relaxed">
         {project.product || project.description || "—"}
       </p>
 
       {/* Bottom row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-[9px] text-muted-foreground/50 font-mono">
+          <span className="text-[9px] text-muted-foreground/50 font-mono-brand">
             {new Date(project.updated_at).toLocaleDateString("pt-BR")}
           </span>
-          {project.performance_rating && (
-            <span className="text-[9px] text-cos-warning font-mono flex items-center gap-0.5">
+          {project.performance_rating != null && project.performance_rating > 0 && (
+            <span className="text-[9px] text-cos-warning font-mono-brand flex items-center gap-0.5">
               ★ {project.performance_rating.toFixed(1)}
             </span>
           )}
-          {typeof project.asset_count === "number" && (
-            <span className="text-[9px] text-muted-foreground/40 font-mono">
+          {typeof project.asset_count === "number" && project.asset_count > 0 && (
+            <span className="text-[9px] text-muted-foreground/40 font-mono-brand">
               {project.asset_count} ativos
             </span>
           )}
         </div>
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
           <button
             onClick={(e) => { e.stopPropagation(); togglePin.mutate(); }}
             className={cn(
               "rounded-lg p-1.5 transition-all text-[10px]",
-              project.is_pinned ? "text-primary" : "text-muted-foreground/40 hover:text-primary"
+              project.is_pinned ? "text-primary drop-shadow-[0_0_4px_hsl(var(--primary)/0.5)]" : "text-muted-foreground/40 hover:text-primary"
             )}
             title={project.is_pinned ? "Desafixar" : "Fixar"}
           >
@@ -147,9 +134,11 @@ export default function ProjectCard({ project, index }: Props) {
               <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
           </button>
-          <svg className="w-3 h-3 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 12h14m-7-7 7 7-7 7" />
-          </svg>
+          <div className="rounded-lg p-1.5">
+            <svg className="w-3 h-3 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14m-7-7 7 7-7 7" />
+            </svg>
+          </div>
         </div>
       </div>
     </motion.div>

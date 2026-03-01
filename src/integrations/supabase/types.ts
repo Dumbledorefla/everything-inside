@@ -843,6 +843,71 @@ export type Database = {
         }
         Relationships: []
       }
+      reference_analyses: {
+        Row: {
+          composition_intent: string
+          created_at: string
+          emotional_tone: string
+          focus_narrative: string | null
+          generated_prompt: string | null
+          human_context: string | null
+          id: string
+          image_url: string
+          project_id: string
+          raw_analysis: Json | null
+          sophistication_level: number | null
+          strategic_why: string
+          typography_style: Json | null
+          updated_at: string
+          user_id: string
+          visual_archetype: string
+        }
+        Insert: {
+          composition_intent?: string
+          created_at?: string
+          emotional_tone?: string
+          focus_narrative?: string | null
+          generated_prompt?: string | null
+          human_context?: string | null
+          id?: string
+          image_url: string
+          project_id: string
+          raw_analysis?: Json | null
+          sophistication_level?: number | null
+          strategic_why?: string
+          typography_style?: Json | null
+          updated_at?: string
+          user_id: string
+          visual_archetype?: string
+        }
+        Update: {
+          composition_intent?: string
+          created_at?: string
+          emotional_tone?: string
+          focus_narrative?: string | null
+          generated_prompt?: string | null
+          human_context?: string | null
+          id?: string
+          image_url?: string
+          project_id?: string
+          raw_analysis?: Json | null
+          sophistication_level?: number | null
+          strategic_why?: string
+          typography_style?: Json | null
+          updated_at?: string
+          user_id?: string
+          visual_archetype?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_templates: {
         Row: {
           content: Json

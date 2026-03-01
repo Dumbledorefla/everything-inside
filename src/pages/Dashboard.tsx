@@ -21,7 +21,6 @@ export default function Dashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // ─── Projects with joined data ───
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -41,13 +40,10 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // ─── Asset counts per project ───
   const { data: assetCounts = {} } = useQuery({
     queryKey: ["project-asset-counts"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("assets")
-        .select("project_id, status");
+      const { data } = await supabase.from("assets").select("project_id, status");
       const counts: Record<string, { total: number; approved: number }> = {};
       (data || []).forEach((a: any) => {
         if (!counts[a.project_id]) counts[a.project_id] = { total: 0, approved: 0 };
@@ -59,7 +55,6 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // ─── Global stats ───
   const { data: stats } = useQuery({
     queryKey: ["global-stats"],
     queryFn: async () => {
@@ -75,7 +70,6 @@ export default function Dashboard() {
     enabled: !!user,
   });
 
-  // ─── Derived ───
   const folders = useMemo(() => {
     const set = new Set<string>();
     projects.forEach((p: any) => { if (p.workspace_folder) set.add(p.workspace_folder); });
@@ -89,36 +83,21 @@ export default function Dashboard() {
   }, [projects]);
 
   const enriched = useMemo(() => {
-    return projects.map((p: any) => ({
-      ...p,
-      asset_count: assetCounts[p.id]?.total ?? 0,
-    }));
+    return projects.map((p: any) => ({ ...p, asset_count: assetCounts[p.id]?.total ?? 0 }));
   }, [projects, assetCounts]);
 
   const filtered = useMemo(() => {
     let list = enriched;
-
-    // Folder
     if (selectedFolder) list = list.filter((p: any) => p.workspace_folder === selectedFolder);
-
-    // Niche
     if (filters.niche) list = list.filter((p: any) => p.niche === filters.niche);
-
-    // Stale
     if (filters.stale) {
       const cutoff = Date.now() - 15 * 86400000;
       list = list.filter((p: any) => new Date(p.updated_at).getTime() < cutoff);
     }
-
-    // Min assets
     if (filters.minAssets) list = list.filter((p: any) => (assetCounts[p.id]?.approved ?? 0) >= filters.minAssets!);
-
-    // Status
     if (filters.status === "sprint") list = list.filter((p: any) => p.sprint_status === "active");
     else if (filters.status === "active") list = list.filter((p: any) => !p.sprint_status && Date.now() - new Date(p.updated_at).getTime() < 15 * 86400000);
     else if (filters.status === "review") list = list.filter((p: any) => (assetCounts[p.id]?.total ?? 0) > 0);
-
-    // Sort: pinned first, then by updated_at
     return list.sort((a: any, b: any) => {
       if (a.is_pinned && !b.is_pinned) return -1;
       if (!a.is_pinned && b.is_pinned) return 1;
@@ -130,16 +109,20 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* ─── Header ─── */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.35 }}>
+      {/* ─── Hero Header ─── */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/8 border border-primary/10 p-2.5">
-              <span className="text-primary text-lg">◎</span>
+            <div className="rounded-xl bg-primary/8 border border-primary/10 p-2.5 shadow-[0_0_20px_-4px_hsl(var(--primary)/0.15)]">
+              <svg className="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 2L4 7l8 5 8-5-8-5z" /><path d="M4 12l8 5 8-5" /><path d="M4 17l8 5 8-5" />
+              </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight font-mono">Mission Control</h1>
-              <p className="text-[11px] text-muted-foreground/60 font-mono tracking-widest uppercase">Centro de comando · {projects.length} projetos</p>
+              <h1 className="text-xl font-bold tracking-tight font-mono-brand">Mission Control</h1>
+              <p className="text-[11px] text-muted-foreground/70 font-mono-brand tracking-widest uppercase">
+                Centro de comando · {projects.length} projetos
+              </p>
             </div>
           </div>
         </motion.div>
@@ -149,83 +132,112 @@ export default function Dashboard() {
           onClick={() => setWizardOpen(true)}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all shrink-0"
+          className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] shrink-0"
         >
-          + Novo Projeto
+          <span className="text-base leading-none">+</span>
+          Novo Projeto
         </motion.button>
       </div>
 
       {/* ─── Search ─── */}
-      <div className="mb-5">
+      <div className="mb-6">
         <GlobalContextSearch />
       </div>
 
       {/* ─── Stats ─── */}
-      <div className="mb-6">
-        <StatsRow
-          projectCount={projects.length}
-          drafts={stats?.drafts ?? 0}
-          official={stats?.official ?? 0}
-          pinned={pinnedCount}
-        />
+      <div className="mb-8">
+        <StatsRow projectCount={projects.length} drafts={stats?.drafts ?? 0} official={stats?.official ?? 0} pinned={pinnedCount} />
       </div>
 
-      {/* ─── Folders + Filters ─── */}
-      <div className="mb-4 space-y-2">
-        <WorkspaceFolderManager
-          folders={folders}
-          onSelect={setSelectedFolder}
-          selectedFolder={selectedFolder}
-        />
-        <DashboardFilters
-          filters={filters}
-          onChange={setFilters}
-          availableNiches={niches}
-        />
+      {/* ─── Workspace Folders ─── */}
+      <div className="mb-2">
+        <div className="flex items-center gap-2 mb-3">
+          <svg className="h-3 w-3 text-muted-foreground/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+          <span className="text-[10px] font-mono-brand text-muted-foreground/50 uppercase tracking-[0.2em]">Workspaces</span>
+        </div>
+        <WorkspaceFolderManager folders={folders} onSelect={setSelectedFolder} selectedFolder={selectedFolder} />
+      </div>
+
+      {/* ─── Filters ─── */}
+      <div className="mb-6">
+        <DashboardFilters filters={filters} onChange={setFilters} availableNiches={niches} />
       </div>
 
       {/* ─── Main Grid ─── */}
-      <div className="grid grid-cols-12 gap-5">
+      <div className="grid grid-cols-12 gap-6">
         {/* Projects */}
         <div className="col-span-12 lg:col-span-8">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-[0.2em]">
-              {filtered.length} projeto{filtered.length !== 1 ? "s" : ""}
-              {selectedFolder && ` em "${selectedFolder}"`}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="h-3.5 w-3.5 text-muted-foreground/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              <h2 className="text-[10px] font-mono-brand text-muted-foreground/70 uppercase tracking-[0.2em]">Projetos</h2>
+            </div>
+            <span className="text-[9px] text-muted-foreground/40 font-mono-brand px-2.5 py-0.5 rounded-full bg-card/30 border border-border/10">
+              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+              {selectedFolder && ` · ${selectedFolder}`}
             </span>
           </div>
 
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="rounded-2xl border border-border/10 bg-card/20 p-5 space-y-3 animate-pulse">
-                  <div className="h-4 w-3/4 rounded-lg bg-muted/20" />
-                  <div className="h-3 w-1/2 rounded-lg bg-muted/20" />
+                <div key={i} className="rounded-2xl border border-border/10 bg-card/20 backdrop-blur-sm p-5 space-y-3">
+                  <div className="h-4 w-3/4 rounded-lg bg-muted/10 animate-pulse" />
+                  <div className="h-3 w-1/2 rounded-lg bg-muted/10 animate-pulse" />
+                  <div className="h-3 w-1/3 rounded-lg bg-muted/10 animate-pulse" />
                 </div>
               ))}
             </div>
           ) : filtered.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-2xl border border-dashed border-border/20 bg-card/10 p-14 text-center"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="rounded-2xl border border-dashed border-border/20 bg-card/10 backdrop-blur-sm p-14 text-center relative overflow-hidden"
             >
-              <span className="text-3xl text-muted-foreground/20 block mb-4">◎</span>
-              <h3 className="text-base font-semibold mb-1.5 font-mono">
+              <div className="mx-auto mb-6 relative">
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                  className="w-20 h-20 mx-auto rounded-full bg-primary/5 border border-primary/10 flex items-center justify-center"
+                >
+                  <svg className="h-10 w-10 text-primary/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
+                    <circle cx="12" cy="12" r="10" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    <path d="M2 12h20" />
+                  </svg>
+                </motion.div>
+                {[0, 1, 2].map((j) => (
+                  <motion.div
+                    key={j}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 10 + j * 4, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0"
+                  >
+                    <div className="w-1 h-1 rounded-full bg-primary/30 absolute" style={{ top: `${8 + j * 6}%`, left: "50%" }} />
+                  </motion.div>
+                ))}
+              </div>
+              <h3 className="text-base font-semibold mb-1.5 font-mono-brand">
                 {projects.length === 0 ? "Pronto para a decolagem?" : "Nenhum projeto corresponde aos filtros"}
               </h3>
-              <p className="text-xs text-muted-foreground/50 mb-6">
+              <p className="text-xs text-muted-foreground/60 mb-6 max-w-sm mx-auto leading-relaxed">
                 {projects.length === 0
                   ? "Crie seu primeiro projeto e deixe a IA cuidar do resto."
                   : "Tente ajustar os filtros ou pastas de trabalho."}
               </p>
               {projects.length === 0 && (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setWizardOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)]"
                 >
-                  + Criar Primeiro Projeto
-                </button>
+                  <span className="text-base leading-none">+</span>
+                  Criar Primeiro Projeto
+                </motion.button>
               )}
             </motion.div>
           ) : (
@@ -241,12 +253,7 @@ export default function Dashboard() {
 
         {/* Activity Feed */}
         <div className="col-span-12 lg:col-span-4">
-          <ActivityFeed
-            recent={stats?.recent || []}
-            projectCount={projects.length}
-            drafts={stats?.drafts ?? 0}
-            official={stats?.official ?? 0}
-          />
+          <ActivityFeed recent={stats?.recent || []} projectCount={projects.length} drafts={stats?.drafts ?? 0} official={stats?.official ?? 0} />
         </div>
       </div>
 
