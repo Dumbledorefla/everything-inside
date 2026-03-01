@@ -855,6 +855,7 @@ export type Database = {
           image_url: string
           project_id: string
           raw_analysis: Json | null
+          reference_type: string
           sophistication_level: number | null
           strategic_why: string
           typography_style: Json | null
@@ -873,6 +874,7 @@ export type Database = {
           image_url: string
           project_id: string
           raw_analysis?: Json | null
+          reference_type?: string
           sophistication_level?: number | null
           strategic_why?: string
           typography_style?: Json | null
@@ -891,6 +893,7 @@ export type Database = {
           image_url?: string
           project_id?: string
           raw_analysis?: Json | null
+          reference_type?: string
           sophistication_level?: number | null
           strategic_why?: string
           typography_style?: Json | null

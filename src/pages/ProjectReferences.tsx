@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye, Upload, Loader2, Link, Brain, Sparkles, X, Copy, Check,
   Target, Heart, Layers, Type, Users, Lightbulb, Wand2, ChevronDown,
-  Sun, Palette,
+  Sun, Palette, Instagram, ShoppingCart, Globe, Brush,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,20 @@ const SOPHISTICATION_LABELS = [
   "Sofisticado", "Premium", "Alto Padrão", "Luxo", "Ultra-Luxo",
 ];
 
+const REFERENCE_TYPES = [
+  { id: "instagram", label: "Instagram", icon: Instagram, description: "Viralização e Retenção", color: "text-pink-500" },
+  { id: "sales", label: "Venda", icon: ShoppingCart, description: "Conversão e Desejo", color: "text-cos-warning" },
+  { id: "landing", label: "Landing Page", icon: Globe, description: "Estrutura e Escaneabilidade", color: "text-primary" },
+  { id: "brand", label: "Marca", icon: Brush, description: "Identidade e Tom de Voz", color: "text-cos-purple" },
+];
+
+const TYPE_BADGES: Record<string, { label: string; class: string }> = {
+  instagram: { label: "Instagram", class: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
+  sales: { label: "Venda", class: "bg-cos-warning/10 text-cos-warning border-cos-warning/20" },
+  landing: { label: "Landing", class: "bg-primary/10 text-primary border-primary/20" },
+  brand: { label: "Marca", class: "bg-cos-purple/10 text-cos-purple border-cos-purple/20" },
+};
+
 export default function ProjectReferences() {
   const { projectId } = useParams();
   const { user } = useAuth();
@@ -24,6 +38,7 @@ export default function ProjectReferences() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [refUrl, setRefUrl] = useState("");
   const [humanContext, setHumanContext] = useState("");
+  const [referenceType, setReferenceType] = useState("instagram");
   const [uploadingRef, setUploadingRef] = useState(false);
   const [selectedRef, setSelectedRef] = useState<any>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
@@ -53,7 +68,7 @@ export default function ProjectReferences() {
   const analyzeMutation = useMutation({
     mutationFn: async (imageUrl: string) => {
       const { data, error } = await supabase.functions.invoke("reference-analyze", {
-        body: { imageUrl, projectId, projectNiche: project?.niche || "", humanContext: humanContext.trim() || undefined },
+        body: { imageUrl, projectId, projectNiche: project?.niche || "", humanContext: humanContext.trim() || undefined, referenceType },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -126,8 +141,30 @@ export default function ProjectReferences() {
           <h2 className="text-sm font-semibold font-mono-brand">Enviar Referência</h2>
         </div>
         <p className="text-xs text-muted-foreground/50 mb-5">
-          Envie uma imagem e a IA extrairá arquétipo visual, tom emocional, composição, contexto humano e gerará um prompt de produção.
+          Escolha o tipo de referência para que a IA ajuste o foco da análise.
         </p>
+
+        {/* Reference Type Selector */}
+        <div className="mb-4">
+          <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-2 block">
+            Temperatura da Referência
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {REFERENCE_TYPES.map((t) => (
+              <button key={t.id} onClick={() => setReferenceType(t.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-xl border py-3 px-2 text-[10px] transition-all",
+                  referenceType === t.id
+                    ? "border-primary/40 bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                    : "border-border/20 text-muted-foreground/60 hover:border-primary/20 hover:text-foreground hover:bg-card/30"
+                )}>
+                <t.icon className={cn("h-4 w-4", referenceType === t.id ? t.color : "")} />
+                <span className="font-medium">{t.label}</span>
+                <span className="text-[8px] text-muted-foreground/40 text-center leading-tight">{t.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* URL input */}
         <div className="flex gap-2 mb-3">
@@ -181,28 +218,36 @@ export default function ProjectReferences() {
         </div>
       ) : references && references.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {references.map((ref: any) => (
-            <motion.div key={ref.id} layout
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              onClick={() => setSelectedRef(ref)}
-              className="group cursor-pointer rounded-2xl border border-border/10 bg-card/20 backdrop-blur-sm overflow-hidden hover:border-primary/30 hover:bg-card/30 transition-all">
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <img src={ref.image_url} alt="Reference" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-[10px] font-mono-brand text-primary truncate">{ref.visual_archetype}</p>
-                  <p className="text-[10px] text-foreground/70 truncate">{ref.emotional_tone}</p>
+          {references.map((ref: any) => {
+            const badge = TYPE_BADGES[(ref as any).reference_type] || TYPE_BADGES.instagram;
+            return (
+              <motion.div key={ref.id} layout
+                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                onClick={() => setSelectedRef(ref)}
+                className="group cursor-pointer rounded-2xl border border-border/10 bg-card/20 backdrop-blur-sm overflow-hidden hover:border-primary/30 hover:bg-card/30 transition-all">
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img src={ref.image_url} alt="Reference" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute top-2 left-2">
+                    <span className={cn("rounded-lg border px-2 py-0.5 text-[9px] font-mono-brand font-medium", badge.class)}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-[10px] font-mono-brand text-primary truncate">{ref.visual_archetype}</p>
+                    <p className="text-[10px] text-foreground/70 truncate">{ref.emotional_tone}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-mono-brand text-primary">{ref.visual_archetype}</span>
-                  <span className="text-[10px] font-mono-brand text-cos-warning">{ref.sophistication_level}/10</span>
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-mono-brand text-primary">{ref.visual_archetype}</span>
+                    <span className="text-[10px] font-mono-brand text-cos-warning">{ref.sophistication_level}/10</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60 line-clamp-2">{ref.emotional_tone}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground/60 line-clamp-2">{ref.emotional_tone}</p>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-16">
@@ -230,9 +275,19 @@ export default function ProjectReferences() {
                   <div className="rounded-lg bg-primary/10 p-1.5">
                     <Eye className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-sm font-semibold font-mono-brand truncate max-w-[280px]">
-                    {selectedRef.visual_archetype}
-                  </span>
+                  <div>
+                    <span className="text-sm font-semibold font-mono-brand truncate max-w-[240px] block">
+                      {selectedRef.visual_archetype}
+                    </span>
+                    {(() => {
+                      const badge = TYPE_BADGES[(selectedRef as any).reference_type] || TYPE_BADGES.instagram;
+                      return (
+                        <span className={cn("rounded-lg border px-2 py-0.5 text-[9px] font-mono-brand font-medium mt-0.5 inline-block", badge.class)}>
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <button onClick={() => setSelectedRef(null)} className="rounded-lg p-2 hover:bg-secondary transition-colors">
                   <X className="h-4 w-4" />
@@ -247,7 +302,6 @@ export default function ProjectReferences() {
 
               {/* Analysis Content */}
               <div className="p-6 space-y-6">
-
                 {/* Archetype + Tone + Sophistication */}
                 <div className="grid grid-cols-2 gap-3">
                   <AnalysisCard icon={Target} label="Arquétipo Visual" value={selectedRef.visual_archetype} accent="primary" />
@@ -272,10 +326,7 @@ export default function ProjectReferences() {
                   </p>
                 </div>
 
-                {/* Composition */}
                 <AnalysisSection icon={Layers} label="Engenharia de Composição" text={selectedRef.composition_intent} />
-
-                {/* Focus Narrative */}
                 <AnalysisSection icon={Target} label="Foco Narrativo" text={selectedRef.focus_narrative} />
 
                 {/* Typography */}
@@ -295,15 +346,29 @@ export default function ProjectReferences() {
                   </div>
                 )}
 
-                {/* Human Context */}
+                {/* Extracted Copy */}
+                {(() => {
+                  const raw = selectedRef.raw_analysis || {};
+                  if (!raw.extracted_copy) return null;
+                  return (
+                    <div className="space-y-2">
+                      <h3 className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                        <Type className="h-3.5 w-3.5 text-pink-500" /> Copy Extraída da Imagem
+                      </h3>
+                      <div className="rounded-xl bg-pink-500/5 border border-pink-500/20 p-4">
+                        <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap italic">"{raw.extracted_copy}"</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {selectedRef.human_context && (
                   <AnalysisSection icon={Users} label="Contexto Humano" text={selectedRef.human_context} />
                 )}
 
-                {/* Strategic Why */}
                 <AnalysisSection icon={Lightbulb} label="Por que Funciona" text={selectedRef.strategic_why} highlight />
 
-                {/* Visual DNA: Palette, Lighting, Grain */}
+                {/* Visual DNA */}
                 {(() => {
                   const raw = selectedRef.raw_analysis || {};
                   const hasDna = raw.palette?.length || raw.lighting_type || raw.grain_level || raw.color_temperature;
