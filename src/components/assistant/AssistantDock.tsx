@@ -44,9 +44,11 @@ export default function AssistantDock() {
         animate={{ opacity: 1, x: 0 }}
         className="fixed bottom-6 right-6 z-50"
       >
-        <button
+        <motion.button
           onClick={() => setDockFocused(true)}
-          className="glass-intense rounded-2xl p-3.5 flex items-center gap-2.5 hover:scale-105 transition-transform glow-cyan elevation-clay group"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          className="rounded-2xl p-3.5 flex items-center gap-2.5 transition-transform group bg-card/40 backdrop-blur-2xl border border-border/30 shadow-xl shadow-primary/5"
         >
           <div className="flex gap-1.5">
             <span className="h-2 w-2 rounded-full bg-cos-success animate-pulse" />
@@ -54,7 +56,7 @@ export default function AssistantDock() {
             <span className="h-2 w-2 rounded-full bg-cos-purple animate-pulse" style={{ animationDelay: "0.3s" }} />
           </div>
           <Sparkles className="h-4 w-4 text-primary group-hover:rotate-12 transition-transform" />
-        </button>
+        </motion.button>
       </motion.div>
     );
   }
@@ -64,39 +66,39 @@ export default function AssistantDock() {
       {dockOpen && (
         <motion.aside
           initial={{ width: 0, opacity: 0, x: 40 }}
-          animate={{ width: dockWidth, opacity: dockFocused ? 1 : 0.35, x: 0 }}
+          animate={{ width: dockWidth, opacity: dockFocused ? 1 : 0.4, x: 0 }}
           exit={{ width: 0, opacity: 0, x: 40 }}
           transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
           onMouseEnter={() => setDockFocused(true)}
           onMouseLeave={() => setDockFocused(false)}
           className={cn(
             "shrink-0 h-full flex flex-col overflow-hidden transition-opacity duration-500",
-            "glass-intense rounded-l-3xl border-l-0",
+            "rounded-l-3xl border-l border-border/20 bg-background/60 backdrop-blur-3xl",
             nicheClass
           )}
           style={{
             minWidth: 340,
             maxWidth: 520,
             boxShadow: dockFocused
-              ? `var(--shadow-xl), 0 0 60px -15px hsl(var(--primary) / 0.15)`
-              : "var(--shadow-md)",
+              ? `0 0 80px -20px hsl(var(--primary) / 0.1)`
+              : "none",
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             <div className="flex items-center gap-2">
               <div className={cn(
                 "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider",
                 agentMode === "global"
-                  ? "bg-cos-purple/10 text-cos-purple border border-cos-purple/20"
-                  : "bg-primary/10 text-primary border border-primary/20"
+                  ? "bg-cos-purple/10 text-cos-purple border border-cos-purple/15"
+                  : "bg-primary/10 text-primary border border-primary/15"
               )}>
                 {agentMode === "global" ? <Globe className="h-3 w-3" /> : <FolderOpen className="h-3 w-3" />}
                 {agentMode === "global" ? "Global" : project?.name?.slice(0, 12) || "Projeto"}
               </div>
             </div>
 
-            <div className="flex gap-0.5 rounded-xl bg-secondary/30 p-0.5">
+            <div className="flex gap-0.5 rounded-xl bg-card/30 p-0.5">
               {tabs.map((t) => {
                 if (agentMode === "global" && t.id !== "chat") return null;
                 return (
@@ -104,9 +106,9 @@ export default function AssistantDock() {
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all",
+                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all relative",
                       activeTab === t.id
-                        ? "bg-card text-primary elevation-1"
+                        ? "bg-card/60 text-primary"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
@@ -119,7 +121,7 @@ export default function AssistantDock() {
 
             <button
               onClick={closeDock}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-card/40 hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
