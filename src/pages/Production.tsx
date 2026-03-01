@@ -40,9 +40,23 @@ const profileColors: Record<string, string> = {
 
 const roleLabels: Record<string, string> = {
   hook: "🎣 Gancho",
+  problem: "😰 Problema",
+  agitation: "🔥 Agitação",
+  solution: "💡 Solução",
+  benefit: "✨ Benefício",
   content: "📖 Conteúdo",
+  recap: "📋 Resumo",
+  conflict: "⚔️ Conflito",
+  epiphany: "💎 Epifania",
+  proof: "📊 Prova",
   cta: "🎯 CTA",
 };
+
+const formulaOptions = [
+  { id: "pas" as const, label: "PAS", desc: "Dor → Solução", icon: "🔥" },
+  { id: "tutorial" as const, label: "Tutorial", desc: "Lista/Dicas", icon: "📚" },
+  { id: "hero_journey" as const, label: "Jornada", desc: "Storytelling", icon: "🦸" },
+];
 
 export default function Production() {
   const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
@@ -200,6 +214,28 @@ export default function Production() {
               <textarea value={carouselTopic} onChange={(e) => setCarouselTopic(e.target.value)}
                 placeholder="Ex: 5 erros que iniciantes cometem ao investir..."
                 rows={2} className="w-full rounded-xl border border-border/20 bg-background/40 px-3.5 py-2.5 text-xs placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
+            </div>
+
+            {/* Formula selector */}
+            <div>
+              <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 block">Fórmula Narrativa</label>
+              <div className="space-y-1.5">
+                {formulaOptions.map((f) => (
+                  <button key={f.id} onClick={() => carousel.setFormula(f.id)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-all",
+                      carousel.formula === f.id
+                        ? "border-primary/40 bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                        : "border-border/20 text-muted-foreground/60 hover:border-primary/20 hover:text-foreground hover:bg-card/30"
+                    )}>
+                    <span className="text-sm">{f.icon}</span>
+                    <div>
+                      <p className="text-[11px] font-semibold leading-tight">{f.label}</p>
+                      <p className="text-[9px] text-muted-foreground/50">{f.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Reference selector */}
@@ -382,6 +418,11 @@ export default function Production() {
             <div className="mb-4">
               <h2 className="text-sm font-semibold font-mono-brand tracking-tight flex items-center gap-2">
                 <GalleryHorizontalEnd className="h-4 w-4 text-primary" /> Carrossel Estratégico
+                {carousel.step !== "idle" && (
+                  <span className="rounded-lg bg-primary/10 text-primary text-[10px] font-mono-brand px-2 py-0.5 ml-auto">
+                    {carousel.activeFormula === "pas" ? "🔥 PAS" : carousel.activeFormula === "tutorial" ? "📚 Tutorial" : "🦸 Jornada"}
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-muted-foreground/60 mt-0.5">
                 {carousel.step === "idle" ? "Configure e gere o roteiro do carrossel" :
@@ -415,8 +456,18 @@ export default function Production() {
                       value={slide.headline}
                       onChange={(e) => carousel.updateSlide(i, { headline: e.target.value })}
                       className="w-full text-sm font-semibold bg-transparent border-b border-border/20 pb-1 mb-2 focus:outline-none focus:border-primary/40"
+                      disabled={carousel.step === "generating-slides"}
                     />
-                    <p className="text-xs text-muted-foreground/60">{slide.visualDirection}</p>
+                    {slide.body && (
+                      <textarea
+                        value={slide.body}
+                        onChange={(e) => carousel.updateSlide(i, { body: e.target.value })}
+                        rows={2}
+                        className="w-full text-xs text-muted-foreground/80 bg-transparent border-b border-border/10 pb-1 mb-2 focus:outline-none focus:border-primary/30 resize-none"
+                        disabled={carousel.step === "generating-slides"}
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground/60 italic">{slide.visualDirection}</p>
                   </motion.div>
                 ))}
               </div>
