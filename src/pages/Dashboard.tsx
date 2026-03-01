@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,25 +12,13 @@ import { useAuth } from "@/hooks/useAuth";
 import CreateProjectWizard from "@/components/CreateProjectWizard";
 import { getNicheClass } from "@/lib/nicheAccent";
 import { cn } from "@/lib/utils";
-import WarpEffect from "@/components/WarpEffect";
+
 
 export default function Dashboard() {
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [warpTarget, setWarpTarget] = useState<string | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-
-  const handleProjectClick = useCallback((projectId: string) => {
-    setWarpTarget(projectId);
-  }, []);
-
-  const handleWarpComplete = useCallback(() => {
-    if (warpTarget) {
-      navigate(`/project/${warpTarget}/home`);
-      setWarpTarget(null);
-    }
-  }, [warpTarget, navigate]);
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ["projects"],
@@ -218,7 +206,7 @@ export default function Dashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ delay: i * 0.04 }}
-                    onClick={() => handleProjectClick(project.id)}
+                    onClick={() => navigate(`/project/${project.id}/home`)}
                     whileHover={{ y: -2 }}
                     className={cn(
                       "group cursor-pointer rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm p-5 transition-all duration-300",
@@ -348,7 +336,7 @@ export default function Dashboard() {
       </div>
 
       <CreateProjectWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
-      <WarpEffect active={!!warpTarget} onComplete={handleWarpComplete} />
+      
     </div>
   );
 }
