@@ -90,36 +90,36 @@ float fbm(vec3 p) {
 // ── Color palettes ──
 void getPalette(float mode, out vec3 white_hot, out vec3 hot, out vec3 warm, out vec3 cool, out vec3 rim) {
   if (mode < 0.5) {
-    // Project: Cyan / Electric Blue
-    white_hot = vec3(1.0, 1.0, 1.0);
-    hot   = vec3(0.7, 0.98, 1.0);
-    warm  = vec3(0.0, 0.75, 0.95);
-    cool  = vec3(0.0, 0.2, 0.5);
-    rim   = vec3(0.3, 0.85, 1.0);
+    // Project: Golden-Orange (classic black hole)
+    white_hot = vec3(1.0, 0.95, 0.8);
+    hot   = vec3(1.0, 0.7, 0.2);
+    warm  = vec3(0.95, 0.45, 0.05);
+    cool  = vec3(0.4, 0.12, 0.0);
+    rim   = vec3(1.0, 0.6, 0.15);
   } else {
-    // Global: Violet / Ultra-violet
-    white_hot = vec3(1.0, 0.95, 1.0);
-    hot   = vec3(0.9, 0.6, 1.0);
-    warm  = vec3(0.6, 0.1, 0.9);
-    cool  = vec3(0.2, 0.0, 0.4);
-    rim   = vec3(0.65, 0.35, 1.0);
+    // Global: Deep Orange / Amber
+    white_hot = vec3(1.0, 0.92, 0.75);
+    hot   = vec3(1.0, 0.55, 0.1);
+    warm  = vec3(0.85, 0.3, 0.02);
+    cool  = vec3(0.35, 0.08, 0.0);
+    rim   = vec3(1.0, 0.5, 0.08);
   }
 }
 
 // Disk density function — creates structured spiral arms
 float diskDensity(float angle, float r, float time) {
-  // Primary spiral rotation
-  float spiral1 = sin(angle * 3.0 - r * 12.0 + time * 2.5) * 0.5 + 0.5;
-  // Secondary counter-spiral
-  float spiral2 = sin(angle * 5.0 + r * 8.0 - time * 1.8) * 0.5 + 0.5;
-  // Fine turbulence
-  float turb = fbm(vec3(angle * 2.0 + time * 1.5, r * 15.0 - time * 0.8, time * 0.3));
+  // Primary spiral rotation — faster & wider
+  float spiral1 = sin(angle * 3.0 - r * 10.0 + time * 4.5) * 0.5 + 0.5;
+  // Secondary counter-spiral — faster
+  float spiral2 = sin(angle * 5.0 + r * 7.0 - time * 3.5) * 0.5 + 0.5;
+  // Fine turbulence — faster churn
+  float turb = fbm(vec3(angle * 2.0 + time * 3.0, r * 12.0 - time * 1.6, time * 0.6));
   // Filament detail
-  float filaments = fbm(vec3(angle * 6.0 - time * 2.0, r * 25.0 + time * 0.5, time * 0.2 + 5.0));
+  float filaments = fbm(vec3(angle * 6.0 - time * 4.0, r * 20.0 + time * 1.0, time * 0.4 + 5.0));
   
   float density = spiral1 * 0.4 + spiral2 * 0.25 + turb * 0.25 + filaments * 0.15;
-  // Add bright streaks
-  float streaks = pow(max(0.0, sin(angle * 8.0 + r * 20.0 - time * 3.0)), 4.0) * 0.3;
+  // Bright streaks — faster sweep
+  float streaks = pow(max(0.0, sin(angle * 8.0 + r * 18.0 - time * 6.0)), 4.0) * 0.35;
   
   return clamp(density + streaks, 0.0, 1.0);
 }
@@ -317,8 +317,8 @@ function BlackHoleMesh({ mode, thinking, audioLevel }: BlackHoleMeshProps) {
   }, [size]);
 
   useFrame((_, delta) => {
-    // Always animate — base speed is fast enough to see rotation
-    uniforms.uTime.value += delta * 0.8;
+    // Fast base speed — always visibly churning
+    uniforms.uTime.value += delta * 1.6;
     uniforms.uThinking.value += ((thinking ? 1 : 0) - uniforms.uThinking.value) * 0.08;
     uniforms.uAudioLevel.value += (audioLevel - uniforms.uAudioLevel.value) * 0.15;
   });
