@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Clock, Cpu, Palette, FileText, Hash, CreditCard, ChevronRight, Check, RefreshCw } from "lucide-react";
+import AssetRating from "./AssetRating";
 import { cn } from "@/lib/utils";
 
 interface AssetDrawerProps {
@@ -135,6 +136,12 @@ export default function AssetDrawer({ asset, onClose, onApprove }: AssetDrawerPr
                   <TimelineItem label="Criado" date={asset.created_at} />
                   <TimelineItem label="Atualizado" date={asset.updated_at} />
                 </div>
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Performance</h3>
+                <AssetRating assetId={asset.id} currentRating={asset.rating ?? null} />
               </div>
 
               {/* Actions */}

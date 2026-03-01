@@ -113,6 +113,7 @@ export type Database = {
           folder: string | null
           id: string
           output: Database["public"]["Enums"]["output_type"]
+          parent_asset_id: string | null
           platform: string | null
           preset: string | null
           profile_used: Database["public"]["Enums"]["profile_level"] | null
@@ -121,6 +122,7 @@ export type Database = {
           project_id: string
           provider_selected: string | null
           provider_used: string | null
+          rating: number | null
           scheduled_for: string | null
           status: Database["public"]["Enums"]["asset_status"]
           tags: string[] | null
@@ -139,6 +141,7 @@ export type Database = {
           folder?: string | null
           id?: string
           output?: Database["public"]["Enums"]["output_type"]
+          parent_asset_id?: string | null
           platform?: string | null
           preset?: string | null
           profile_used?: Database["public"]["Enums"]["profile_level"] | null
@@ -147,6 +150,7 @@ export type Database = {
           project_id: string
           provider_selected?: string | null
           provider_used?: string | null
+          rating?: number | null
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
@@ -165,6 +169,7 @@ export type Database = {
           folder?: string | null
           id?: string
           output?: Database["public"]["Enums"]["output_type"]
+          parent_asset_id?: string | null
           platform?: string | null
           preset?: string | null
           profile_used?: Database["public"]["Enums"]["profile_level"] | null
@@ -173,6 +178,7 @@ export type Database = {
           project_id?: string
           provider_selected?: string | null
           provider_used?: string | null
+          rating?: number | null
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
@@ -758,31 +764,40 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_pinned: boolean | null
           name: string
           niche: string | null
+          performance_rating: number | null
           product: string | null
           updated_at: string
           user_id: string
+          workspace_folder: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
+          is_pinned?: boolean | null
           name: string
           niche?: string | null
+          performance_rating?: number | null
           product?: string | null
           updated_at?: string
           user_id: string
+          workspace_folder?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
+          is_pinned?: boolean | null
           name?: string
           niche?: string | null
+          performance_rating?: number | null
           product?: string | null
           updated_at?: string
           user_id?: string
+          workspace_folder?: string | null
         }
         Relationships: []
       }
