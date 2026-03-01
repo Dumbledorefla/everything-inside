@@ -38,6 +38,33 @@ const PIECE_PROMPTS: Record<string, string> = {
   ad: "Crie um anúncio pago com headline que gera curiosidade, body que aborda dor/desejo e CTA urgente.",
   thumbnail: "Crie um texto para thumbnail de vídeo: título curto e chamativo que gere clique.",
   vsl: "Crie um roteiro de VSL (Video Sales Letter) com gancho, problema, solução, prova e CTA.",
+  logo: "Descreva um conceito de logo: limpo, escalável, memorável. Funciona em P&B e 32px.",
+  palette: "Defina paleta de cores: primária, secundária, accent e neutras, justificando cada escolha.",
+  typography: "Sugira combinação tipográfica: display, body e accent. Justifique.",
+  brand_manual: "Crie diretrizes de uso da marca: espaçamento, versões, cores proibidas, tom de voz.",
+  highlight: "Crie capa de destaque para Instagram: ícone minimalista com fundo sólido na cor da marca.",
+  hero_banner: "Crie hero banner: composição lateral, 60% respiro para texto. Produto no terço direito.",
+  ecommerce_banner: "Crie banner e-commerce: produto centralizado, fundo clean, badge de desconto.",
+  lp_section: "Crie imagem para seção de LP: suporte a sobreposição de texto, alto contraste.",
+};
+
+// ── Mode-specific system prompts ────────────────────────────────
+const MODE_PROMPTS: Record<string, string> = {
+  foundation: `MODO: FUNDAÇÃO — Priorize minimalismo, escalabilidade e formas puras. Ignore fundos complexos, foque na MARCA. Cores sólidas, reproduzíveis. Tipografia legível de 32px a outdoor.`,
+  social: `MODO: SOCIAL — Priorize estética nativa de redes, tendências visuais, composição para retenção e ganchos visuais. Cores vibrantes, alto contraste, otimizado para mobile.`,
+  performance: `MODO: PERFORMANCE — Priorize hierarquia de leitura (headline → benefício → CTA), clareza total do produto, alto contraste, conformidade com zonas mortas de ads. Copy: dor → solução → prova → ação.`,
+};
+
+const SAFE_ZONE_RULES: Record<string, Record<string, string>> = {
+  social: {
+    "9:16": "ZONA DE SEGURANÇA: Manter elementos cruciais no centro. 250px superiores (perfil) e 250px inferiores (barra de resposta) livres de informações vitais.",
+    "1:1": "ZONA DE SEGURANÇA: Feed — margem de 5% para safe area do Instagram.",
+  },
+  performance: {
+    "16:9": "ZONA DE SEGURANÇA: Hero Banner — composição lateral. Objeto principal em 1 dos terços. 60% com respiro para sobreposição de texto.",
+    "1:1": "ZONA DE SEGURANÇA: Ads — centralização absoluta ou diagonal para CTA. Texto máximo 20% da área.",
+    "9:16": "ZONA DE SEGURANÇA: Ads Stories — conteúdo vital na zona central. 200px inferiores livres para swipe-up.",
+  },
 };
 
 // ── Quality finishing instructions ──────────────────────────────
@@ -76,7 +103,9 @@ interface GenerateRequest {
   regenerateAssetId?: string;
   pipelineMode?: "simple" | "outline" | "variants" | "assembly";
   outlineSections?: string[];
-  referenceId?: string; // Deep Perception reference to inject
+  referenceId?: string;
+  operationMode?: string; // foundation | social | performance
+  formatLabel?: string;   // human-readable format tag
 }
 
 serve(async (req) => {
@@ -108,6 +137,7 @@ serve(async (req) => {
       projectId, mode, output, pieceType, quantity, profile,
       provider, destination, ratio, intensity, userPrompt,
       regenerateAssetId, pipelineMode = "simple", referenceId,
+      operationMode, formatLabel,
     } = body;
 
     // ── 1. Fetch Project DNA (latest version) ───────────────────
@@ -154,7 +184,10 @@ serve(async (req) => {
       }
     }
 
-    const dnaContext = buildDNAPrompt(project, dna) + deepPerceptionContext;
+    // Inject operation mode context
+    const modeContext = operationMode && MODE_PROMPTS[operationMode] ? `\n\n${MODE_PROMPTS[operationMode]}` : "";
+    const safeZoneContext = operationMode && SAFE_ZONE_RULES[operationMode]?.[ratio] ? `\n${SAFE_ZONE_RULES[operationMode][ratio]}` : "";
+    const dnaContext = buildDNAPrompt(project, dna) + deepPerceptionContext + modeContext + safeZoneContext;
 
     // ── 3. Handle "Regerar com Qualidade" ───────────────────────
     let originalAsset: any = null;
@@ -204,14 +237,16 @@ serve(async (req) => {
           title: variation.headline,
           output,
           status: "draft",
-          folder: "Exploração",                    // Always born in Exploração
+          folder: "Exploração",
           profile_used: profile,
           provider_selected: provider === "Auto" ? null : provider,
           provider_used: variation.providerUsed,
           destination,
           preset: ratio,
           attempts: variation.attempts,
-          dna_version_id: dnaVersionId,            // Snapshot: which DNA generated this
+          dna_version_id: dnaVersionId,
+          operation_mode: operationMode || null,
+          format_label: formatLabel || pieceType,
         })
         .select()
         .single();

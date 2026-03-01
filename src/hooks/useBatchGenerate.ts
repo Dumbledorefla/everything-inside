@@ -38,6 +38,8 @@ interface BatchGenerateParams {
   useModel: boolean;
   useVisualProfile: boolean;
   userPrompt?: string;
+  operationMode?: string;
+  formatLabel?: string;
 }
 
 export function useBatchGenerate() {
