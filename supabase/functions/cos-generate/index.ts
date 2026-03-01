@@ -466,7 +466,9 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 
   // ── IMAGE GENERATION ──────────────────────────────────────────
   if (output === "image" || output === "both") {
-    const models = provider !== "Auto"
+    // Always use dedicated image models — text-only models can't generate images
+    const IMAGE_CAPABLE = new Set(Object.values(IMAGE_MODELS).flat());
+    const models = (provider !== "Auto" && IMAGE_CAPABLE.has(provider))
       ? [provider]
       : IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
 
