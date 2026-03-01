@@ -135,7 +135,7 @@ export default function StarField() {
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * 0.003,
         life: 0,
-        maxLife: Math.random() * 600 + 400, // 7-17 seconds at 60fps
+        maxLife: Math.random() * 1800 + 1200, // 20-50 seconds at 60fps
         depth: Math.random() * 0.5,
       });
     };
@@ -144,7 +144,7 @@ export default function StarField() {
     let cometTimer = 0;
     let bodyTimer = 0;
     const nextCometIn = () => Math.random() * 360 + 240; // 4-10s
-    const nextBodyIn = () => Math.random() * 300 + 150;  // 2.5-7.5s
+    const nextBodyIn = () => Math.random() * 600 + 400;  // 7-17s
     let nextComet = nextCometIn();
     let nextBody = nextBodyIn();
 
@@ -195,8 +195,8 @@ export default function StarField() {
         b.life += 1;
         b.rotation += b.rotationSpeed;
         // Fade in/out
-        const fadeIn = Math.min(1, b.life / 120);
-        const fadeOut = Math.max(0, 1 - Math.max(0, b.life - (b.maxLife - 120)) / 120);
+        const fadeIn = Math.min(1, b.life / 300);  // 5 second fade in
+        const fadeOut = Math.max(0, 1 - Math.max(0, b.life - (b.maxLife - 300)) / 300); // 5 second fade out
         b.opacity = b.targetOpacity * fadeIn * fadeOut;
         if (b.opacity <= 0.001 && b.life > b.maxLife) return false;
 
