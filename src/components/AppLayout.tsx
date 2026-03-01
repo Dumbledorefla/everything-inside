@@ -99,11 +99,11 @@ export default function AppLayout() {
 
       <div
         className={cn(
-          "pt-12 min-h-screen flex transition-all duration-300 relative z-[1]",
+          "pt-12 h-[calc(100vh)] flex transition-all duration-300 relative z-[1] overflow-hidden",
           collapsed ? "ml-[60px]" : "ml-56"
         )}
       >
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 overflow-y-auto">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>
               <Outlet />
