@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CreativeCanvas from "@/components/creative/CreativeCanvas";
 import BatchProgressBar from "@/components/production/BatchProgressBar";
@@ -38,6 +40,27 @@ export default function Production() {
   const { results, progress, generate, cancel } = useBatchGenerate();
   const [userPrompt, setUserPrompt] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
+
+  // Fetch project niche & visual DNA for canvas styling
+  const { data: projectDna } = useQuery({
+    queryKey: ["project-dna-canvas", activeProjectId],
+    queryFn: async () => {
+      if (!activeProjectId) return null;
+      const [{ data: project }, { data: dna }] = await Promise.all([
+        supabase.from("projects").select("niche").eq("id", activeProjectId).single(),
+        supabase.from("project_dna").select("visual").eq("project_id", activeProjectId)
+          .order("version", { ascending: false }).limit(1).single(),
+      ]);
+      const visual = dna?.visual as any;
+      return {
+        niche: project?.niche || null,
+        logoUrl: visual?.logo_url || null,
+        brandColors: visual?.cores ? { primary: visual.cores.split(",")[0]?.trim() } : null,
+      };
+    },
+    enabled: !!activeProjectId,
+    staleTime: 60_000,
+  });
 
   const handleGenerate = async () => {
     if (!activeProjectId || !session) {
@@ -235,7 +258,16 @@ export default function Production() {
             {previewId === r.id && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 pt-4 border-t border-border">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">Preview do Criativo ({spec.ratio})</p>
-                <CreativeCanvas imageUrl={r.imageUrl} headline={r.headline} body={r.body} cta={r.cta} ratio={spec.ratio} />
+                <CreativeCanvas
+                  imageUrl={r.imageUrl}
+                  headline={r.headline}
+                  body={r.body}
+                  cta={r.cta}
+                  ratio={spec.ratio}
+                  niche={projectDna?.niche}
+                  logoUrl={projectDna?.logoUrl}
+                  brandColors={projectDna?.brandColors}
+                />
               </motion.div>
             )}
 
