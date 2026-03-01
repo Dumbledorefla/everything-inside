@@ -38,33 +38,60 @@ serve(async (req) => {
     const refType = referenceType || "landing";
     const typeFocus = TYPE_FOCUS[refType] || TYPE_FOCUS.landing;
 
-    // ── Step 1: Scrape URL via Firecrawl ──
+    // ── Step 1: Scrape URL via Firecrawl (with Instagram fallback) ──
     console.log("Scraping URL:", pageUrl);
     
-    const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url: pageUrl,
-        formats: ["markdown", "screenshot"],
-        onlyMainContent: false,
-        waitFor: 3000,
-      }),
-    });
+    const isInstagram = /instagram\.com|instagr\.am/i.test(pageUrl);
+    let pageMarkdown = "";
+    let pageScreenshot: string | null = null;
+    let pageMetadata: any = {};
 
-    if (!scrapeResponse.ok) {
-      const errText = await scrapeResponse.text();
-      console.error("Firecrawl error:", scrapeResponse.status, errText);
-      throw new Error(`Falha ao acessar a página (${scrapeResponse.status}). Verifique a URL.`);
+    if (isInstagram) {
+      // Instagram is blocked by Firecrawl — use Microlink screenshot + AI vision
+      console.log("Instagram detected — using Microlink screenshot fallback");
+      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(pageUrl)}&screenshot=true&meta=true&embed=screenshot.url`;
+      const mlResponse = await fetch(microlinkUrl);
+      if (mlResponse.ok) {
+        const mlData = await mlResponse.json();
+        pageScreenshot = mlData.data?.screenshot?.url || null;
+        pageMetadata = {
+          title: mlData.data?.title || "Instagram Profile",
+          description: mlData.data?.description || "",
+          ogImage: mlData.data?.image?.url || null,
+        };
+        pageMarkdown = `# ${pageMetadata.title}\n\n${pageMetadata.description || "Instagram page — análise visual via screenshot."}`;
+      } else {
+        console.error("Microlink fallback also failed:", mlResponse.status);
+        // Last resort: just use the URL with AI vision prompt
+        pageMarkdown = `Instagram URL: ${pageUrl}\n\nAnálise baseada apenas na URL. O scraping direto do Instagram não é suportado.`;
+        pageMetadata = { title: "Instagram Profile" };
+      }
+    } else {
+      const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: pageUrl,
+          formats: ["markdown", "screenshot"],
+          onlyMainContent: false,
+          waitFor: 3000,
+        }),
+      });
+
+      if (!scrapeResponse.ok) {
+        const errText = await scrapeResponse.text();
+        console.error("Firecrawl error:", scrapeResponse.status, errText);
+        throw new Error(`Falha ao acessar a página (${scrapeResponse.status}). Verifique a URL.`);
+      }
+
+      const scrapeData = await scrapeResponse.json();
+      pageMarkdown = scrapeData.data?.markdown || scrapeData.markdown || "";
+      pageScreenshot = scrapeData.data?.screenshot || scrapeData.screenshot || null;
+      pageMetadata = scrapeData.data?.metadata || scrapeData.metadata || {};
     }
-
-    const scrapeData = await scrapeResponse.json();
-    const pageMarkdown = scrapeData.data?.markdown || scrapeData.markdown || "";
-    const pageScreenshot = scrapeData.data?.screenshot || scrapeData.screenshot || null;
-    const pageMetadata = scrapeData.data?.metadata || scrapeData.metadata || {};
 
     if (!pageMarkdown && !pageScreenshot) {
       throw new Error("Não foi possível extrair conteúdo da página.");
