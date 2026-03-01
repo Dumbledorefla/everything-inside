@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Search, Bell, Plus, Bot, Command, Globe, LogOut } from "lucide-react";
+import { Search, Bell, Plus, Command, LogOut } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import AppSidebar from "./AppSidebar";
 import AssistantDock from "./assistant/AssistantDock";
@@ -8,6 +8,7 @@ import CommandPalette from "./CommandPalette";
 import ThemeToggle from "./ThemeToggle";
 import StarField from "./StarField";
 import PageTransition from "./PageTransition";
+import BlackHoleIcon from "./BlackHoleIcon";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,7 @@ export default function AppLayout() {
           <button
             onClick={dockOpen ? toggleDock : openDock}
             className={cn(
-              "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all",
+              "flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium transition-all",
               dockOpen
                 ? "bg-primary/15 text-primary border border-primary/20"
                 : agentMode === "global"
@@ -61,7 +62,11 @@ export default function AppLayout() {
                 : "bg-primary/10 text-primary/80 border border-primary/15 hover:bg-primary/20"
             )}
           >
-            {agentMode === "global" ? <Globe className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+            <BlackHoleIcon
+              mode={agentMode === "global" ? "global" : "project"}
+              size={18}
+              thinking={false}
+            />
             <span className="hidden sm:inline">
               {agentMode === "global" ? "Diretor" : "Assistente"}
             </span>

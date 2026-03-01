@@ -4,7 +4,8 @@ import ChatThread from "./ChatThread";
 import ContextPanel from "./ContextPanel";
 import QuickActions from "./QuickActions";
 import AdaptiveMemoryObserver from "./AdaptiveMemoryObserver";
-import { MessageSquare, Layers, Zap, X, Globe, FolderOpen, Sparkles } from "lucide-react";
+import { MessageSquare, Layers, Zap, X, FolderOpen } from "lucide-react";
+import BlackHoleIcon from "../BlackHoleIcon";
 import { cn } from "@/lib/utils";
 import { getNicheClass } from "@/lib/nicheAccent";
 import { useParams } from "react-router-dom";
@@ -48,14 +49,13 @@ export default function AssistantDock() {
           onClick={() => setDockFocused(true)}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
-          className="rounded-2xl p-3.5 flex items-center gap-2.5 transition-transform group bg-card/40 backdrop-blur-2xl border border-border/30 shadow-xl shadow-primary/5"
+          className="rounded-2xl p-2.5 flex items-center gap-2 transition-transform group bg-card/40 backdrop-blur-2xl border border-border/30 shadow-xl shadow-primary/5"
         >
-          <div className="flex gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-cos-success animate-pulse" />
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: "0.15s" }} />
-            <span className="h-2 w-2 rounded-full bg-cos-purple animate-pulse" style={{ animationDelay: "0.3s" }} />
-          </div>
-          <Sparkles className="h-4 w-4 text-primary group-hover:rotate-12 transition-transform" />
+          <BlackHoleIcon
+            mode={agentMode === "global" ? "global" : "project"}
+            size={28}
+            thinking={false}
+          />
         </motion.button>
       </motion.div>
     );
@@ -87,13 +87,17 @@ export default function AssistantDock() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             <div className="flex items-center gap-2">
+              <BlackHoleIcon
+                mode={agentMode === "global" ? "global" : "project"}
+                size={22}
+                thinking={false}
+              />
               <div className={cn(
                 "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider",
                 agentMode === "global"
                   ? "bg-cos-purple/10 text-cos-purple border border-cos-purple/15"
                   : "bg-primary/10 text-primary border border-primary/15"
               )}>
-                {agentMode === "global" ? <Globe className="h-3 w-3" /> : <FolderOpen className="h-3 w-3" />}
                 {agentMode === "global" ? "Global" : project?.name?.slice(0, 12) || "Projeto"}
               </div>
             </div>

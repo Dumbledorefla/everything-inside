@@ -9,74 +9,80 @@
      SNOW (Light Mode) — Soft Clay Elevation
      ═══════════════════════════════════════════════ */
   :root {
-    --background: 220 16% 96%;
-    --foreground: 220 20% 10%;
+    /* ═══ SNOW SPACE — Sterile Research Station ═══ */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222 47% 11%;
     --primary: 187 94% 38%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 214 14% 93%;
-    --secondary-foreground: 220 20% 25%;
-    --muted: 214 14% 91%;
-    --muted-foreground: 215 13% 45%;
-    --accent: 214 14% 93%;
-    --accent-foreground: 220 20% 10%;
+    --secondary: 210 16% 93%;
+    --secondary-foreground: 222 47% 20%;
+    --muted: 210 16% 91%;
+    --muted-foreground: 215 16% 42%;
+    --accent: 210 16% 93%;
+    --accent-foreground: 222 47% 11%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
+    --border: 0 0% 0% / 0.1;
+    --input: 0 0% 0% / 0.1;
     --ring: 187 94% 38%;
     --radius: 0.625rem;
 
-    /* Elevation surfaces */
-    --surface-0: 220 16% 96%;
-    --surface-1: 214 14% 94%;
-    --surface-2: 214 14% 91%;
-    --surface-3: 214 14% 86%;
+    /* Elevation surfaces — icy whites */
+    --surface-0: 210 20% 98%;
+    --surface-1: 210 16% 96%;
+    --surface-2: 210 16% 93%;
+    --surface-3: 210 16% 88%;
 
-    /* Shadows — Soft Clay */
-    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 3px 0 rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -2px rgba(0,0,0,0.04);
-    --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.05), 0 4px 10px -4px rgba(0,0,0,0.03);
-    --shadow-xl: 0 20px 50px -12px rgba(0,0,0,0.08);
-    --shadow-glow: 0 0 20px -5px hsl(187 94% 38% / 0.15);
-    --shadow-clay: 6px 6px 12px rgba(0,0,0,0.06), -4px -4px 10px rgba(255,255,255,0.8);
+    /* Shadows — crisp & clinical */
+    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.04), 0 1px 3px 0 rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 8px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 30px -5px rgba(0,0,0,0.08), 0 4px 10px -4px rgba(0,0,0,0.04);
+    --shadow-xl: 0 24px 50px -12px rgba(0,0,0,0.1);
+    --shadow-glow: 0 0 24px -5px hsl(187 94% 38% / 0.12);
+    --shadow-clay: 6px 6px 16px rgba(0,0,0,0.06), -4px -4px 12px rgba(255,255,255,0.9);
 
     /* Brand accents */
     --cos-cyan: 187 94% 38%;
-    --cos-cyan-glow: 187 94% 55%;
-    --cos-success: 152 69% 38%;
+    --cos-cyan-glow: 187 94% 52%;
+    --cos-success: 152 69% 36%;
     --cos-warning: 38 92% 50%;
     --cos-error: 0 72% 51%;
-    --cos-purple: 262 83% 58%;
+    --cos-purple: 262 83% 55%;
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 10%;
+    /* Sidebar — crystalline */
+    --sidebar-background: 210 20% 99%;
+    --sidebar-foreground: 222 47% 11%;
     --sidebar-primary: 187 94% 38%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 14% 93%;
-    --sidebar-accent-foreground: 220 20% 10%;
-    --sidebar-border: 214 20% 88%;
+    --sidebar-accent: 210 16% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 0 0% 0% / 0.06;
     --sidebar-ring: 187 94% 38%;
 
-    /* Glass */
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 214 20% 88%;
+    /* Glass — Crystal Pure */
+    --glass-bg: 0 0% 100% / 0.5;
+    --glass-border: 0 0% 100% / 0.8;
+
+    /* Star field hint */
+    --star-color: 217 60% 55%;
+    --star-color-alt: 0 0% 72%;
   }
 
   /* ═══════════════════════════════════════════════
      OBSIDIAN SPACE (Dark Mode) — Deep Interstellar
      ═══════════════════════════════════════════════ */
   .dark {
+    /* ═══ OBSIDIAN SPACE — Deep Interstellar ═══ */
     --background: 0 0% 2%;
-    --foreground: 220 10% 88%;
+    --foreground: 220 10% 90%;
     --card: 0 0% 6.7%;
-    --card-foreground: 220 10% 88%;
+    --card-foreground: 220 10% 90%;
     --popover: 0 0% 5%;
-    --popover-foreground: 220 10% 88%;
+    --popover-foreground: 220 10% 90%;
     --primary: 187 94% 43%;
     --primary-foreground: 0 0% 2%;
     --secondary: 220 12% 10%;
@@ -84,7 +90,7 @@
     --muted: 220 12% 10%;
     --muted-foreground: 215 8% 46%;
     --accent: 220 12% 12%;
-    --accent-foreground: 220 10% 88%;
+    --accent-foreground: 220 10% 90%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 100% / 0.05;
@@ -126,6 +132,10 @@
     /* Glass — Deep Space */
     --glass-bg: 0 0% 3% / 0.8;
     --glass-border: 0 0% 100% / 0.06;
+
+    /* Star field */
+    --star-color: 0 0% 100%;
+    --star-color-alt: 187 94% 70%;
   }
 }
 
