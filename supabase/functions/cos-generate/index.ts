@@ -479,11 +479,15 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       attempts++;
 
       const imagePrompt = `Create a professional marketing image for a ${pieceType}.
-Style: modern, clean, high-contrast.
+
+${dnaContext}
+
+Visual direction: Use the project's niche, brand colors, and visual style described above as the PRIMARY creative guide for this image.
 Aspect ratio: ${ratio}.
-Context: ${headline || userPrompt || "marketing digital brasileiro"}.
-${intensity === "Agressivo" ? "Bold colors, strong contrast." : intensity === "Suave" ? "Soft, warm tones." : "Balanced, professional look."}
-${qualityImageFinishing}`;
+Subject/Context: ${headline || userPrompt || pieceType}.
+${intensity === "Agressivo" ? "Bold colors, strong contrast, high energy." : intensity === "Suave" ? "Soft, warm tones, elegant and calm." : "Balanced, professional look."}
+${qualityImageFinishing}
+IMPORTANT: The image MUST reflect the project's niche and visual identity described above. Do NOT create generic marketing images.`;
 
       try {
         const resp = await fetch(AI_GATEWAY, {
