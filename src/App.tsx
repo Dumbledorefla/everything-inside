@@ -27,43 +27,45 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function App() {
+  return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AssistantProvider>
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/library" element={<GlobalLibrary />} />
-                  <Route path="/models" element={<Models />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/logs" element={<Logs />} />
-                  <Route path="/project/:projectId" element={<Navigate to="home" replace />} />
-                  <Route path="/project/:projectId/home" element={<ProjectHome />} />
-                  <Route path="/project/:projectId/dna" element={<ProjectDNA />} />
-                  <Route path="/project/:projectId/production" element={<Production />} />
-                  <Route path="/project/:projectId/library" element={<ProjectLibrary />} />
-                  <Route path="/project/:projectId/planning" element={<Planning />} />
-                  <Route path="/project/:projectId/sprints" element={<Sprints />} />
-                  <Route path="/project/:projectId/history" element={<ProjectHistory />} />
-                  <Route path="/project/:projectId/pages" element={<ProjectPages />} />
-                  <Route path="/project/:projectId/models" element={<Models />} />
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AssistantProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AssistantProvider>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/library" element={<GlobalLibrary />} />
+                    <Route path="/models" element={<Models />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/logs" element={<Logs />} />
+                    <Route path="/project/:projectId" element={<Navigate to="home" replace />} />
+                    <Route path="/project/:projectId/home" element={<ProjectHome />} />
+                    <Route path="/project/:projectId/dna" element={<ProjectDNA />} />
+                    <Route path="/project/:projectId/production" element={<Production />} />
+                    <Route path="/project/:projectId/library" element={<ProjectLibrary />} />
+                    <Route path="/project/:projectId/planning" element={<Planning />} />
+                    <Route path="/project/:projectId/sprints" element={<Sprints />} />
+                    <Route path="/project/:projectId/history" element={<ProjectHistory />} />
+                    <Route path="/project/:projectId/pages" element={<ProjectPages />} />
+                    <Route path="/project/:projectId/models" element={<Models />} />
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AssistantProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;
