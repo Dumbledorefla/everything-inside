@@ -1,0 +1,633 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      asset_versions: {
+        Row: {
+          asset_id: string
+          body: string | null
+          created_at: string
+          cta: string | null
+          generation_metadata: Json | null
+          headline: string | null
+          id: string
+          image_url: string | null
+          template_id: string | null
+          version: number
+        }
+        Insert: {
+          asset_id: string
+          body?: string | null
+          created_at?: string
+          cta?: string | null
+          generation_metadata?: Json | null
+          headline?: string | null
+          id?: string
+          image_url?: string | null
+          template_id?: string | null
+          version?: number
+        }
+        Update: {
+          asset_id?: string
+          body?: string | null
+          created_at?: string
+          cta?: string | null
+          generation_metadata?: Json | null
+          headline?: string | null
+          id?: string
+          image_url?: string | null
+          template_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_versions_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          attempts: number | null
+          created_at: string
+          destination: string | null
+          fallback_chain: Json | null
+          folder: string | null
+          id: string
+          output: Database["public"]["Enums"]["output_type"]
+          preset: string | null
+          profile_used: Database["public"]["Enums"]["profile_level"] | null
+          profile_visual_applied: boolean | null
+          profile_visual_ref: string | null
+          project_id: string
+          provider_selected: string | null
+          provider_used: string | null
+          status: Database["public"]["Enums"]["asset_status"]
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string
+          destination?: string | null
+          fallback_chain?: Json | null
+          folder?: string | null
+          id?: string
+          output?: Database["public"]["Enums"]["output_type"]
+          preset?: string | null
+          profile_used?: Database["public"]["Enums"]["profile_level"] | null
+          profile_visual_applied?: boolean | null
+          profile_visual_ref?: string | null
+          project_id: string
+          provider_selected?: string | null
+          provider_used?: string | null
+          status?: Database["public"]["Enums"]["asset_status"]
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string
+          destination?: string | null
+          fallback_chain?: Json | null
+          folder?: string | null
+          id?: string
+          output?: Database["public"]["Enums"]["output_type"]
+          preset?: string | null
+          profile_used?: Database["public"]["Enums"]["profile_level"] | null
+          profile_visual_applied?: boolean | null
+          profile_visual_ref?: string | null
+          project_id?: string
+          provider_selected?: string | null
+          provider_used?: string | null
+          status?: Database["public"]["Enums"]["asset_status"]
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cos_credits_log: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          created_at: string
+          description: string | null
+          id: string
+          project_id: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cos_credits_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_folder_id: string | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "library_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_folders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          default_profile_level:
+            | Database["public"]["Enums"]["profile_level"]
+            | null
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          default_profile_level?:
+            | Database["public"]["Enums"]["profile_level"]
+            | null
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          default_profile_level?:
+            | Database["public"]["Enums"]["profile_level"]
+            | null
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_dna: {
+        Row: {
+          audience: Json | null
+          created_at: string
+          funnel: Json | null
+          id: string
+          identity: Json | null
+          project_id: string
+          strategy: Json | null
+          updated_at: string
+          version: number
+          visual: Json | null
+        }
+        Insert: {
+          audience?: Json | null
+          created_at?: string
+          funnel?: Json | null
+          id?: string
+          identity?: Json | null
+          project_id: string
+          strategy?: Json | null
+          updated_at?: string
+          version?: number
+          visual?: Json | null
+        }
+        Update: {
+          audience?: Json | null
+          created_at?: string
+          funnel?: Json | null
+          id?: string
+          identity?: Json | null
+          project_id?: string
+          strategy?: Json | null
+          updated_at?: string
+          version?: number
+          visual?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_dna_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          niche: string | null
+          product: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          niche?: string | null
+          product?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          niche?: string | null
+          product?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      provider_configs: {
+        Row: {
+          config: Json | null
+          created_at: string
+          fallback_order: number | null
+          id: string
+          is_active: boolean | null
+          model_name: string | null
+          name: string
+          profile_level: Database["public"]["Enums"]["profile_level"]
+          provider_type: Database["public"]["Enums"]["provider_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          fallback_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          model_name?: string | null
+          name: string
+          profile_level?: Database["public"]["Enums"]["profile_level"]
+          provider_type: Database["public"]["Enums"]["provider_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          fallback_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          model_name?: string | null
+          name?: string
+          profile_level?: Database["public"]["Enums"]["profile_level"]
+          provider_type?: Database["public"]["Enums"]["provider_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sprint_items: {
+        Row: {
+          asset_id: string | null
+          created_at: string
+          id: string
+          sprint_id: string
+          status: Database["public"]["Enums"]["asset_status"] | null
+        }
+        Insert: {
+          asset_id?: string | null
+          created_at?: string
+          id?: string
+          sprint_id: string
+          status?: Database["public"]["Enums"]["asset_status"] | null
+        }
+        Update: {
+          asset_id?: string | null
+          created_at?: string
+          id?: string
+          sprint_id?: string
+          status?: Database["public"]["Enums"]["asset_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprint_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprint_items_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sprints: {
+        Row: {
+          budget_credits: number | null
+          created_at: string
+          id: string
+          name: string
+          output_mix: Database["public"]["Enums"]["output_type"] | null
+          profile_level: Database["public"]["Enums"]["profile_level"] | null
+          project_id: string
+          spent_credits: number | null
+          status: Database["public"]["Enums"]["sprint_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_credits?: number | null
+          created_at?: string
+          id?: string
+          name: string
+          output_mix?: Database["public"]["Enums"]["output_type"] | null
+          profile_level?: Database["public"]["Enums"]["profile_level"] | null
+          project_id: string
+          spent_credits?: number | null
+          status?: Database["public"]["Enums"]["sprint_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_credits?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          output_mix?: Database["public"]["Enums"]["output_type"] | null
+          profile_level?: Database["public"]["Enums"]["profile_level"] | null
+          project_id?: string
+          spent_credits?: number | null
+          status?: Database["public"]["Enums"]["sprint_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprints_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      is_asset_owner: { Args: { p_asset_id: string }; Returns: boolean }
+      is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_sprint_owner: { Args: { p_sprint_id: string }; Returns: boolean }
+    }
+    Enums: {
+      asset_status:
+        | "draft"
+        | "review"
+        | "approved"
+        | "official"
+        | "archived"
+        | "error"
+      output_type: "text" | "image" | "both"
+      profile_level: "economy" | "standard" | "quality"
+      provider_type: "text" | "image"
+      sprint_status: "active" | "paused" | "completed"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      asset_status: [
+        "draft",
+        "review",
+        "approved",
+        "official",
+        "archived",
+        "error",
+      ],
+      output_type: ["text", "image", "both"],
+      profile_level: ["economy", "standard", "quality"],
+      provider_type: ["text", "image"],
+      sprint_status: ["active", "paused", "completed"],
+    },
+  },
+} as const
