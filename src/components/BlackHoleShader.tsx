@@ -87,22 +87,20 @@ float fbm(vec3 p) {
   return v;
 }
 
-// ── Color palettes ──
+// ── Color palettes — NASA black hole style ──
 void getPalette(float mode, out vec3 white_hot, out vec3 hot, out vec3 warm, out vec3 cool, out vec3 rim) {
   if (mode < 0.5) {
-    // Project: Deep warm orange-red (NASA style)
-    white_hot = vec3(1.0, 0.85, 0.55);
-    hot   = vec3(0.9, 0.45, 0.08);
-    warm  = vec3(0.7, 0.22, 0.02);
-    cool  = vec3(0.25, 0.06, 0.0);
-    rim   = vec3(0.85, 0.35, 0.05);
+    white_hot = vec3(1.0, 0.9, 0.6);
+    hot   = vec3(0.95, 0.5, 0.05);
+    warm  = vec3(0.8, 0.25, 0.0);
+    cool  = vec3(0.3, 0.08, 0.0);
+    rim   = vec3(0.9, 0.4, 0.03);
   } else {
-    // Global: Deeper red-orange
-    white_hot = vec3(1.0, 0.8, 0.5);
-    hot   = vec3(0.85, 0.38, 0.06);
-    warm  = vec3(0.6, 0.18, 0.01);
-    cool  = vec3(0.2, 0.04, 0.0);
-    rim   = vec3(0.8, 0.3, 0.04);
+    white_hot = vec3(1.0, 0.85, 0.55);
+    hot   = vec3(0.9, 0.45, 0.04);
+    warm  = vec3(0.75, 0.2, 0.0);
+    cool  = vec3(0.25, 0.06, 0.0);
+    rim   = vec3(0.85, 0.35, 0.02);
   }
 }
 
@@ -140,80 +138,79 @@ void main() {
   getPalette(uMode, whiteHot, hotCol, warmCol, coolCol, rimCol);
 
   // ── Schwarzschild Shadow ──
-  float rs = 0.12;
-  float eventHorizon = smoothstep(rs + 0.004, rs - 0.004, dist);
+  float rs = 0.10;
+  float eventHorizon = smoothstep(rs + 0.003, rs - 0.003, dist);
 
   // ── Gravitational Lensing ──
-  float lensStrength = rs * rs / (dist * dist + 0.0005);
-  vec2 lensedUV = uv * (1.0 + lensStrength * 0.2);
+  float lensStrength = rs * rs / (dist * dist + 0.0003);
+  vec2 lensedUV = uv * (1.0 + lensStrength * 0.35);
   float lensedDist = length(lensedUV);
 
-  // ── Photon Sphere (brilliant thin ring) ──
-  float photonR = rs * 1.45;
-  float photonRing = exp(-pow((dist - photonR) / 0.006, 2.0)) * 3.0;
-  // Shimmer along the ring
+  // ── Photon Sphere (thin bright ring around shadow) ──
+  float photonR = rs * 1.5;
+  float photonRing = exp(-pow((dist - photonR) / 0.005, 2.0)) * 2.0;
   float shimmer = 0.7 + 0.3 * sin(angle * 20.0 + time * 6.0);
   float shimmer2 = 0.8 + 0.2 * sin(angle * 35.0 - time * 8.0);
   photonRing *= shimmer * shimmer2;
 
-  // ── FRONT Accretion Disk ──
-  float diskTilt = 0.32;
+  // ── FRONT Accretion Disk — high tilt for elongated ellipse ──
+  float diskTilt = 1.25; // ~72° — nearly edge-on like NASA image
   float cosT = cos(diskTilt), sinT = sin(diskTilt);
   float diskY = lensedUV.y * cosT;
   float diskX = lensedUV.x;
-  vec2 diskUV = vec2(diskX, diskY * 2.6);
+  vec2 diskUV = vec2(diskX, diskY * 4.0); // stretch vertically for thin disk
   float diskR = length(diskUV);
   float diskAngle = atan(diskUV.y, diskUV.x);
 
-  // Radial profile: wide disk
-  float innerEdge = rs * 1.6;
-  float outerEdge = rs * 6.0;
-  float diskProfile = smoothstep(innerEdge - 0.01, innerEdge + 0.06, diskR)
-                    * smoothstep(outerEdge + 0.04, outerEdge - 0.1, diskR);
+  // Radial profile
+  float innerEdge = rs * 1.4;
+  float outerEdge = rs * 5.5;
+  float diskProfile = smoothstep(innerEdge - 0.01, innerEdge + 0.04, diskR)
+                    * smoothstep(outerEdge + 0.03, outerEdge - 0.08, diskR);
 
   // Density with spirals + turbulence
   float density = diskDensity(diskAngle, diskR, time);
 
   // Temperature gradient: hotter near inner edge
   float tempGrad = smoothstep(outerEdge, innerEdge, diskR);
-  float innerGlow = pow(tempGrad, 2.0);
+  float innerGlow = pow(tempGrad, 2.5);
 
   // Relativistic beaming (Doppler)
-  float doppler = 0.25 + 0.75 * smoothstep(-1.0, 1.0, -sin(diskAngle + 0.4));
+  float doppler = 0.2 + 0.8 * smoothstep(-1.0, 1.0, -sin(diskAngle + 0.4));
   float beaming = doppler * doppler;
 
   // Disk intensity
-  float diskIntensity = diskProfile * beaming * (0.3 + density * 0.7) * 1.8;
-  float diskHeat = diskProfile * innerGlow * (0.4 + density * 0.6) * 2.0;
+  float diskIntensity = diskProfile * beaming * (0.3 + density * 0.7) * 1.6;
+  float diskHeat = diskProfile * innerGlow * (0.4 + density * 0.6) * 1.8;
 
   // Color: temperature-mapped
   vec3 diskColor = mix(coolCol, warmCol, diskIntensity * 0.8);
   diskColor = mix(diskColor, hotCol, diskHeat * 0.7);
-  diskColor = mix(diskColor, whiteHot, innerGlow * diskProfile * beaming * 0.5);
+  diskColor = mix(diskColor, whiteHot, innerGlow * diskProfile * beaming * 0.4);
 
   float totalDisk = diskIntensity + diskHeat * 0.6;
 
-  // ── BACK Accretion Disk (gravitationally lensed — Interstellar effect) ──
+  // ── BACK Accretion Disk (gravitationally lensed — wraps above/below) ──
   float backY = -lensedUV.y * cosT;
-  vec2 backUV = vec2(diskX, backY * 2.6);
+  vec2 backUV = vec2(diskX, backY * 4.0);
   float backR = length(backUV);
   float backAngle = atan(backUV.y, backUV.x);
-  float backProfile = smoothstep(innerEdge - 0.01, innerEdge + 0.06, backR)
-                    * smoothstep(outerEdge + 0.04, outerEdge - 0.1, backR);
+  float backProfile = smoothstep(innerEdge - 0.01, innerEdge + 0.04, backR)
+                    * smoothstep(outerEdge + 0.03, outerEdge - 0.08, backR);
 
   float backDensity = diskDensity(backAngle, backR, time * 0.9 + 3.0);
   float backTemp = smoothstep(outerEdge, innerEdge, backR);
-  float backDoppler = 0.25 + 0.75 * smoothstep(-1.0, 1.0, -sin(backAngle + 0.4));
+  float backDoppler = 0.2 + 0.8 * smoothstep(-1.0, 1.0, -sin(backAngle + 0.4));
   float backBeaming = backDoppler * backDoppler;
-  float backIntensity = backProfile * backBeaming * (0.25 + backDensity * 0.6) * 0.7;
-  float backHeat = backProfile * pow(backTemp, 2.0) * (0.3 + backDensity * 0.5) * 0.7;
+  float backIntensity = backProfile * backBeaming * (0.2 + backDensity * 0.6) * 0.6;
+  float backHeat = backProfile * pow(backTemp, 2.5) * (0.3 + backDensity * 0.5) * 0.6;
 
   vec3 backColor = mix(coolCol, warmCol * 0.7, backIntensity);
   backColor = mix(backColor, hotCol * 0.8, backHeat * 0.6);
   totalDisk += backIntensity * 0.5 + backHeat * 0.3;
 
-  // ── Edge brightening — the "ring" effect around the shadow ──
-  float edgeRing = exp(-pow((dist - rs * 1.15) / 0.018, 2.0)) * 1.5;
+  // ── Thin edge ring around shadow ──
+  float edgeRing = exp(-pow((dist - rs * 1.12) / 0.012, 2.0)) * 1.2;
   edgeRing *= 0.7 + 0.3 * sin(angle * 12.0 + time * 5.0);
 
   // ── Corona / ambient glow — very subtle ──
