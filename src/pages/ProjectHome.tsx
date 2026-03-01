@@ -1,16 +1,16 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, FileCheck, Star, ArrowRight, Upload, Bot, Loader2, BarChart3, DollarSign } from "lucide-react";
+import { Zap, FileCheck, Star, ArrowRight, Upload, Bot, BarChart3, DollarSign, Brain, TrendingUp } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 const statusColors: Record<string, string> = {
-  draft: "bg-cos-warning/10 text-cos-warning",
-  review: "bg-cos-purple/10 text-cos-purple",
-  approved: "bg-cos-cyan/10 text-cos-cyan",
-  official: "bg-cos-success/10 text-cos-success",
+  draft: "bg-amber-500/10 text-amber-500",
+  review: "bg-violet-500/10 text-violet-500",
+  approved: "bg-cyan-500/10 text-cyan-500",
+  official: "bg-green-500/10 text-green-500",
   archived: "bg-muted text-muted-foreground",
 };
 
@@ -47,7 +47,22 @@ export default function ProjectHome() {
     enabled: !!projectId,
   });
 
-  // Credits/cost data for efficiency charts
+  // Ledger data for consumption card
+  const { data: ledgerData } = useQuery({
+    queryKey: ["project-ledger", projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cos_ledger")
+        .select("credits_cost, estimated_usd, operation_type, provider_used, created_at")
+        .eq("project_id", projectId!)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  // Fallback to credits log if no ledger data
   const { data: creditsData } = useQuery({
     queryKey: ["project-credits-chart", projectId],
     queryFn: async () => {
@@ -58,6 +73,19 @@ export default function ProjectHome() {
         .order("created_at", { ascending: true })
         .limit(100);
       return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: pendingInsights } = useQuery({
+    queryKey: ["pending-dna-updates-count", projectId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("pending_dna_updates")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId!)
+        .eq("status", "pending");
+      return count || 0;
     },
     enabled: !!projectId,
   });
@@ -76,34 +104,43 @@ export default function ProjectHome() {
     enabled: !!projectId,
   });
 
-  // Build chart data
+  // Build ledger chart data
+  const useLedger = (ledgerData || []).length > 0;
+  const rawData = useLedger ? ledgerData! : creditsData || [];
+
+  const byDay = rawData.reduce((acc: Record<string, { credits: number; usd: number }>, log: any) => {
+    const day = new Date(log.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    if (!acc[day]) acc[day] = { credits: 0, usd: 0 };
+    if (useLedger) {
+      acc[day].credits += Math.abs(log.credits_cost || 0);
+      acc[day].usd += Math.abs(log.estimated_usd || 0);
+    } else {
+      acc[day].credits += Math.abs(log.amount || 0);
+      acc[day].usd += Math.abs(log.amount || 0) * 0.002;
+    }
+    return acc;
+  }, {});
+
+  const barData = Object.entries(byDay).slice(-14).map(([day, v]) => ({
+    day, credits: Number(v.credits.toFixed(1)), estimatedUSD: v.usd.toFixed(3),
+  }));
+
+  const totalCredits = rawData.reduce((s: number, l: any) => s + Math.abs(useLedger ? (l.credits_cost || 0) : (l.amount || 0)), 0);
+  const totalUSD = useLedger
+    ? rawData.reduce((s: number, l: any) => s + Math.abs(l.estimated_usd || 0), 0)
+    : totalCredits * 0.002;
+
+  // Operation breakdown
+  const byOp = (ledgerData || []).reduce((acc: Record<string, number>, l: any) => {
+    acc[l.operation_type] = (acc[l.operation_type] || 0) + Math.abs(l.credits_cost || 0);
+    return acc;
+  }, {});
+
   const pieData = stats ? [
     { name: "Rascunhos", value: stats.drafts },
     { name: "Aprovados", value: stats.approved },
     { name: "Oficiais", value: stats.official },
   ].filter((d) => d.value > 0) : [];
-
-  // Aggregate credits by day
-  const creditsByDay = (creditsData || []).reduce((acc: Record<string, number>, log) => {
-    const day = new Date(log.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-    acc[day] = (acc[day] || 0) + Math.abs(log.amount);
-    return acc;
-  }, {});
-
-  const barData = Object.entries(creditsByDay).slice(-14).map(([day, credits]) => ({
-    day,
-    credits,
-    estimatedUSD: (credits * 0.002).toFixed(3), // rough estimate
-  }));
-
-  const totalCreditsSpent = (creditsData || []).reduce((s, l) => s + Math.abs(l.amount), 0);
-  const estimatedTotalUSD = (totalCreditsSpent * 0.002).toFixed(2);
-
-  const quickChips = [
-    { label: "Gerar 5 criativos topo de funil", msg: "Gere 5 criativos de topo de funil para o projeto atual" },
-    { label: "Planejar 7 dias", msg: "Crie um plano de conteúdo para os próximos 7 dias" },
-    { label: "Sprint de ads 4:5", msg: "Crie um sprint de ads com formato 4:5 para Instagram" },
-  ];
 
   const formatTime = (ts: string) => {
     const diff = Date.now() - new Date(ts).getTime();
@@ -115,9 +152,15 @@ export default function ProjectHome() {
   };
 
   const statCards = [
-    { label: "Rascunhos", value: stats?.drafts || 0, icon: Zap, color: "text-cos-warning" },
-    { label: "Aprovados", value: stats?.approved || 0, icon: FileCheck, color: "text-cos-cyan" },
-    { label: "Oficiais", value: stats?.official || 0, icon: Star, color: "text-cos-success" },
+    { label: "Rascunhos", value: stats?.drafts || 0, icon: Zap, color: "text-amber-500" },
+    { label: "Aprovados", value: stats?.approved || 0, icon: FileCheck, color: "text-cyan-500" },
+    { label: "Oficiais", value: stats?.official || 0, icon: Star, color: "text-green-500" },
+  ];
+
+  const quickChips = [
+    { label: "Gerar 5 criativos topo de funil", msg: "Gere 5 criativos de topo de funil para o projeto atual" },
+    { label: "Planejar 7 dias", msg: "Crie um plano de conteúdo para os próximos 7 dias" },
+    { label: "Sprint de ads 4:5", msg: "Crie um sprint de ads com formato 4:5 para Instagram" },
   ];
 
   return (
@@ -129,17 +172,17 @@ export default function ProjectHome() {
         </div>
         <div className="flex gap-2">
           <button className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-secondary transition-colors">
-            <Upload className="h-3.5 w-3.5" />Importar Referência
+            <Upload className="h-3.5 w-3.5" />Importar
           </button>
           <button onClick={() => navigate(`/project/${projectId}/production`)}
-            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors glow-cyan">
+            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
             <Zap className="h-3.5 w-3.5" />Gerar
           </button>
         </div>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      {/* Stats + Memory Insight Alert */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
         {statCards.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center gap-3">
@@ -153,69 +196,93 @@ export default function ProjectHome() {
         ))}
       </div>
 
-      {/* Efficiency Dashboard */}
+      {/* Pending DNA Insights Alert */}
+      {(pendingInsights || 0) > 0 && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-6 rounded-lg border border-violet-500/30 bg-violet-500/5 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Brain className="h-5 w-5 text-violet-500" />
+            <div>
+              <p className="text-sm font-semibold">💡 Evolução de DNA Detectada</p>
+              <p className="text-xs text-muted-foreground">
+                {pendingInsights} sugestão(ões) de atualização do DNA baseada(s) nos seus padrões de aprovação.
+              </p>
+            </div>
+          </div>
+          <button onClick={() => { openDock(); }}
+            className="rounded-md bg-violet-500/20 px-4 py-2 text-xs font-medium text-violet-500 hover:bg-violet-500/30 transition-colors">
+            Ver no Assistente
+          </button>
+        </motion.div>
+      )}
+
+      {/* Consumption Dashboard */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        {/* Drafts vs Officials Pie */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold">Rascunhos vs Oficiais</h3>
+            <h3 className="text-sm font-semibold">Pipeline de Ativos</h3>
           </div>
           {pieData.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                  {pieData.map((_, idx) => (
-                    <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                  ))}
+                  {pieData.map((_, idx) => <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-xs text-muted-foreground text-center py-12">Sem dados ainda</p>
+            <p className="text-xs text-muted-foreground text-center py-12">Sem dados</p>
           )}
           <p className="text-[10px] text-muted-foreground text-center mt-2">
             Taxa de aprovação: {stats && stats.total > 0 ? Math.round(((stats.official + stats.approved) / stats.total) * 100) : 0}%
           </p>
         </motion.div>
 
-        {/* API Cost Bar Chart */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-cos-success" />
-              <h3 className="text-sm font-semibold">Custo Estimado (API)</h3>
+              <DollarSign className="h-4 w-4 text-green-500" />
+              <h3 className="text-sm font-semibold">Consumo do Projeto</h3>
             </div>
-            <span className="rounded-md bg-cos-success/10 px-2 py-0.5 text-[10px] font-mono text-cos-success">
-              ~${estimatedTotalUSD} USD
+            <span className="rounded-md bg-green-500/10 px-2 py-0.5 text-[10px] font-mono text-green-500">
+              ~${totalUSD.toFixed(2)} USD
             </span>
           </div>
           {barData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
+            <ResponsiveContainer width="100%" height={140}>
               <BarChart data={barData}>
                 <XAxis dataKey="day" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.[0]) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="rounded-md border border-border bg-card px-3 py-2 text-xs shadow-md">
-                        <p className="font-medium">{d.day}</p>
-                        <p className="text-muted-foreground">{d.credits} créditos (~${d.estimatedUSD} USD)</p>
-                      </div>
-                    );
-                  }}
-                />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.[0]) return null;
+                  const d = payload[0].payload;
+                  return (
+                    <div className="rounded-md border border-border bg-card px-3 py-2 text-xs shadow-md">
+                      <p className="font-medium">{d.day}</p>
+                      <p className="text-muted-foreground">{d.credits} créditos (~${d.estimatedUSD} USD)</p>
+                    </div>
+                  );
+                }} />
                 <Bar dataKey="credits" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <p className="text-xs text-muted-foreground text-center py-12">Sem dados de consumo</p>
           )}
+          {/* Operation breakdown */}
+          {Object.keys(byOp).length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {Object.entries(byOp).map(([op, credits]) => (
+                <span key={op} className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                  {op}: {Number(credits).toFixed(1)}cr
+                </span>
+              ))}
+            </div>
+          )}
           <p className="text-[10px] text-muted-foreground text-center mt-2">
-            {totalCreditsSpent} créditos consumidos neste projeto
+            {totalCredits.toFixed(1)} créditos · {rawData.length} operações
           </p>
         </motion.div>
       </div>
