@@ -76,6 +76,7 @@ interface GenerateRequest {
   regenerateAssetId?: string;
   pipelineMode?: "simple" | "outline" | "variants" | "assembly";
   outlineSections?: string[];
+  referenceId?: string; // Deep Perception reference to inject
 }
 
 serve(async (req) => {
@@ -106,7 +107,7 @@ serve(async (req) => {
     const {
       projectId, mode, output, pieceType, quantity, profile,
       provider, destination, ratio, intensity, userPrompt,
-      regenerateAssetId, pipelineMode = "simple",
+      regenerateAssetId, pipelineMode = "simple", referenceId,
     } = body;
 
     // ── 1. Fetch Project DNA (latest version) ───────────────────
@@ -128,7 +129,32 @@ serve(async (req) => {
     const dnaVersionId: string | null = dna?.id ?? null;
 
     // ── 2. Build DNA System Prompt ──────────────────────────────
-    const dnaContext = buildDNAPrompt(project, dna);
+    // ── 2a. Fetch Deep Perception reference if provided ─────────
+    let deepPerceptionContext = "";
+    if (referenceId) {
+      const { data: refAnalysis } = await supabase
+        .from("reference_analyses")
+        .select("*")
+        .eq("id", referenceId)
+        .single();
+      if (refAnalysis) {
+        deepPerceptionContext = buildDeepPerceptionContext(refAnalysis);
+      }
+    } else if (body.useVisualProfile) {
+      // Auto-select latest reference for the project
+      const { data: latestRef } = await supabase
+        .from("reference_analyses")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (latestRef) {
+        deepPerceptionContext = buildDeepPerceptionContext(latestRef);
+      }
+    }
+
+    const dnaContext = buildDNAPrompt(project, dna) + deepPerceptionContext;
 
     // ── 3. Handle "Regerar com Qualidade" ───────────────────────
     let originalAsset: any = null;
@@ -314,6 +340,40 @@ function buildDNAPrompt(project: any, dna: any): string {
       if (visual.referencia) parts.push(`Referência: ${visual.referencia}`);
     }
   }
+
+  return parts.filter(Boolean).join("\n");
+}
+
+// ── Deep Perception Context Builder ─────────────────────────────
+function buildDeepPerceptionContext(ref: any): string {
+  const raw = ref.raw_analysis || {};
+  const parts = [
+    `\n\n## 🔮 DEEP PERCEPTION (Referência Ativa)`,
+    `Arquétipo Visual: ${ref.visual_archetype}`,
+    `Tom Emocional: ${ref.emotional_tone}`,
+    `Sofisticação: ${ref.sophistication_level}/10`,
+    `Composição: ${ref.composition_intent}`,
+    ref.focus_narrative ? `Foco Narrativo: ${ref.focus_narrative}` : null,
+    ref.human_context ? `Contexto Humano: ${ref.human_context}` : null,
+    ref.strategic_why ? `Estratégia: ${ref.strategic_why}` : null,
+  ];
+
+  // Add visual DNA details from raw analysis
+  if (raw.palette?.length) parts.push(`Paleta: ${raw.palette.join(", ")}`);
+  if (raw.lighting_type) parts.push(`Iluminação: ${raw.lighting_type}`);
+  if (raw.grain_level) parts.push(`Grão/Textura: ${raw.grain_level}`);
+  if (raw.color_temperature) parts.push(`Temperatura: ${raw.color_temperature}`);
+
+  if (ref.typography_style && typeof ref.typography_style === "object") {
+    const ts = ref.typography_style;
+    parts.push(`Tipografia: peso=${ts.weight || "?"}, tracking=${ts.tracking || "?"}, vibe=${ts.vibe || "?"}`);
+  }
+
+  if (ref.generated_prompt) {
+    parts.push(`\nINSTRUÇÃO DA REFERÊNCIA: ${ref.generated_prompt}`);
+  }
+
+  parts.push(`\nIMPORTANTE: Mantenha o SENTIMENTO, a COMPOSIÇÃO e a ESTRATÉGIA da referência. Adapte ao nicho e DNA do projeto.`);
 
   return parts.filter(Boolean).join("\n");
 }
