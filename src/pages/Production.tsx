@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles, Layers,
@@ -7,30 +7,26 @@ import {
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CreativeCanvas from "@/components/creative/CreativeCanvas";
 import LayerEditor, { type TextLayer } from "@/components/creative/LayerEditor";
 import BatchProgressBar from "@/components/production/BatchProgressBar";
+import OperationModeSelector, { MODE_PIECE_TYPES, MODE_RATIOS, type OperationMode } from "@/components/production/OperationModeSelector";
 import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
 import { cn } from "@/lib/utils";
 
-const pieceTypes = [
-  { id: "post", label: "Post", icon: LayoutGrid },
-  { id: "banner", label: "Banner", icon: Rows3 },
-  { id: "story", label: "Story", icon: FileText },
-  { id: "ad", label: "Ad", icon: Sparkles },
-  { id: "thumbnail", label: "Thumb", icon: Image },
-  { id: "vsl", label: "VSL", icon: Type },
-  { id: "carousel", label: "Carrossel", icon: GalleryHorizontalEnd },
-];
+const PIECE_ICONS: Record<string, React.ElementType> = {
+  post: LayoutGrid, banner: Rows3, story: FileText, ad: Sparkles,
+  thumbnail: Image, vsl: Type, carousel: GalleryHorizontalEnd,
+  logo: Sparkles, palette: Sparkles, typography: Type, brand_manual: FileText,
+  highlight: Image, hero_banner: Rows3, ecommerce_banner: LayoutGrid, lp_section: Layers,
+};
 
 const profileLabels: Record<string, string> = {
-  economy: "Economia",
-  standard: "Padrão",
-  quality: "Qualidade",
+  economy: "Economia", standard: "Padrão", quality: "Qualidade",
 };
 
 const profileColors: Record<string, string> = {
@@ -40,17 +36,10 @@ const profileColors: Record<string, string> = {
 };
 
 const roleLabels: Record<string, string> = {
-  hook: "🎣 Gancho",
-  problem: "😰 Problema",
-  agitation: "🔥 Agitação",
-  solution: "💡 Solução",
-  benefit: "✨ Benefício",
-  content: "📖 Conteúdo",
-  recap: "📋 Resumo",
-  conflict: "⚔️ Conflito",
-  epiphany: "💎 Epifania",
-  proof: "📊 Prova",
-  cta: "🎯 CTA",
+  hook: "🎣 Gancho", problem: "😰 Problema", agitation: "🔥 Agitação",
+  solution: "💡 Solução", benefit: "✨ Benefício", content: "📖 Conteúdo",
+  recap: "📋 Resumo", conflict: "⚔️ Conflito", epiphany: "💎 Epifania",
+  proof: "📊 Prova", cta: "🎯 CTA",
 };
 
 const formulaOptions = [
@@ -59,9 +48,14 @@ const formulaOptions = [
   { id: "hero_journey" as const, label: "Jornada", desc: "Storytelling", icon: "🦸" },
 ];
 
+const MODE_LABELS: Record<OperationMode, string> = {
+  foundation: "Fundação", social: "Social", performance: "Performance",
+};
+
 export default function Production() {
   const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   const { results, progress, generate, cancel } = useBatchGenerate();
   const carousel = useCarouselGenerate();
   const [userPrompt, setUserPrompt] = useState("");
@@ -71,22 +65,65 @@ export default function Production() {
   const [activeEditorSlide, setActiveEditorSlide] = useState<number | null>(null);
   const [carouselLayerStyles, setCarouselLayerStyles] = useState<Record<number, TextLayer[]>>({});
 
+  // Operation mode — loaded from project DB
+  const [operationMode, setOperationModeLocal] = useState<OperationMode>("social");
+
+  // Load persisted mode from project
+  const { data: projectData } = useQuery({
+    queryKey: ["project-mode", activeProjectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("operation_mode, niche")
+        .eq("id", activeProjectId!)
+        .single();
+      return data;
+    },
+    enabled: !!activeProjectId,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (projectData?.operation_mode) {
+      setOperationModeLocal(projectData.operation_mode as OperationMode);
+    }
+  }, [projectData]);
+
+  // Persist mode change to DB
+  const modeMutation = useMutation({
+    mutationFn: async (mode: OperationMode) => {
+      await supabase.from("projects").update({ operation_mode: mode }).eq("id", activeProjectId!);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project-mode", activeProjectId] }),
+  });
+
+  const setOperationMode = (mode: OperationMode) => {
+    setOperationModeLocal(mode);
+    if (activeProjectId) modeMutation.mutate(mode);
+    // Reset piece type to first available in the new mode
+    const firstPiece = MODE_PIECE_TYPES[mode][0];
+    if (firstPiece) setSpec({ pieceType: firstPiece.id });
+  };
+
+  const availablePieceTypes = MODE_PIECE_TYPES[operationMode];
+  const availableRatios = MODE_RATIOS[operationMode];
   const isCarousel = spec.pieceType === "carousel";
+
+  // Ensure current ratio is valid for the mode
+  useEffect(() => {
+    if (!availableRatios.includes(spec.ratio)) {
+      setSpec({ ratio: availableRatios[0] });
+    }
+  }, [operationMode]);
 
   const handleApplyToAll = useCallback((layers: TextLayer[]) => {
     if (!carousel.slides.length) return;
     const styleMap: Record<number, TextLayer[]> = {};
     for (const slide of carousel.slides) {
-      // Apply same font/color/weight/style but keep each slide's content
       const existing = carouselLayerStyles[slide.slideNumber];
       styleMap[slide.slideNumber] = layers.map((l) => {
         const match = existing?.find((e) => e.type === l.type);
-        return {
-          ...l,
-          content: match?.content || l.content,
-          x: match?.x ?? l.x,
-          y: match?.y ?? l.y,
-        };
+        return { ...l, content: match?.content || l.content, x: match?.x ?? l.x, y: match?.y ?? l.y };
       });
     }
     setCarouselLayerStyles(styleMap);
@@ -113,7 +150,6 @@ export default function Production() {
     staleTime: 60_000,
   });
 
-  // Fetch references for carousel reference selector
   const { data: references } = useQuery({
     queryKey: ["references-for-production", activeProjectId],
     queryFn: async () => {
@@ -129,6 +165,8 @@ export default function Production() {
   });
 
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | undefined>();
+
+  const currentPieceLabel = availablePieceTypes.find((t) => t.id === spec.pieceType)?.label || spec.pieceType;
 
   const handleGenerate = async () => {
     if (!activeProjectId || !session) {
@@ -149,7 +187,9 @@ export default function Production() {
       useModel: spec.useModel,
       useVisualProfile: spec.useVisualProfile,
       userPrompt: userPrompt || undefined,
-    });
+      operationMode,
+      formatLabel: currentPieceLabel,
+    } as any);
   };
 
   const handleCarouselStoryline = async () => {
@@ -181,7 +221,10 @@ export default function Production() {
     <div className="flex h-[calc(100vh-3.5rem)]">
       {/* Left panel — Controls */}
       <div className="w-72 shrink-0 border-r border-border/20 bg-card/20 backdrop-blur-sm overflow-y-auto p-5 space-y-5">
-        {/* Mode selector */}
+        {/* Operation Mode Selector */}
+        <OperationModeSelector mode={operationMode} onChange={setOperationMode} />
+
+        {/* Generation Mode */}
         <div>
           <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 block">Modo</label>
           <div className="flex gap-1 rounded-xl bg-background/40 p-1">
@@ -199,21 +242,26 @@ export default function Production() {
           </div>
         </div>
 
-        {/* Piece type */}
+        {/* Piece type — filtered by mode */}
         <div>
-          <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 block">Tipo de Peça</label>
+          <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 block">
+            Tipo de Peça · <span className="text-primary">{MODE_LABELS[operationMode]}</span>
+          </label>
           <div className="grid grid-cols-3 gap-1.5">
-            {pieceTypes.map((t) => (
-              <button key={t.id} onClick={() => { setSpec({ pieceType: t.id }); if (t.id !== "carousel") carousel.reset(); }}
-                className={cn(
-                  "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[10px] transition-all",
-                  spec.pieceType === t.id
-                    ? "border-primary/40 bg-primary/10 text-primary shadow-sm shadow-primary/10"
-                    : "border-border/20 text-muted-foreground/60 hover:border-primary/20 hover:text-foreground hover:bg-card/30"
-                )}>
-                <t.icon className={cn("h-3.5 w-3.5", spec.pieceType === t.id && "drop-shadow-[0_0_4px_hsl(var(--primary)/0.4)]")} />{t.label}
-              </button>
-            ))}
+            {availablePieceTypes.map((t) => {
+              const Icon = PIECE_ICONS[t.id] || Sparkles;
+              return (
+                <button key={t.id} onClick={() => { setSpec({ pieceType: t.id }); if (t.id !== "carousel") carousel.reset(); }}
+                  className={cn(
+                    "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[10px] transition-all",
+                    spec.pieceType === t.id
+                      ? "border-primary/40 bg-primary/10 text-primary shadow-sm shadow-primary/10"
+                      : "border-border/20 text-muted-foreground/60 hover:border-primary/20 hover:text-foreground hover:bg-card/30"
+                  )}>
+                  <Icon className={cn("h-3.5 w-3.5", spec.pieceType === t.id && "drop-shadow-[0_0_4px_hsl(var(--primary)/0.4)]")} />{t.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -261,7 +309,6 @@ export default function Production() {
               </div>
             </div>
 
-            {/* Reference selector */}
             {references && references.length > 0 && (
               <div>
                 <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 block">Referência Visual</label>
@@ -313,11 +360,11 @@ export default function Production() {
           </>
         )}
 
-        {/* Ratio */}
+        {/* Ratio — filtered by mode */}
         <div>
           <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-2 block">Proporção</label>
           <div className="flex gap-1 rounded-xl bg-background/40 p-1">
-            {["1:1", "4:5", "9:16", "16:9"].map((r) => (
+            {availableRatios.map((r) => (
               <button key={r} onClick={() => setSpec({ ratio: r })}
                 className={cn(
                   "flex-1 rounded-lg py-1.5 text-[10px] font-mono-brand transition-all",
@@ -496,10 +543,9 @@ export default function Production() {
               </div>
             )}
 
-            {/* Generated Slides — Thumbnail Grid + Layer Editor */}
+            {/* Generated Slides */}
             {carousel.step === "done" && carousel.slides.length > 0 && (
               <div className="space-y-4">
-                {/* Thumbnails */}
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {carousel.slides.map((slide, i) => (
                     <motion.button key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
@@ -527,7 +573,6 @@ export default function Production() {
                   ))}
                 </div>
 
-                {/* Active Layer Editor */}
                 {activeEditorSlide !== null && (() => {
                   const slide = carousel.slides.find((s) => s.slideNumber === activeEditorSlide);
                   if (!slide) return null;
@@ -558,7 +603,6 @@ export default function Production() {
                   );
                 })()}
 
-                {/* Hint when no editor open */}
                 {activeEditorSlide === null && (
                   <p className="text-center text-xs text-muted-foreground/40 py-4">
                     Clique em um slide acima para abrir o editor de camadas
@@ -567,7 +611,6 @@ export default function Production() {
               </div>
             )}
 
-            {/* Empty state */}
             {carousel.step === "idle" && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
@@ -584,10 +627,15 @@ export default function Production() {
         ) : (
           <>
             <div className="mb-4">
-              <h2 className="text-sm font-semibold font-mono-brand tracking-tight">Resultados</h2>
+              <h2 className="text-sm font-semibold font-mono-brand tracking-tight flex items-center gap-2">
+                Resultados
+                <span className="rounded-lg bg-primary/10 text-primary text-[10px] font-mono-brand px-2 py-0.5 ml-2">
+                  {MODE_LABELS[operationMode]}
+                </span>
+              </h2>
               <p className="text-xs text-muted-foreground/60 mt-0.5">
                 {results.length > 0
-                  ? `${results.length} variações geradas — ${spec.pieceType} ${spec.destination} ${spec.ratio}`
+                  ? `${results.length} variações geradas — ${currentPieceLabel} ${spec.destination} ${spec.ratio}`
                   : "Configure os parâmetros e clique em Gerar"}
               </p>
             </div>

@@ -111,7 +111,9 @@ export type Database = {
           fallback_chain: Json | null
           final_render_url: string | null
           folder: string | null
+          format_label: string | null
           id: string
+          operation_mode: string | null
           output: Database["public"]["Enums"]["output_type"]
           parent_asset_id: string | null
           platform: string | null
@@ -139,7 +141,9 @@ export type Database = {
           fallback_chain?: Json | null
           final_render_url?: string | null
           folder?: string | null
+          format_label?: string | null
           id?: string
+          operation_mode?: string | null
           output?: Database["public"]["Enums"]["output_type"]
           parent_asset_id?: string | null
           platform?: string | null
@@ -167,7 +171,9 @@ export type Database = {
           fallback_chain?: Json | null
           final_render_url?: string | null
           folder?: string | null
+          format_label?: string | null
           id?: string
+          operation_mode?: string | null
           output?: Database["public"]["Enums"]["output_type"]
           parent_asset_id?: string | null
           platform?: string | null
@@ -767,6 +773,7 @@ export type Database = {
           is_pinned: boolean | null
           name: string
           niche: string | null
+          operation_mode: string
           performance_rating: number | null
           product: string | null
           updated_at: string
@@ -780,6 +787,7 @@ export type Database = {
           is_pinned?: boolean | null
           name: string
           niche?: string | null
+          operation_mode?: string
           performance_rating?: number | null
           product?: string | null
           updated_at?: string
@@ -793,6 +801,7 @@ export type Database = {
           is_pinned?: boolean | null
           name?: string
           niche?: string | null
+          operation_mode?: string
           performance_rating?: number | null
           product?: string | null
           updated_at?: string
