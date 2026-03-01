@@ -23,12 +23,11 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
-    const userId = claims.claims.sub as string;
+    const userId = user.id;
 
     const { projectId } = await req.json();
     if (!projectId) throw new Error("projectId required");

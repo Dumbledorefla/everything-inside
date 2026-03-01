@@ -21,6 +21,7 @@ import ProjectPages from "./pages/ProjectPages";
 import GlobalLibrary from "./pages/GlobalLibrary";
 import Models from "./pages/Models";
 import SettingsPage from "./pages/SettingsPage";
+import Logs from "./pages/Logs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/library" element={<GlobalLibrary />} />
                 <Route path="/models" element={<Models />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/logs" element={<Logs />} />
                 <Route path="/project/:projectId" element={<Navigate to="home" replace />} />
                 <Route path="/project/:projectId/home" element={<ProjectHome />} />
                 <Route path="/project/:projectId/dna" element={<ProjectDNA />} />
