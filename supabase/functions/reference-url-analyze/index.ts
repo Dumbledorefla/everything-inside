@@ -47,60 +47,50 @@ serve(async (req) => {
     let pageMetadata: any = {};
 
     if (isInstagram) {
-      // Instagram often blocks regular scraping — fallback to screenshot + metadata
-      console.log("Instagram detected — using Microlink screenshot fallback");
-      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(pageUrl)}&screenshot=true&meta=true`;
-      const mlResponse = await fetch(microlinkUrl, {
-        headers: { Accept: "application/json, image/*;q=0.9, */*;q=0.8" },
-      });
+      console.log("Instagram detected — using public oEmbed for metadata");
 
-      if (mlResponse.ok) {
-        const contentType = (mlResponse.headers.get("content-type") || "").toLowerCase();
-
-        if (contentType.includes("application/json")) {
-          const mlData = await mlResponse.json();
-          pageScreenshot = mlData.data?.screenshot?.url || null;
+      // Try Instagram oEmbed (public, no auth needed)
+      try {
+        const oembedUrl = `https://www.instagram.com/api/v1/oembed/?url=${encodeURIComponent(pageUrl)}`;
+        const oembedRes = await fetch(oembedUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; bot)" },
+        });
+        if (oembedRes.ok) {
+          const oembed = await oembedRes.json();
           pageMetadata = {
-            title: mlData.data?.title || "Instagram Profile",
-            description: mlData.data?.description || "",
-            ogImage: mlData.data?.image?.url || null,
+            title: oembed.author_name || oembed.title || "Instagram",
+            description: oembed.title || "",
+            ogImage: oembed.thumbnail_url || null,
           };
-        } else if (contentType.startsWith("image/")) {
-          const imageBytes = new Uint8Array(await mlResponse.arrayBuffer());
-          let binary = "";
-          const chunkSize = 0x8000;
-          for (let i = 0; i < imageBytes.length; i += chunkSize) {
-            binary += String.fromCharCode(...imageBytes.subarray(i, i + chunkSize));
+
+          const parts = [
+            `# Instagram — ${oembed.author_name || "Perfil"}`,
+            "",
+            oembed.title ? `**Bio/Descrição:** ${oembed.title}` : "",
+            oembed.author_name ? `**Autor:** ${oembed.author_name}` : "",
+            oembed.author_url ? `**URL:** ${oembed.author_url}` : "",
+            oembed.provider_name ? `**Plataforma:** ${oembed.provider_name}` : "",
+            oembed.html ? `\n**Embed HTML disponível:** Sim (${oembed.width}x${oembed.height})` : "",
+          ].filter(Boolean);
+          pageMarkdown = parts.join("\n");
+
+          // Only use thumbnail if it's from Instagram CDN (AI can fetch those)
+          if (oembed.thumbnail_url && /instagram|cdninstagram|fbcdn/i.test(oembed.thumbnail_url)) {
+            pageScreenshot = oembed.thumbnail_url;
           }
-          const base64Image = btoa(binary);
-          pageScreenshot = `data:image/png;base64,${base64Image}`;
-          pageMetadata = { title: "Instagram Profile", description: "" };
         } else {
-          const fallbackText = await mlResponse.text();
-          try {
-            const mlData = JSON.parse(fallbackText);
-            pageScreenshot = mlData.data?.screenshot?.url || null;
-            pageMetadata = {
-              title: mlData.data?.title || "Instagram Profile",
-              description: mlData.data?.description || "",
-              ogImage: mlData.data?.image?.url || null,
-            };
-          } catch {
-            pageMetadata = { title: "Instagram Profile", description: "" };
-          }
+          console.log("oEmbed failed:", oembedRes.status);
         }
+      } catch (e) {
+        console.error("oEmbed fetch error:", e);
+      }
 
-        pageMarkdown = `# ${pageMetadata.title}
-
-${pageMetadata.description || "Instagram page — análise visual via screenshot."}`;
-      } else {
-        console.error("Microlink fallback also failed:", mlResponse.status);
-        // Last resort: just use the URL with AI vision prompt
-        pageMarkdown = `Instagram URL: ${pageUrl}
-
-Análise baseada apenas na URL. O scraping direto do Instagram não é suportado.`;
+      // Fallback markdown if oEmbed returned nothing
+      if (!pageMarkdown) {
+        pageMarkdown = `Instagram URL: ${pageUrl}\n\nO perfil requer login para visualização completa. Análise baseada apenas na URL pública.`;
         pageMetadata = { title: "Instagram Profile" };
       }
+      // Don't use external screenshot proxies — AI can't fetch them reliably
     } else {
       const scrapeResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
         method: "POST",
