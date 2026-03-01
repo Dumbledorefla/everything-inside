@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, Image, Type, FileText, Sparkles,
+  Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, Eye, GalleryHorizontalEnd,
   Check, Pencil, RotateCcw, ChevronRight,
 } from "lucide-react";
@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CreativeCanvas from "@/components/creative/CreativeCanvas";
+import LayerEditor, { type TextLayer } from "@/components/creative/LayerEditor";
 import BatchProgressBar from "@/components/production/BatchProgressBar";
 import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
@@ -67,8 +68,30 @@ export default function Production() {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [carouselTopic, setCarouselTopic] = useState("");
   const [carouselSlideCount, setCarouselSlideCount] = useState(5);
+  const [activeEditorSlide, setActiveEditorSlide] = useState<number | null>(null);
+  const [carouselLayerStyles, setCarouselLayerStyles] = useState<Record<number, TextLayer[]>>({});
 
   const isCarousel = spec.pieceType === "carousel";
+
+  const handleApplyToAll = useCallback((layers: TextLayer[]) => {
+    if (!carousel.slides.length) return;
+    const styleMap: Record<number, TextLayer[]> = {};
+    for (const slide of carousel.slides) {
+      // Apply same font/color/weight/style but keep each slide's content
+      const existing = carouselLayerStyles[slide.slideNumber];
+      styleMap[slide.slideNumber] = layers.map((l) => {
+        const match = existing?.find((e) => e.type === l.type);
+        return {
+          ...l,
+          content: match?.content || l.content,
+          x: match?.x ?? l.x,
+          y: match?.y ?? l.y,
+        };
+      });
+    }
+    setCarouselLayerStyles(styleMap);
+    toast.success(`Estilo aplicado a ${carousel.slides.length} slides!`);
+  }, [carousel.slides, carouselLayerStyles]);
 
   const { data: projectDna } = useQuery({
     queryKey: ["project-dna-canvas", activeProjectId],
@@ -473,29 +496,74 @@ export default function Production() {
               </div>
             )}
 
-            {/* Generated Slides */}
+            {/* Generated Slides — Thumbnail Grid + Layer Editor */}
             {carousel.step === "done" && carousel.slides.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {carousel.slides.map((slide, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="rounded-2xl border border-border/20 bg-card/30 overflow-hidden">
-                    {slide.imageUrl ? (
-                      <img src={slide.imageUrl} alt={slide.headline} className="w-full aspect-square object-cover" />
-                    ) : (
-                      <div className="w-full aspect-square bg-card/20 flex items-center justify-center">
-                        <Image className="h-8 w-8 text-muted-foreground/20" />
+              <div className="space-y-4">
+                {/* Thumbnails */}
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {carousel.slides.map((slide, i) => (
+                    <motion.button key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.08 }}
+                      onClick={() => setActiveEditorSlide(activeEditorSlide === slide.slideNumber ? null : slide.slideNumber)}
+                      className={cn(
+                        "shrink-0 w-24 rounded-xl border overflow-hidden transition-all",
+                        activeEditorSlide === slide.slideNumber
+                          ? "border-primary/60 ring-2 ring-primary/30 shadow-lg shadow-primary/10"
+                          : "border-border/20 bg-card/30 hover:border-primary/30"
+                      )}>
+                      {slide.imageUrl ? (
+                        <img src={slide.imageUrl} alt={slide.headline} className="w-full aspect-square object-cover" />
+                      ) : (
+                        <div className="w-full aspect-square bg-card/20 flex items-center justify-center">
+                          <Image className="h-5 w-5 text-muted-foreground/20" />
+                        </div>
+                      )}
+                      <div className="p-1.5 text-center">
+                        <span className="text-[9px] font-mono-brand text-muted-foreground/60">
+                          {slide.slideNumber}. {roleLabels[slide.role]?.split(" ")[0] || slide.role}
+                        </span>
                       </div>
-                    )}
-                    <div className="p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="rounded bg-primary/10 text-primary text-[10px] font-mono-brand px-1.5 py-0.5">{slide.slideNumber}</span>
-                        <span className="text-[10px] text-muted-foreground/50">{roleLabels[slide.role] || slide.role}</span>
+                    </motion.button>
+                  ))}
+                </div>
+
+                {/* Active Layer Editor */}
+                {activeEditorSlide !== null && (() => {
+                  const slide = carousel.slides.find((s) => s.slideNumber === activeEditorSlide);
+                  if (!slide) return null;
+                  return (
+                    <motion.div key={slide.slideNumber} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="rounded-lg bg-primary/10 text-primary text-xs font-mono-brand font-bold w-7 h-7 flex items-center justify-center">
+                          {slide.slideNumber}
+                        </span>
+                        <span className="text-sm font-medium">{roleLabels[slide.role] || slide.role}</span>
+                        <span className="text-[10px] text-muted-foreground/40 ml-auto">Clique no texto para editar • Arraste para mover</span>
                       </div>
-                      <p className="text-xs font-medium truncate">{slide.headline}</p>
-                    </div>
-                  </motion.div>
-                ))}
+                      <LayerEditor
+                        imageUrl={slide.imageUrl}
+                        headline={slide.headline}
+                        body={slide.body}
+                        cta={slide.role === "cta" ? slide.headline : undefined}
+                        ratio={spec.ratio}
+                        niche={projectDna?.niche}
+                        logoUrl={projectDna?.logoUrl}
+                        brandColors={projectDna?.brandColors}
+                        copyPlacement={slide.copyPlacement}
+                        showApplyToAll={carousel.slides.length > 1}
+                        onApplyToAll={handleApplyToAll}
+                        onLayersChange={(layers) => setCarouselLayerStyles((prev) => ({ ...prev, [slide.slideNumber]: layers }))}
+                      />
+                    </motion.div>
+                  );
+                })()}
+
+                {/* Hint when no editor open */}
+                {activeEditorSlide === null && (
+                  <p className="text-center text-xs text-muted-foreground/40 py-4">
+                    Clique em um slide acima para abrir o editor de camadas
+                  </p>
+                )}
               </div>
             )}
 
@@ -555,7 +623,7 @@ export default function Production() {
                       <img src={r.imageUrl} alt={r.headline} className="w-32 h-32 rounded-xl object-cover border border-border/20 shadow-sm" />
                       <button onClick={(e) => { e.stopPropagation(); setPreviewId(previewId === r.id ? null : r.id); }}
                         className="w-full flex items-center justify-center gap-1 rounded-lg bg-card/50 border border-border/20 px-2 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:border-primary/20 transition-all">
-                        <Eye className="h-3 w-3" />Canvas
+                        <Layers className="h-3 w-3" />Editor
                       </button>
                     </div>
                   ) : (
@@ -567,8 +635,8 @@ export default function Production() {
 
                 {previewId === r.id && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 pt-4 border-t border-border/20">
-                    <p className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-2">Preview do Criativo ({spec.ratio})</p>
-                    <CreativeCanvas
+                    <p className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-2">Editor de Camadas ({spec.ratio})</p>
+                    <LayerEditor
                       imageUrl={r.imageUrl} headline={r.headline} body={r.body} cta={r.cta}
                       ratio={spec.ratio} niche={projectDna?.niche} logoUrl={projectDna?.logoUrl} brandColors={projectDna?.brandColors}
                     />
