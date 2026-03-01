@@ -12,14 +12,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface DNAForm {
-  identity: { nome: string; nicho: string; produto: string; slogan: string; tom: string; personalidade: string };
+  identity: { nome: string; nicho: string; produto: string; slogan: string; tom: string; personalidade: string; instagram: string; website: string; whatsapp: string };
   audience: { perfil: string; dor_principal: string; desejo_principal: string; objecoes: string; provas: string };
   strategy: { promessa: string; diferencial: string; mecanismo: string; cta_padrao: string; palavras_proibidas: string; pilares: string };
   visual: { estilo?: string; cores?: string; referencia?: string; colors: { name: string; hex: string }[]; fonts: { role: string; family: string; weight: string; size: string }[]; references: string[] };
 }
 
 const DEFAULT_DNA: DNAForm = {
-  identity: { nome: "", nicho: "", produto: "", slogan: "", tom: "Profissional", personalidade: "" },
+  identity: { nome: "", nicho: "", produto: "", slogan: "", tom: "Profissional", personalidade: "", instagram: "", website: "", whatsapp: "" },
   audience: { perfil: "", dor_principal: "", desejo_principal: "", objecoes: "", provas: "" },
   strategy: { promessa: "", diferencial: "", mecanismo: "", cta_padrao: "", palavras_proibidas: "", pilares: "" },
   visual: {
@@ -155,6 +155,7 @@ export default function ProjectDNA() {
     { key: "identity" as const, title: "Identidade", fields: [
       { k: "nome", label: "Nome do Projeto" }, { k: "nicho", label: "Nicho" }, { k: "produto", label: "Produto" },
       { k: "slogan", label: "Slogan" }, { k: "tom", label: "Tom de Voz" }, { k: "personalidade", label: "Personalidade" },
+      { k: "instagram", label: "@ Instagram" }, { k: "website", label: "Website" }, { k: "whatsapp", label: "WhatsApp" },
     ]},
     { key: "audience" as const, title: "Público e Voz", fields: [
       { k: "perfil", label: "Público Principal" }, { k: "dor_principal", label: "Dor Principal" }, { k: "desejo_principal", label: "Desejo Principal" },
