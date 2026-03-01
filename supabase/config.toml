@@ -1,1 +1,4 @@
 project_id = "gsqbekrccyojcziommco"
+
+[functions.cos-generate]
+verify_jwt = false

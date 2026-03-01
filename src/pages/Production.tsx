@@ -2,9 +2,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles,
-  LayoutGrid, Rows3
+  LayoutGrid, Rows3, Loader2
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const pieceTypes = [
   { id: "post", label: "Post", icon: LayoutGrid },
@@ -15,44 +18,82 @@ const pieceTypes = [
   { id: "vsl", label: "VSL", icon: Type },
 ];
 
-const mockResults = [
-  {
-    id: 1,
-    headline: "Transforme seu negócio digital em 90 dias",
-    body: "Descubra o método que já ajudou mais de 5.000 empreendedores a faturar R$10k/mês com marketing digital.",
-    cta: "Quero Começar Agora →",
-    provider: "Gemini Pro",
-    profile: "Padrão",
-    status: "Rascunho",
-  },
-  {
-    id: 2,
-    headline: "De zero a R$10k: o caminho mais curto",
-    body: "Pare de perder tempo com estratégias que não funcionam. O Expert Pro é o atalho que você precisava.",
-    cta: "Garantir Minha Vaga",
-    provider: "Gemini Flash",
-    profile: "Economia",
-    status: "Rascunho",
-  },
-  {
-    id: 3,
-    headline: "Seu faturamento merece um upgrade",
-    body: "Com o Expert Pro, você aprende a criar campanhas que vendem no automático. Resultados desde a primeira semana.",
-    cta: "Acessar o Método →",
-    provider: "OpenAI",
-    profile: "Qualidade",
-    status: "Rascunho",
-  },
-];
-
 const profileColors: Record<string, string> = {
-  Economia: "bg-cos-warning/10 text-cos-warning",
-  Padrão: "bg-primary/10 text-primary",
-  Qualidade: "bg-cos-purple/10 text-cos-purple",
+  economy: "bg-cos-warning/10 text-cos-warning",
+  standard: "bg-primary/10 text-primary",
+  quality: "bg-cos-purple/10 text-cos-purple",
 };
 
+const profileLabels: Record<string, string> = {
+  economy: "Economia",
+  standard: "Padrão",
+  quality: "Qualidade",
+};
+
+interface GeneratedResult {
+  id: string;
+  headline: string;
+  body: string;
+  cta: string;
+  imageUrl: string | null;
+  provider: string;
+  profile: string;
+  status: string;
+  creditCost: number;
+}
+
 export default function Production() {
-  const { spec, setSpec, selectAsset, openDock } = useAssistant();
+  const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
+  const { session } = useAuth();
+  const [results, setResults] = useState<GeneratedResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [userPrompt, setUserPrompt] = useState("");
+
+  const handleGenerate = async () => {
+    if (!activeProjectId || !session) {
+      toast.error("Você precisa estar logado em um projeto.");
+      return;
+    }
+
+    setLoading(true);
+    setResults([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("cos-generate", {
+        body: {
+          projectId: activeProjectId,
+          mode: spec.mode,
+          output: spec.output,
+          pieceType: spec.pieceType,
+          quantity: spec.quantity,
+          profile: spec.profile,
+          provider: spec.provider,
+          destination: spec.destination,
+          ratio: spec.ratio,
+          intensity: spec.intensity,
+          useModel: spec.useModel,
+          useVisualProfile: spec.useVisualProfile,
+          userPrompt: userPrompt || undefined,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setResults(data.results || []);
+      const totalCredits = (data.results || []).reduce((s: number, r: GeneratedResult) => s + r.creditCost, 0);
+      toast.success(`${data.results?.length || 0} variações geradas (${totalCredits} créditos)`);
+    } catch (e: any) {
+      console.error("Generate error:", e);
+      toast.error(e.message || "Erro ao gerar conteúdo.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
@@ -155,6 +196,21 @@ export default function Production() {
           </div>
         </div>
 
+        {/* Provider */}
+        <div>
+          <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Provedor</label>
+          <select
+            value={spec.provider}
+            onChange={(e) => setSpec({ provider: e.target.value })}
+            className="w-full rounded-md border border-border bg-secondary/50 px-2 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
+          >
+            <option value="Auto">Auto (Fallback)</option>
+            <option value="google/gemini-3-flash-preview">Gemini Flash</option>
+            <option value="google/gemini-2.5-pro">Gemini Pro</option>
+            <option value="google/gemini-2.5-flash-lite">Gemini Lite</option>
+          </select>
+        </div>
+
         {/* Toggles */}
         <div className="space-y-2">
           <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-xs text-muted-foreground cursor-pointer hover:border-foreground/20 transition-colors">
@@ -167,20 +223,57 @@ export default function Production() {
           </label>
         </div>
 
+        {/* Prompt rápido */}
+        <div>
+          <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Prompt (opcional)</label>
+          <textarea
+            value={userPrompt}
+            onChange={(e) => setUserPrompt(e.target.value)}
+            placeholder="Ex: Foco em urgência e escassez..."
+            rows={3}
+            className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
+          />
+        </div>
+
         {/* Generate button */}
-        <button className="w-full flex items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors glow-cyan animate-pulse-glow">
-          <Zap className="h-4 w-4" />
-          Gerar
+        <button
+          onClick={handleGenerate}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+          {loading ? "Gerando..." : "Gerar"}
         </button>
       </div>
 
-      {/* Center — Results (full width, no right panel) */}
+      {/* Center — Results */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         <div className="mb-4">
           <h2 className="text-sm font-semibold">Resultados</h2>
-          <p className="text-xs text-muted-foreground">3 variações geradas — Post Feed 1:1</p>
+          <p className="text-xs text-muted-foreground">
+            {results.length > 0
+              ? `${results.length} variações geradas — ${spec.pieceType} ${spec.destination} ${spec.ratio}`
+              : "Clique em Gerar para criar conteúdo com IA"}
+          </p>
         </div>
-        {mockResults.map((r, i) => (
+
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm">Gerando {spec.quantity} variações com perfil {profileLabels[spec.profile]}...</p>
+            <p className="text-xs text-muted-foreground">Injetando DNA do projeto • Router {spec.provider}</p>
+          </div>
+        )}
+
+        {!loading && results.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
+            <Zap className="h-10 w-10 text-muted-foreground/20" />
+            <p className="text-sm">Nenhum resultado ainda</p>
+            <p className="text-xs">Configure os parâmetros e clique em Gerar</p>
+          </div>
+        )}
+
+        {results.map((r, i) => (
           <motion.div
             key={r.id}
             initial={{ opacity: 0, y: 16 }}
@@ -188,11 +281,11 @@ export default function Production() {
             transition={{ delay: i * 0.1 }}
             onClick={() => {
               selectAsset({
-                id: String(r.id),
+                id: r.id,
                 title: r.headline,
-                type: "Post",
+                type: spec.pieceType,
                 status: r.status,
-                profile: r.profile,
+                profile: profileLabels[r.profile] || r.profile,
                 provider: r.provider,
               });
             }}
@@ -202,17 +295,28 @@ export default function Production() {
               <div className="flex-1 space-y-2">
                 <h3 className="font-semibold text-sm">{r.headline}</h3>
                 <p className="text-sm text-muted-foreground">{r.body}</p>
-                <p className="text-sm font-medium text-primary">{r.cta}</p>
+                {r.cta && <p className="text-sm font-medium text-primary">{r.cta}</p>}
               </div>
-              <div className="shrink-0 w-32 h-32 rounded-md bg-secondary border border-border flex items-center justify-center">
-                <Image className="h-8 w-8 text-muted-foreground/30" />
-              </div>
+              {r.imageUrl ? (
+                <img
+                  src={r.imageUrl}
+                  alt={r.headline}
+                  className="shrink-0 w-32 h-32 rounded-md object-cover border border-border"
+                />
+              ) : (
+                <div className="shrink-0 w-32 h-32 rounded-md bg-secondary border border-border flex items-center justify-center">
+                  <Image className="h-8 w-8 text-muted-foreground/30" />
+                </div>
+              )}
             </div>
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{r.provider}</span>
-                <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono ${profileColors[r.profile]}`}>{r.profile}</span>
+                <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono ${profileColors[r.profile] || "bg-secondary text-muted-foreground"}`}>
+                  {profileLabels[r.profile] || r.profile}
+                </span>
               </div>
+              <span className="text-[10px] text-muted-foreground">{r.creditCost} créditos</span>
             </div>
           </motion.div>
         ))}
