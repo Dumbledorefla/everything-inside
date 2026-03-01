@@ -45,7 +45,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
           {!collapsed && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-baseline gap-1.5">
               <span className="font-mono-brand text-sm font-bold tracking-wider text-gradient-cyan">COS</span>
-              <span className="text-[8px] font-mono-brand text-muted-foreground/30 tracking-widest">v2</span>
+              <span className="text-[8px] font-mono-brand text-muted-foreground/50 tracking-widest">v2</span>
             </motion.div>
           )}
         </div>
@@ -64,7 +64,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
           <>
             {!collapsed && (
               <div className="mb-2 px-3">
-                <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40">Projeto</span>
+                <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Projeto</span>
               </div>
             )}
             {projectNav.map((item) => {
@@ -78,7 +78,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
                     "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-all duration-200 relative group",
                     isActive
                       ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground/70 hover:bg-card/40 hover:text-foreground",
+                      : "text-sidebar-foreground/80 hover:bg-card/40 hover:text-foreground",
                     collapsed && "justify-center px-0"
                   )}
                 >
@@ -101,7 +101,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
             <div className="my-3 mx-3 border-t border-border/10" />
             {!collapsed && (
               <div className="mb-2 px-3">
-                <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/40">Global</span>
+                <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Global</span>
               </div>
             )}
           </>
@@ -115,7 +115,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
               "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-all duration-200 relative group",
               isActive && !isInProject
                 ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground/70 hover:bg-card/40 hover:text-foreground",
+                : "text-sidebar-foreground/80 hover:bg-card/40 hover:text-foreground",
               collapsed && "justify-center px-0"
             )}
           >
@@ -139,7 +139,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
       {/* Bottom */}
       {!collapsed && (
         <div className="px-4 py-3 border-t border-border/10">
-          <p className="text-[8px] text-muted-foreground/20 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
+          <p className="text-[8px] text-muted-foreground/40 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
         </div>
       )}
     </aside>
