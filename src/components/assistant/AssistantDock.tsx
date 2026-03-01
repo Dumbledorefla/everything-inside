@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import ChatThread from "./ChatThread";
 import ContextPanel from "./ContextPanel";
 import QuickActions from "./QuickActions";
-import { MessageSquare, Layers, Zap, X, GripVertical } from "lucide-react";
+import AdaptiveMemoryObserver from "./AdaptiveMemoryObserver";
+import { MessageSquare, Layers, Zap, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -50,6 +51,11 @@ export default function AssistantDock() {
             <button onClick={closeDock} className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
               <X className="h-4 w-4" />
             </button>
+          </div>
+
+          {/* Adaptive Memory Alert (shows across all tabs when patterns detected) */}
+          <div className="px-3 pt-2">
+            <AdaptiveMemoryObserver />
           </div>
 
           {/* Content */}

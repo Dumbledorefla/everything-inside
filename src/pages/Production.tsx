@@ -2,12 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles,
-  LayoutGrid, Rows3, Loader2
+  LayoutGrid, Rows3, Loader2, Eye
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import CreativeCanvas from "@/components/creative/CreativeCanvas";
 
 const pieceTypes = [
   { id: "post", label: "Post", icon: LayoutGrid },
@@ -40,6 +41,7 @@ interface GeneratedResult {
   profile: string;
   status: string;
   creditCost: number;
+  fallbackEvents?: string[];
 }
 
 export default function Production() {
@@ -48,16 +50,15 @@ export default function Production() {
   const [results, setResults] = useState<GeneratedResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [userPrompt, setUserPrompt] = useState("");
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     if (!activeProjectId || !session) {
       toast.error("Você precisa estar logado em um projeto.");
       return;
     }
-
     setLoading(true);
     setResults([]);
-
     try {
       const { data, error } = await supabase.functions.invoke("cos-generate", {
         body: {
@@ -76,12 +77,12 @@ export default function Production() {
           userPrompt: userPrompt || undefined,
         },
       });
-
       if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
 
-      if (data?.error) {
-        toast.error(data.error);
-        return;
+      const fallbackLog = data?.fallbackLog || [];
+      if (fallbackLog.length > 0) {
+        toast.warning(`Fallback ativado: ${fallbackLog[0]}`);
       }
 
       setResults(data.results || []);
@@ -95,6 +96,8 @@ export default function Production() {
     }
   };
 
+  const previewResult = results.find((r) => r.id === previewId);
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
       {/* Left panel — Controls */}
@@ -104,13 +107,8 @@ export default function Production() {
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Modo</label>
           <div className="flex gap-1">
             {(["rapido", "orientado", "sprint"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setSpec({ mode: m })}
-                className={`flex-1 rounded-md py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all ${
-                  spec.mode === m ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
+              <button key={m} onClick={() => setSpec({ mode: m })}
+                className={`flex-1 rounded-md py-1.5 text-[10px] font-medium uppercase tracking-wider transition-all ${spec.mode === m ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
                 {m === "rapido" ? "Rápido" : m === "orientado" ? "Orientado" : "Sprint"}
               </button>
             ))}
@@ -122,15 +120,9 @@ export default function Production() {
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Tipo de Peça</label>
           <div className="grid grid-cols-3 gap-1.5">
             {pieceTypes.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setSpec({ pieceType: t.id })}
-                className={`flex flex-col items-center gap-1 rounded-md border py-2 text-[10px] transition-all ${
-                  spec.pieceType === t.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-foreground/30"
-                }`}
-              >
-                <t.icon className="h-3.5 w-3.5" />
-                {t.label}
+              <button key={t.id} onClick={() => setSpec({ pieceType: t.id })}
+                className={`flex flex-col items-center gap-1 rounded-md border py-2 text-[10px] transition-all ${spec.pieceType === t.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-foreground/30"}`}>
+                <t.icon className="h-3.5 w-3.5" />{t.label}
               </button>
             ))}
           </div>
@@ -145,15 +137,22 @@ export default function Production() {
               { id: "image" as const, label: "Imagem", icon: Image },
               { id: "both" as const, label: "Ambos", icon: Zap },
             ]).map((o) => (
-              <button
-                key={o.id}
-                onClick={() => setSpec({ output: o.id })}
-                className={`flex-1 flex flex-col items-center gap-1 rounded-md border py-2 text-[10px] transition-all ${
-                  spec.output === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-foreground/30"
-                }`}
-              >
-                <o.icon className="h-3.5 w-3.5" />
-                {o.label}
+              <button key={o.id} onClick={() => setSpec({ output: o.id })}
+                className={`flex-1 flex flex-col items-center gap-1 rounded-md border py-2 text-[10px] transition-all ${spec.output === o.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-foreground/30"}`}>
+                <o.icon className="h-3.5 w-3.5" />{o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Ratio */}
+        <div>
+          <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Proporção</label>
+          <div className="flex gap-1">
+            {["1:1", "4:5", "9:16", "16:9"].map((r) => (
+              <button key={r} onClick={() => setSpec({ ratio: r })}
+                className={`flex-1 rounded-md border py-1.5 text-[10px] transition-all ${spec.ratio === r ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+                {r}
               </button>
             ))}
           </div>
@@ -161,36 +160,18 @@ export default function Production() {
 
         {/* Quantity */}
         <div>
-          <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">
-            Variações: {spec.quantity}
-          </label>
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={spec.quantity}
-            onChange={(e) => setSpec({ quantity: +e.target.value })}
-            className="w-full accent-primary"
-          />
+          <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Variações: {spec.quantity}</label>
+          <input type="range" min={1} max={20} value={spec.quantity} onChange={(e) => setSpec({ quantity: +e.target.value })} className="w-full accent-primary" />
         </div>
 
         {/* Profile */}
         <div>
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Perfil</label>
           <div className="flex gap-1">
-            {([
-              { id: "economy" as const, label: "Economia" },
-              { id: "standard" as const, label: "Padrão" },
-              { id: "quality" as const, label: "Qualidade" },
-            ]).map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSpec({ profile: p.id })}
-                className={`flex-1 rounded-md border py-1.5 text-[10px] transition-all ${
-                  spec.profile === p.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"
-                }`}
-              >
-                {p.label}
+            {(["economy", "standard", "quality"] as const).map((p) => (
+              <button key={p} onClick={() => setSpec({ profile: p })}
+                className={`flex-1 rounded-md border py-1.5 text-[10px] transition-all ${spec.profile === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"}`}>
+                {profileLabels[p]}
               </button>
             ))}
           </div>
@@ -199,11 +180,8 @@ export default function Production() {
         {/* Provider */}
         <div>
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Provedor</label>
-          <select
-            value={spec.provider}
-            onChange={(e) => setSpec({ provider: e.target.value })}
-            className="w-full rounded-md border border-border bg-secondary/50 px-2 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none"
-          >
+          <select value={spec.provider} onChange={(e) => setSpec({ provider: e.target.value })}
+            className="w-full rounded-md border border-border bg-secondary/50 px-2 py-1.5 text-xs text-foreground focus:border-primary focus:outline-none">
             <option value="Auto">Auto (Fallback)</option>
             <option value="google/gemini-3-flash-preview">Gemini Flash</option>
             <option value="google/gemini-2.5-pro">Gemini Pro</option>
@@ -223,24 +201,15 @@ export default function Production() {
           </label>
         </div>
 
-        {/* Prompt rápido */}
+        {/* Prompt */}
         <div>
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Prompt (opcional)</label>
-          <textarea
-            value={userPrompt}
-            onChange={(e) => setUserPrompt(e.target.value)}
-            placeholder="Ex: Foco em urgência e escassez..."
-            rows={3}
-            className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none"
-          />
+          <textarea value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} placeholder="Ex: Foco em urgência e escassez..."
+            rows={3} className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none" />
         </div>
 
-        {/* Generate button */}
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <button onClick={handleGenerate} disabled={loading}
+          className="w-full flex items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
           {loading ? "Gerando..." : "Gerar"}
         </button>
@@ -274,47 +243,54 @@ export default function Production() {
         )}
 
         {results.map((r, i) => (
-          <motion.div
-            key={r.id}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            onClick={() => {
-              selectAsset({
-                id: r.id,
-                title: r.headline,
-                type: spec.pieceType,
-                status: r.status,
-                profile: profileLabels[r.profile] || r.profile,
-                provider: r.provider,
-              });
-            }}
-            className="rounded-lg border border-border bg-card p-5 hover:border-primary/30 transition-colors cursor-pointer"
-          >
+          <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+            onClick={() => selectAsset({ id: r.id, title: r.headline, type: spec.pieceType, status: r.status, profile: profileLabels[r.profile] || r.profile, provider: r.provider })}
+            className="rounded-lg border border-border bg-card p-5 hover:border-primary/30 transition-colors cursor-pointer">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 space-y-2">
                 <h3 className="font-semibold text-sm">{r.headline}</h3>
                 <p className="text-sm text-muted-foreground">{r.body}</p>
                 {r.cta && <p className="text-sm font-medium text-primary">{r.cta}</p>}
+                {r.fallbackEvents && r.fallbackEvents.length > 0 && (
+                  <p className="text-[10px] text-cos-warning mt-1">⚠ Fallback: {r.fallbackEvents[0]}</p>
+                )}
               </div>
               {r.imageUrl ? (
-                <img
-                  src={r.imageUrl}
-                  alt={r.headline}
-                  className="shrink-0 w-32 h-32 rounded-md object-cover border border-border"
-                />
+                <div className="shrink-0 space-y-1">
+                  <img src={r.imageUrl} alt={r.headline} className="w-32 h-32 rounded-md object-cover border border-border" />
+                  <button onClick={(e) => { e.stopPropagation(); setPreviewId(previewId === r.id ? null : r.id); }}
+                    className="w-full flex items-center justify-center gap-1 rounded-md bg-secondary/80 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+                    <Eye className="h-3 w-3" />Canvas
+                  </button>
+                </div>
               ) : (
                 <div className="shrink-0 w-32 h-32 rounded-md bg-secondary border border-border flex items-center justify-center">
                   <Image className="h-8 w-8 text-muted-foreground/30" />
                 </div>
               )}
             </div>
+
+            {/* Canvas Preview */}
+            {previewId === r.id && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 pt-4 border-t border-border">
+                <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">Preview do Criativo ({spec.ratio})</p>
+                <CreativeCanvas
+                  imageUrl={r.imageUrl}
+                  headline={r.headline}
+                  body={r.body}
+                  cta={r.cta}
+                  ratio={spec.ratio}
+                />
+              </motion.div>
+            )}
+
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{r.provider}</span>
                 <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono ${profileColors[r.profile] || "bg-secondary text-muted-foreground"}`}>
                   {profileLabels[r.profile] || r.profile}
                 </span>
+                <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{spec.ratio}</span>
               </div>
               <span className="text-[10px] text-muted-foreground">{r.creditCost} créditos</span>
             </div>
