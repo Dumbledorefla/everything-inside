@@ -47,10 +47,10 @@
     /* Brand accents */
     --cos-cyan: 187 94% 43%;
     --cos-cyan-glow: 187 94% 55%;
-    --cos-success: 152 69% 41%;
-    --cos-warning: 45 60% 45%;
-    --cos-error: 0 72% 51%;
-    --cos-purple: 262 83% 58%;
+    --cos-success: 160 60% 42%;
+    --cos-warning: 220 45% 56%;
+    --cos-error: 0 65% 50%;
+    --cos-purple: 270 70% 62%;
 
     /* Sidebar */
     --sidebar-background: 0 0% 3%;
