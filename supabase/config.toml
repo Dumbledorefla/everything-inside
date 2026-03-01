@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.page-assembler]
 verify_jwt = false
+
+[functions.branding-generate]
+verify_jwt = false
+
+[functions.template-extract]
+verify_jwt = false

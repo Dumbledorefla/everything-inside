@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, FileCheck, Star, ArrowRight, Upload, Bot, BarChart3, DollarSign, Brain, TrendingUp } from "lucide-react";
+import { Zap, FileCheck, Star, ArrowRight, Upload, Bot, BarChart3, DollarSign, Brain, TrendingUp, Palette, Loader2 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 const statusColors: Record<string, string> = {
@@ -23,7 +25,9 @@ const PIE_COLORS = ["hsl(45, 93%, 47%)", "hsl(171, 77%, 64%)", "hsl(142, 71%, 45
 export default function ProjectHome() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { sendMessage, openDock } = useAssistant();
+  const [brandingLoading, setBrandingLoading] = useState(false);
 
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
@@ -89,6 +93,33 @@ export default function ProjectHome() {
     },
     enabled: !!projectId,
   });
+
+  // Brand Kit
+  const { data: brandKit } = useQuery({
+    queryKey: ["brand-kit", projectId],
+    queryFn: async () => {
+      const { data } = await supabase.from("brand_kits").select("*").eq("project_id", projectId!).maybeSingle();
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const handleGenerateBranding = async () => {
+    setBrandingLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("branding-generate", {
+        body: { projectId },
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["brand-kit", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["dna-versions", projectId] });
+      toast.success(`Branding Kit gerado! DNA atualizado para v${data.dnaVersion}`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBrandingLoading(false);
+    }
+  };
 
   const { data: recentAssets } = useQuery({
     queryKey: ["recent-assets", projectId],
@@ -215,6 +246,59 @@ export default function ProjectHome() {
           </button>
         </motion.div>
       )}
+
+      {/* Branding Kit */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+        className="mb-6 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Palette className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Branding Kit</h3>
+          </div>
+          {!brandKit && (
+            <button onClick={handleGenerateBranding} disabled={brandingLoading}
+              className="flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
+              {brandingLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Palette className="h-3 w-3" />}
+              {brandingLoading ? "Gerando..." : "Gerar Identidade Visual"}
+            </button>
+          )}
+        </div>
+        {brandKit ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Paleta</p>
+              <div className="flex gap-2">
+                {((brandKit.color_palette as any) || []).map((c: string, i: number) => (
+                  <div key={i} className="flex flex-col items-center gap-1">
+                    <div className="h-8 w-8 rounded-md border border-border" style={{ backgroundColor: c }} />
+                    <span className="text-[9px] font-mono text-muted-foreground">{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Tipografia</p>
+              <p className="text-xs">
+                <span className="font-semibold">{(brandKit.typography as any)?.heading || "—"}</span>
+                {" · "}
+                <span className="text-muted-foreground">{(brandKit.typography as any)?.body || "—"}</span>
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Pilares Editoriais</p>
+              <div className="flex flex-wrap gap-1.5">
+                {((brandKit.editorial_line as any) || []).map((p: any, i: number) => (
+                  <span key={i} className="rounded-md bg-primary/10 px-2 py-1 text-[10px] text-primary">
+                    {p.pillar || p}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Gere um kit de marca completo com paleta, tipografia e linha editorial baseados no DNA do projeto.</p>
+        )}
+      </motion.div>
 
       {/* Consumption Dashboard */}
       <div className="grid grid-cols-2 gap-4 mb-8">

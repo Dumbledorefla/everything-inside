@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Zap, Calendar, Library, FileStack, Settings,
-  ChevronLeft, FolderOpen, Dna, Home, History, Layers, FileText,
+  ChevronLeft, FolderOpen, Dna, Home, History, Layers, FileText, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,7 @@ const projectNav = [
   { to: "planning", icon: Calendar, label: "Planejamento" },
   { to: "sprints", icon: Layers, label: "Sprints" },
   { to: "pages", icon: FileText, label: "Páginas" },
+  { to: "models", icon: Sparkles, label: "Modelos" },
   { to: "history", icon: History, label: "Histórico" },
 ];
 
