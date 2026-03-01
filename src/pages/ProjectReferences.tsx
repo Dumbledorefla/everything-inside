@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Eye, Upload, Loader2, Link, Brain, Sparkles, X, Copy, Check,
   Target, Heart, Layers, Type, Users, Lightbulb, Wand2, ChevronDown,
+  Sun, Palette,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -301,6 +302,53 @@ export default function ProjectReferences() {
 
                 {/* Strategic Why */}
                 <AnalysisSection icon={Lightbulb} label="Por que Funciona" text={selectedRef.strategic_why} highlight />
+
+                {/* Visual DNA: Palette, Lighting, Grain */}
+                {(() => {
+                  const raw = selectedRef.raw_analysis || {};
+                  const hasDna = raw.palette?.length || raw.lighting_type || raw.grain_level || raw.color_temperature;
+                  if (!hasDna) return null;
+                  return (
+                    <div className="space-y-2">
+                      <h3 className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                        <Sun className="h-3.5 w-3.5" /> DNA Visual Profundo
+                      </h3>
+                      {raw.palette?.length > 0 && (
+                        <div className="rounded-xl bg-secondary/30 p-4">
+                          <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-2">Paleta Extraída</p>
+                          <div className="flex gap-2">
+                            {raw.palette.map((hex: string, i: number) => (
+                              <div key={i} className="flex flex-col items-center gap-1">
+                                <div className="w-8 h-8 rounded-lg border border-border/20 shadow-sm" style={{ backgroundColor: hex }} />
+                                <span className="text-[9px] font-mono-brand text-muted-foreground/50">{hex}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-2">
+                        {raw.lighting_type && (
+                          <div className="rounded-xl bg-secondary/30 p-3">
+                            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-0.5">Luz</p>
+                            <p className="text-xs font-mono-brand font-medium">{raw.lighting_type}</p>
+                          </div>
+                        )}
+                        {raw.grain_level && (
+                          <div className="rounded-xl bg-secondary/30 p-3">
+                            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-0.5">Grão</p>
+                            <p className="text-xs font-mono-brand font-medium">{raw.grain_level}</p>
+                          </div>
+                        )}
+                        {raw.color_temperature && (
+                          <div className="rounded-xl bg-secondary/30 p-3">
+                            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider mb-0.5">Temperatura</p>
+                            <p className="text-xs font-mono-brand font-medium">{raw.color_temperature}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Generated Prompt */}
                 {selectedRef.generated_prompt && (
