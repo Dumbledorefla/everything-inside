@@ -4,18 +4,16 @@ import ChatThread from "./ChatThread";
 import ContextPanel from "./ContextPanel";
 import QuickActions from "./QuickActions";
 import AdaptiveMemoryObserver from "./AdaptiveMemoryObserver";
-import { MessageSquare, Layers, Zap, X } from "lucide-react";
 import BlackHoleShader from "../BlackHoleShader";
-import { cn } from "@/lib/utils";
 import { getNicheClass } from "@/lib/nicheAccent";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const tabs = [
-  { id: "chat" as const, label: "Chat", icon: MessageSquare },
-  { id: "context" as const, label: "Contexto", icon: Layers },
-  { id: "actions" as const, label: "Ações", icon: Zap },
+  { id: "chat" as const, label: "COMM", symbol: "◈" },
+  { id: "context" as const, label: "CTX", symbol: "◎" },
+  { id: "actions" as const, label: "ACT", symbol: "⚡" },
 ];
 
 export default function AssistantDock() {
@@ -37,6 +35,8 @@ export default function AssistantDock() {
   });
 
   const nicheClass = project?.niche ? getNicheClass(project.niche) : "";
+  const isGlobal = agentMode === "global";
+  const accentVar = isGlobal ? "var(--cos-purple, 180 60% 60%)" : "var(--primary)";
 
   if (!dockOpen) {
     return (
@@ -49,11 +49,15 @@ export default function AssistantDock() {
           onClick={() => setDockFocused(true)}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
-          className="rounded-2xl p-2.5 flex items-center gap-2 transition-transform group bg-card/40 backdrop-blur-2xl border border-border/30 shadow-xl shadow-primary/5"
+          className="rounded-full p-1 backdrop-blur-xl"
+          style={{
+            background: "radial-gradient(circle, hsl(0 0% 5% / 0.9) 40%, transparent 100%)",
+            boxShadow: `0 0 40px -10px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.4)`,
+          }}
         >
           <BlackHoleShader
-            mode={agentMode === "global" ? "global" : "project"}
-            size={36}
+            mode={isGlobal ? "global" : "project"}
+            size={44}
             thinking={false}
           />
         </motion.button>
@@ -71,60 +75,96 @@ export default function AssistantDock() {
           transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
           onMouseEnter={() => setDockFocused(true)}
           onMouseLeave={() => setDockFocused(false)}
-          className={cn(
-            "shrink-0 h-full flex flex-col overflow-hidden transition-opacity duration-500",
-            "rounded-l-3xl border-l border-border/20 bg-background/60 backdrop-blur-3xl",
-            nicheClass
-          )}
+          className={`shrink-0 h-full flex flex-col overflow-hidden transition-opacity duration-500 ${nicheClass}`}
           style={{
-            minWidth: 340, maxWidth: 520,
-            boxShadow: dockFocused ? `0 0 80px -20px hsl(var(--primary) / 0.1)` : "none",
+            minWidth: 340,
+            maxWidth: 520,
+            background: "linear-gradient(180deg, hsl(0 0% 3% / 0.95) 0%, hsl(0 0% 2% / 0.98) 100%)",
+            backdropFilter: "blur(40px) saturate(1.2)",
+            borderLeft: "1px solid hsl(0 0% 100% / 0.04)",
+            boxShadow: dockFocused
+              ? `inset 1px 0 0 hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.08), -20px 0 80px -20px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.06)`
+              : "none",
           }}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
-            <div className="flex items-center gap-2">
+          {/* Header — pure custom */}
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}
+          >
+            <div className="flex items-center gap-2.5">
               <BlackHoleShader
-                mode={agentMode === "global" ? "global" : "project"}
+                mode={isGlobal ? "global" : "project"}
                 size={28}
                 thinking={false}
               />
-              <div className={cn(
-                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider",
-                agentMode === "global"
-                  ? "bg-cos-purple/10 text-cos-purple border border-cos-purple/15"
-                  : "bg-primary/10 text-primary border border-primary/15"
-              )}>
-                {agentMode === "global" ? "Global" : project?.name?.slice(0, 12) || "Projeto"}
-              </div>
+              <span
+                className="font-mono text-[10px] uppercase tracking-[0.25em]"
+                style={{
+                  color: `hsl(${isGlobal ? "270 70% 70%" : "190 80% 70%"})`,
+                  textShadow: `0 0 12px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.4)`,
+                }}
+              >
+                {isGlobal ? "GLOBAL" : (project?.name?.slice(0, 12).toUpperCase() || "PROJETO")}
+              </span>
             </div>
 
-            <div className="flex gap-0.5 rounded-xl bg-card/30 p-0.5">
+            {/* Tabs — custom glyphs */}
+            <div className="flex gap-1">
               {tabs.map((t) => {
-                if (agentMode === "global" && t.id !== "chat") return null;
+                if (isGlobal && t.id !== "chat") return null;
+                const isActive = activeTab === t.id;
                 return (
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all relative",
-                      activeTab === t.id
-                        ? "bg-card/60 text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
+                    className="relative px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all duration-300"
+                    style={{
+                      color: isActive
+                        ? `hsl(${isGlobal ? "270 70% 80%" : "190 80% 80%"})`
+                        : "hsl(0 0% 40%)",
+                      background: isActive ? "hsl(0 0% 100% / 0.03)" : "transparent",
+                      borderRadius: 6,
+                      textShadow: isActive
+                        ? `0 0 8px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.5)`
+                        : "none",
+                    }}
                   >
-                    <t.icon className="h-3.5 w-3.5" />
+                    <span className="mr-1">{t.symbol}</span>
                     {t.label}
+                    {isActive && (
+                      <span
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-px"
+                        style={{
+                          background: `linear-gradient(90deg, transparent, hsl(${isGlobal ? "270 70% 60%" : "190 80% 60%"}), transparent)`,
+                        }}
+                      />
+                    )}
                   </button>
                 );
               })}
             </div>
 
+            {/* Close — custom X glyph */}
             <button
               onClick={closeDock}
-              className="rounded-lg p-1.5 text-muted-foreground hover:bg-card/40 hover:text-foreground transition-colors"
+              className="w-7 h-7 flex items-center justify-center transition-all duration-200"
+              style={{
+                color: "hsl(0 0% 35%)",
+                borderRadius: 6,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "hsl(0 0% 70%)";
+                e.currentTarget.style.background = "hsl(0 0% 100% / 0.04)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "hsl(0 0% 35%)";
+                e.currentTarget.style.background = "transparent";
+              }}
             >
-              <X className="h-4 w-4" />
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
 
