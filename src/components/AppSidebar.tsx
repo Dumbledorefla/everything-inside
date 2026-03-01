@@ -34,7 +34,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
   return (
     <aside className={cn(
       "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
-      "glass-intense",
+      "bg-sidebar border-r border-border",
       collapsed ? "w-[60px]" : "w-56"
     )}>
       {/* Brand header */}

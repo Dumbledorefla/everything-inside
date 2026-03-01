@@ -28,7 +28,7 @@ export default function AppLayout() {
       <header
         className={cn(
           "fixed top-0 right-0 z-30 flex h-12 items-center justify-between px-5 transition-all duration-300",
-          "bg-background/40 backdrop-blur-2xl border-b border-border/10",
+          "bg-surface-0 border-b border-border",
           collapsed ? "left-[60px]" : "left-56"
         )}
       >
