@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Zap, Calendar, Library, FileStack, Settings,
-  ChevronLeft, FolderOpen, Dna, Home, History, Layers, FileText, Sparkles,
+  ChevronLeft, FolderOpen, Dna, Home, History, Layers, FileText, Sparkles, ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const globalNav = [
   { to: "/", icon: LayoutDashboard, label: "Projetos" },
   { to: "/library", icon: Library, label: "Biblioteca Global" },
   { to: "/models", icon: FileStack, label: "Modelos" },
+  { to: "/logs", icon: ScrollText, label: "Logs" },
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
