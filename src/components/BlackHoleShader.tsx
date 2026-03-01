@@ -216,14 +216,14 @@ void main() {
   float edgeRing = exp(-pow((dist - rs * 1.15) / 0.018, 2.0)) * 1.5;
   edgeRing *= 0.7 + 0.3 * sin(angle * 12.0 + time * 5.0);
 
-  // ── Corona / ambient glow ──
-  float corona = exp(-dist * 3.5) * 0.2 * (1.0 + uThinking * 0.6 + uAudioLevel * 1.0);
+  // ── Corona / ambient glow — very subtle ──
+  float corona = exp(-dist * 5.0) * 0.08 * (1.0 + uThinking * 0.4 + uAudioLevel * 0.5);
   // Pulsating corona
-  float coronaPulse = 1.0 + 0.08 * sin(time * 2.0) + 0.05 * sin(time * 3.7);
+  float coronaPulse = 1.0 + 0.04 * sin(time * 2.0) + 0.03 * sin(time * 3.7);
   corona *= coronaPulse;
 
-  // ── Outer halo glow (very subtle, makes it feel alive at small sizes) ──
-  float outerHalo = exp(-dist * 2.0) * 0.08;
+  // ── Outer halo glow — barely visible ──
+  float outerHalo = exp(-dist * 4.0) * 0.02;
 
   // ── Quasar Jets (when thinking) ──
   float jetWidth = 0.012 + uThinking * 0.012;
@@ -271,7 +271,7 @@ void main() {
   // Alpha — ensure visibility even at small sizes
   float alpha = totalDisk + backIntensity * 0.6 + backHeat * 0.4
               + photonRing * 0.9 + edgeRing * 0.6
-              + corona * 4.0 + outerHalo * 3.0
+              + corona * 2.0 + outerHalo * 1.0
               + reactive + horizonEdge * 0.8
               + eventHorizon * 0.98 + jet * 2.0;
   alpha = clamp(alpha, 0.0, 1.0);
