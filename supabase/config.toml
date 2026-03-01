@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.dna-autofill]
 verify_jwt = false
+
+[functions.reference-analyze]
+verify_jwt = false
