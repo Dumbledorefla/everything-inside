@@ -58,8 +58,8 @@ export default function AppLayout() {
               dockOpen
                 ? "bg-primary/15 text-primary border border-primary/20"
                 : agentMode === "global"
-                ? "bg-cos-warning/10 text-cos-warning/80 border border-cos-warning/15 hover:bg-cos-warning/20"
-                : "bg-cos-warning/10 text-cos-warning/80 border border-cos-warning/15 hover:bg-cos-warning/20"
+                ? "bg-muted/10 text-muted-foreground/80 border border-border/15 hover:bg-muted/20"
+                : "bg-muted/10 text-muted-foreground/80 border border-border/15 hover:bg-muted/20"
             )}
           >
             <BlackHoleShader
