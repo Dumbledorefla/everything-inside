@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,7 +6,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
+const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+const CREDIT_COSTS = { memory_analysis: { credits: 3, usd: 0.03 } };
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -28,21 +31,48 @@ serve(async (req) => {
       });
     }
 
-    const { projectId, assetIds } = await req.json();
+    const { projectId, autoTriggered } = await req.json();
     if (!projectId) throw new Error("projectId required");
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ═══ BATCH TRIGGER LOGIC ═══
+    // If auto-triggered, check if enough new officials since last analysis
+    if (autoTriggered) {
+      const { data: lastMemory } = await serviceClient
+        .from("project_memory")
+        .select("last_analysis_at")
+        .eq("project_id", projectId)
+        .order("last_analysis_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const lastAnalysis = lastMemory?.last_analysis_at ? new Date(lastMemory.last_analysis_at) : new Date(0);
+      
+      const { count: newOfficials } = await serviceClient
+        .from("assets")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("status", "official")
+        .gte("updated_at", lastAnalysis.toISOString());
+
+      if (!newOfficials || newOfficials < 5) {
+        return new Response(JSON.stringify({
+          patterns: [],
+          message: `Apenas ${newOfficials || 0}/5 novos ativos oficiais desde última análise. Aguardando mais.`,
+          skipped: true,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     // Fetch recent approved/official assets
-    let query = serviceClient
+    const { data: assets } = await serviceClient
       .from("assets")
-      .select("id, title, profile_used, provider_used, preset, status, asset_versions(headline, body, cta, generation_metadata)")
+      .select("id, title, profile_used, provider_used, preset, status, output, destination, asset_versions(headline, body, cta, generation_metadata)")
       .eq("project_id", projectId)
       .in("status", ["approved", "official"])
       .order("updated_at", { ascending: false })
-      .limit(10);
-
-    const { data: assets } = await query;
+      .limit(15);
 
     if (!assets || assets.length < 3) {
       return new Response(JSON.stringify({
@@ -60,57 +90,52 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    const dnaStr = dna ? JSON.stringify({
-      identity: dna.identity,
-      audience: dna.audience,
-      strategy: dna.strategy,
-      visual: dna.visual,
-      version: dna.version,
-    }) : "Nenhum DNA configurado";
+    const dnaStr = dna ? JSON.stringify({ identity: dna.identity, audience: dna.audience, strategy: dna.strategy, visual: dna.visual, version: dna.version }) : "Nenhum DNA configurado";
 
     const assetSummary = assets.map((a: any, i: number) => {
       const v = a.asset_versions?.[0];
-      return `${i + 1}. Headline: "${v?.headline || a.title}" | Body: "${v?.body?.slice(0, 80) || ""}" | CTA: "${v?.cta || ""}" | Perfil: ${a.profile_used} | Proporção: ${a.preset} | Status: ${a.status}`;
+      return `${i + 1}. Headline: "${v?.headline || a.title}" | Body: "${(v?.body || "").slice(0, 100)}" | CTA: "${v?.cta || ""}" | Perfil: ${a.profile_used} | Output: ${a.output} | Ratio: ${a.preset} | Status: ${a.status}`;
     }).join("\n");
 
-    // Use LLM to analyze patterns
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // ═══ LLM ANALYSIS WITH TOOL CALLING ═══
+    const resp = await fetch(AI_GATEWAY, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
           {
             role: "system",
-            content: `Você é um analista de padrões de marketing do COS (Creative Operating System).
+            content: `Você é um Diretor de Arte e Copywriter senior do COS (Creative Operating System).
 Analise os criativos aprovados e compare com o DNA atual do projeto.
-Identifique padrões NÃO cobertos pelo DNA atual.
+Identifique padrões NÃO cobertos pelo DNA atual que são consistentes nos ativos aprovados.
 
 DNA ATUAL:
 ${dnaStr}
 
-Responda APENAS em JSON válido com esta estrutura:
+Responda APENAS em JSON válido com esta estrutura exata:
 {
   "patterns": [
     {
-      "pattern_key": "string (ex: style:short_headlines)",
-      "description": "string (descrição em PT-BR)",
-      "category": "string (style|quality|content|provider)",
-      "confidence": number (0-1),
-      "suggested_dna_patch": { "campo": "valor sugerido" }
+      "type": "COPY" | "VISUAL" | "STRATEGY",
+      "description": "descrição em PT-BR do padrão detectado",
+      "confidence": 0.0-1.0,
+      "proposed_patch": { "campo_do_dna": "valor_sugerido" },
+      "evidence": "exemplos dos ativos que comprovam"
     }
   ],
-  "summary": "string (resumo em PT-BR)"
+  "summary": "resumo executivo em PT-BR"
 }
 
-Retorne APENAS o JSON.`,
+Regras:
+- Apenas padrões com confiança >= 0.6
+- Máximo 5 padrões
+- proposed_patch deve ser específico e acionável
+- Retorne APENAS o JSON, sem markdown`
           },
           {
             role: "user",
-            content: `Analise estes ${assets.length} criativos aprovados/oficiais:\n\n${assetSummary}`,
+            content: `Analise estes ${assets.length} criativos aprovados/oficiais:\n\n${assetSummary}`
           },
         ],
       }),
@@ -125,28 +150,58 @@ Retorne APENAS o JSON.`,
     const data = await resp.json();
     const raw = data.choices?.[0]?.message?.content || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    let analysis = { patterns: [], summary: "Análise inconclusiva" };
+    let analysis = { patterns: [] as any[], summary: "Análise inconclusiva" };
 
     if (jsonMatch) {
-      try {
-        analysis = JSON.parse(jsonMatch[0]);
-      } catch {}
+      try { analysis = JSON.parse(jsonMatch[0]); } catch {}
     }
 
     // Save high-confidence patterns as pending DNA updates
+    let savedCount = 0;
     for (const p of (analysis.patterns || [])) {
-      if ((p.confidence || 0) >= 0.7) {
+      if ((p.confidence || 0) >= 0.6) {
         await serviceClient.from("pending_dna_updates").insert({
           project_id: projectId,
           user_id: user.id,
-          suggestion_text: p.description,
-          json_patch: p.suggested_dna_patch || {},
+          suggestion_text: `[${p.type}] ${p.description}`,
+          json_patch: p.proposed_patch || {},
           status: "pending",
         });
+        savedCount++;
       }
     }
 
-    return new Response(JSON.stringify(analysis), {
+    // Update last_analysis_at timestamp
+    await serviceClient.from("project_memory").upsert({
+      project_id: projectId,
+      user_id: user.id,
+      pattern: "system:last_analysis",
+      category: "system",
+      last_analysis_at: new Date().toISOString(),
+      confirmed: true,
+    }, { onConflict: "project_id,pattern" }).then(() => {}).catch(() => {
+      // If upsert fails due to no unique constraint, just insert
+      serviceClient.from("project_memory").insert({
+        project_id: projectId,
+        user_id: user.id,
+        pattern: "system:last_analysis",
+        category: "system",
+        confirmed: true,
+      }).then(() => {}).catch(() => {});
+    });
+
+    // Log telemetry
+    await serviceClient.from("cos_ledger").insert({
+      project_id: projectId,
+      user_id: user.id,
+      provider_used: "gemini-3-flash-preview",
+      operation_type: "MEMORY_ANALYSIS",
+      credits_cost: CREDIT_COSTS.memory_analysis.credits,
+      estimated_usd: CREDIT_COSTS.memory_analysis.usd,
+      metadata: { patterns_found: analysis.patterns?.length || 0, saved: savedCount },
+    }).then(() => {}).catch(() => {});
+
+    return new Response(JSON.stringify({ ...analysis, saved: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

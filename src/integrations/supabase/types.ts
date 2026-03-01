@@ -243,6 +243,60 @@ export type Database = {
           },
         ]
       }
+      cos_ledger: {
+        Row: {
+          asset_id: string | null
+          created_at: string
+          credits_cost: number
+          estimated_usd: number
+          id: string
+          metadata: Json | null
+          operation_type: string
+          project_id: string
+          provider_used: string
+          user_id: string
+        }
+        Insert: {
+          asset_id?: string | null
+          created_at?: string
+          credits_cost?: number
+          estimated_usd?: number
+          id?: string
+          metadata?: Json | null
+          operation_type: string
+          project_id: string
+          provider_used: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string | null
+          created_at?: string
+          credits_cost?: number
+          estimated_usd?: number
+          id?: string
+          metadata?: Json | null
+          operation_type?: string
+          project_id?: string
+          provider_used?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cos_ledger_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cos_ledger_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_folders: {
         Row: {
           created_at: string
@@ -532,6 +586,7 @@ export type Database = {
           confirmed: boolean
           created_at: string
           id: string
+          last_analysis_at: string | null
           occurrences: number
           pattern: string
           project_id: string
@@ -543,6 +598,7 @@ export type Database = {
           confirmed?: boolean
           created_at?: string
           id?: string
+          last_analysis_at?: string | null
           occurrences?: number
           pattern: string
           project_id: string
@@ -554,6 +610,7 @@ export type Database = {
           confirmed?: boolean
           created_at?: string
           id?: string
+          last_analysis_at?: string | null
           occurrences?: number
           pattern?: string
           project_id?: string
