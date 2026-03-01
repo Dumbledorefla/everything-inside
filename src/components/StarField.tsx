@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 
 interface Star {
   x: number;
@@ -47,6 +48,8 @@ export default function StarField() {
   const bodiesRef = useRef<CosmicBody[]>([]);
   const rafRef = useRef<number>(0);
   const mouseRef = useRef({ x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5 });
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -171,16 +174,19 @@ export default function StarField() {
 
       ctx.clearRect(0, 0, W, H);
 
-      // — Background nebula glows —
+      // — Background nebula glows (theme-aware) —
+      const nebulaIntensity = isDark ? 1 : 0.35;
       const nsx = offX * 0.3, nsy = offY * 0.3;
+      const nebColor1 = isDark ? "0,180,216" : "60,100,180";
+      const nebColor2 = isDark ? "114,9,183" : "80,60,160";
       const g1 = ctx.createRadialGradient(W*0.75+nsx, H*0.3+nsy, 0, W*0.75+nsx, H*0.3+nsy, W*0.5);
-      g1.addColorStop(0, "rgba(0,180,216,0.012)");
-      g1.addColorStop(0.5, "rgba(114,9,183,0.008)");
+      g1.addColorStop(0, `rgba(${nebColor1},${0.012 * nebulaIntensity})`);
+      g1.addColorStop(0.5, `rgba(${nebColor2},${0.008 * nebulaIntensity})`);
       g1.addColorStop(1, "transparent");
       ctx.fillStyle = g1;
       ctx.fillRect(0, 0, W, H);
       const g2 = ctx.createRadialGradient(W*0.2-nsx, H*0.7-nsy, 0, W*0.2-nsx, H*0.7-nsy, W*0.4);
-      g2.addColorStop(0, "rgba(0,180,216,0.008)");
+      g2.addColorStop(0, `rgba(${nebColor1},${0.008 * nebulaIntensity})`);
       g2.addColorStop(1, "transparent");
       ctx.fillStyle = g2;
       ctx.fillRect(0, 0, W, H);
@@ -366,7 +372,9 @@ export default function StarField() {
         return true;
       });
 
-      // — Stars —
+      // — Stars (theme-aware) —
+      const starMainColor = isDark ? "200,220,255" : "60,80,140";
+      const starGlowColor = isDark ? "180,210,255" : "80,100,160";
       for (const star of starsRef.current) {
         star.baseY -= star.speed;
         if (star.baseY < -2) {
@@ -376,16 +384,16 @@ export default function StarField() {
         const px = star.baseX + offX * star.depth;
         const py = star.baseY + offY * star.depth;
         const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.5 + 0.5;
-        const alpha = star.opacity * (0.4 + twinkle * 0.6);
+        const alpha = star.opacity * (0.4 + twinkle * 0.6) * (isDark ? 1 : 0.7);
 
         ctx.beginPath();
         ctx.arc(px, py, star.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200,220,255,${alpha})`;
+        ctx.fillStyle = `rgba(${starMainColor},${alpha})`;
         ctx.fill();
         if (star.size > 1) {
           ctx.beginPath();
           ctx.arc(px, py, star.size * 3, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(180,210,255,${alpha * 0.08})`;
+          ctx.fillStyle = `rgba(${starGlowColor},${alpha * 0.08})`;
           ctx.fill();
         }
       }
@@ -437,13 +445,14 @@ export default function StarField() {
         return c.x > -50 && c.x < W + 50 && c.y < H + 50;
       });
 
-      // — Cursor glow —
+      // — Cursor glow (theme-aware) —
       const gx = m.x * W, gy = m.y * H;
-      const cg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 180);
-      cg.addColorStop(0, "rgba(0,180,216,0.025)");
-      cg.addColorStop(0.5, "rgba(0,180,216,0.008)");
-      cg.addColorStop(1, "transparent");
-      ctx.fillStyle = cg;
+      const cursorColor = isDark ? "0,180,216" : "60,100,180";
+      const cg2 = ctx.createRadialGradient(gx, gy, 0, gx, gy, 180);
+      cg2.addColorStop(0, `rgba(${cursorColor},${isDark ? 0.025 : 0.015})`);
+      cg2.addColorStop(0.5, `rgba(${cursorColor},${isDark ? 0.008 : 0.005})`);
+      cg2.addColorStop(1, "transparent");
+      ctx.fillStyle = cg2;
       ctx.fillRect(0, 0, W, H);
 
       rafRef.current = requestAnimationFrame(animate);
@@ -458,13 +467,13 @@ export default function StarField() {
       window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [isDark]);
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.75 }}
+      style={{ opacity: isDark ? 0.75 : 0.5 }}
     />
   );
 }
