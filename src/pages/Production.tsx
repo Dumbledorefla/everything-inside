@@ -5,10 +5,11 @@ import {
   LayoutGrid, Rows3, Loader2, Eye
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import CreativeCanvas from "@/components/creative/CreativeCanvas";
+import BatchProgressBar from "@/components/production/BatchProgressBar";
+import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 
 const pieceTypes = [
   { id: "post", label: "Post", icon: LayoutGrid },
@@ -19,36 +20,22 @@ const pieceTypes = [
   { id: "vsl", label: "VSL", icon: Type },
 ];
 
-const profileColors: Record<string, string> = {
-  economy: "bg-cos-warning/10 text-cos-warning",
-  standard: "bg-primary/10 text-primary",
-  quality: "bg-cos-purple/10 text-cos-purple",
-};
-
 const profileLabels: Record<string, string> = {
   economy: "Economia",
   standard: "Padrão",
   quality: "Qualidade",
 };
 
-interface GeneratedResult {
-  id: string;
-  headline: string;
-  body: string;
-  cta: string;
-  imageUrl: string | null;
-  provider: string;
-  profile: string;
-  status: string;
-  creditCost: number;
-  fallbackEvents?: string[];
-}
+const profileColors: Record<string, string> = {
+  economy: "bg-cos-warning/10 text-cos-warning",
+  standard: "bg-primary/10 text-primary",
+  quality: "bg-cos-purple/10 text-cos-purple",
+};
 
 export default function Production() {
   const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
   const { session } = useAuth();
-  const [results, setResults] = useState<GeneratedResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { results, progress, generate, cancel } = useBatchGenerate();
   const [userPrompt, setUserPrompt] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
 
@@ -57,46 +44,22 @@ export default function Production() {
       toast.error("Você precisa estar logado em um projeto.");
       return;
     }
-    setLoading(true);
-    setResults([]);
-    try {
-      const { data, error } = await supabase.functions.invoke("cos-generate", {
-        body: {
-          projectId: activeProjectId,
-          mode: spec.mode,
-          output: spec.output,
-          pieceType: spec.pieceType,
-          quantity: spec.quantity,
-          profile: spec.profile,
-          provider: spec.provider,
-          destination: spec.destination,
-          ratio: spec.ratio,
-          intensity: spec.intensity,
-          useModel: spec.useModel,
-          useVisualProfile: spec.useVisualProfile,
-          userPrompt: userPrompt || undefined,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
-
-      const fallbackLog = data?.fallbackLog || [];
-      if (fallbackLog.length > 0) {
-        toast.warning(`Fallback ativado: ${fallbackLog[0]}`);
-      }
-
-      setResults(data.results || []);
-      const totalCredits = (data.results || []).reduce((s: number, r: GeneratedResult) => s + r.creditCost, 0);
-      toast.success(`${data.results?.length || 0} variações geradas (${totalCredits} créditos)`);
-    } catch (e: any) {
-      console.error("Generate error:", e);
-      toast.error(e.message || "Erro ao gerar conteúdo.");
-    } finally {
-      setLoading(false);
-    }
+    await generate({
+      projectId: activeProjectId,
+      mode: spec.mode,
+      output: spec.output,
+      pieceType: spec.pieceType,
+      quantity: spec.quantity,
+      profile: spec.profile,
+      provider: spec.provider,
+      destination: spec.destination,
+      ratio: spec.ratio,
+      intensity: spec.intensity,
+      useModel: spec.useModel,
+      useVisualProfile: spec.useVisualProfile,
+      userPrompt: userPrompt || undefined,
+    });
   };
-
-  const previewResult = results.find((r) => r.id === previewId);
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
@@ -158,10 +121,14 @@ export default function Production() {
           </div>
         </div>
 
-        {/* Quantity */}
+        {/* Quantity — increased max to 50 */}
         <div>
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Variações: {spec.quantity}</label>
-          <input type="range" min={1} max={20} value={spec.quantity} onChange={(e) => setSpec({ quantity: +e.target.value })} className="w-full accent-primary" />
+          <input type="range" min={1} max={50} value={spec.quantity} onChange={(e) => setSpec({ quantity: +e.target.value })} className="w-full accent-primary" />
+          <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+            <span>1</span>
+            <span>50</span>
+          </div>
         </div>
 
         {/* Profile */}
@@ -208,10 +175,10 @@ export default function Production() {
             rows={3} className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-none" />
         </div>
 
-        <button onClick={handleGenerate} disabled={loading}
+        <button onClick={handleGenerate} disabled={progress.running}
           className="w-full flex items-center justify-center gap-2 rounded-md bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-          {loading ? "Gerando..." : "Gerar"}
+          {progress.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+          {progress.running ? `Gerando ${progress.completed}/${progress.total}...` : "Gerar"}
         </button>
       </div>
 
@@ -226,15 +193,10 @@ export default function Production() {
           </p>
         </div>
 
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm">Gerando {spec.quantity} variações com perfil {profileLabels[spec.profile]}...</p>
-            <p className="text-xs text-muted-foreground">Injetando DNA do projeto • Router {spec.provider}</p>
-          </div>
-        )}
+        {/* Batch progress bar */}
+        <BatchProgressBar progress={progress} onCancel={cancel} />
 
-        {!loading && results.length === 0 && (
+        {!progress.running && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
             <Zap className="h-10 w-10 text-muted-foreground/20" />
             <p className="text-sm">Nenhum resultado ainda</p>
@@ -243,7 +205,7 @@ export default function Production() {
         )}
 
         {results.map((r, i) => (
-          <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+          <motion.div key={r.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.05, 0.5) }}
             onClick={() => selectAsset({ id: r.id, title: r.headline, type: spec.pieceType, status: r.status, profile: profileLabels[r.profile] || r.profile, provider: r.provider })}
             className="rounded-lg border border-border bg-card p-5 hover:border-primary/30 transition-colors cursor-pointer">
             <div className="flex items-start justify-between gap-4">
@@ -270,17 +232,10 @@ export default function Production() {
               )}
             </div>
 
-            {/* Canvas Preview */}
             {previewId === r.id && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 pt-4 border-t border-border">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">Preview do Criativo ({spec.ratio})</p>
-                <CreativeCanvas
-                  imageUrl={r.imageUrl}
-                  headline={r.headline}
-                  body={r.body}
-                  cta={r.cta}
-                  ratio={spec.ratio}
-                />
+                <CreativeCanvas imageUrl={r.imageUrl} headline={r.headline} body={r.body} cta={r.cta} ratio={spec.ratio} />
               </motion.div>
             )}
 
