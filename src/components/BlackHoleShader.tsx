@@ -90,19 +90,19 @@ float fbm(vec3 p) {
 // ── Color palettes ──
 void getPalette(float mode, out vec3 white_hot, out vec3 hot, out vec3 warm, out vec3 cool, out vec3 rim) {
   if (mode < 0.5) {
-    // Project: Golden-Orange (classic black hole)
-    white_hot = vec3(1.0, 0.95, 0.8);
-    hot   = vec3(1.0, 0.7, 0.2);
-    warm  = vec3(0.95, 0.45, 0.05);
-    cool  = vec3(0.4, 0.12, 0.0);
-    rim   = vec3(1.0, 0.6, 0.15);
+    // Project: Deep warm orange-red (NASA style)
+    white_hot = vec3(1.0, 0.85, 0.55);
+    hot   = vec3(0.9, 0.45, 0.08);
+    warm  = vec3(0.7, 0.22, 0.02);
+    cool  = vec3(0.25, 0.06, 0.0);
+    rim   = vec3(0.85, 0.35, 0.05);
   } else {
-    // Global: Deep Orange / Amber
-    white_hot = vec3(1.0, 0.92, 0.75);
-    hot   = vec3(1.0, 0.55, 0.1);
-    warm  = vec3(0.85, 0.3, 0.02);
-    cool  = vec3(0.35, 0.08, 0.0);
-    rim   = vec3(1.0, 0.5, 0.08);
+    // Global: Deeper red-orange
+    white_hot = vec3(1.0, 0.8, 0.5);
+    hot   = vec3(0.85, 0.38, 0.06);
+    warm  = vec3(0.6, 0.18, 0.01);
+    cool  = vec3(0.2, 0.04, 0.0);
+    rim   = vec3(0.8, 0.3, 0.04);
   }
 }
 
@@ -276,12 +276,12 @@ void main() {
               + eventHorizon * 0.98 + jet * 2.0;
   alpha = clamp(alpha, 0.0, 1.0);
 
-  // Boost brightness for small renders
-  col *= 1.3;
+  // Subtle brightness
+  col *= 0.9;
 
   // Filmic tone mapping
-  col = col / (col + 0.7);
-  col = pow(col, vec3(0.88));
+  col = col / (col + 0.8);
+  col = pow(col, vec3(0.92));
 
   gl_FragColor = vec4(col, alpha);
 }
