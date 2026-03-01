@@ -58,7 +58,7 @@ interface AssistantContextValue {
 
   // Chat
   thread: ChatMessage[];
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string, userOnly?: boolean, isSystem?: boolean, isStreamUpdate?: boolean) => void;
 
   // Spec
   spec: GenerationSpec;
@@ -167,21 +167,36 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const setActiveTab = useCallback((tab: "chat" | "context" | "actions") => update((s) => ({ ...s, activeTab: tab })), [update]);
 
   const sendMessage = useCallback(
-    (text: string) => {
-      const userMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: text,
-        timestamp: Date.now(),
-      };
-      // Mock assistant reply
-      const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `Entendido! Vou processar: "${text.slice(0, 80)}${text.length > 80 ? "…" : ""}".\n\n_Geração de conteúdo será conectada em breve._`,
-        timestamp: Date.now() + 1,
-      };
-      update((s) => ({ ...s, thread: [...s.thread, userMsg, assistantMsg], activeTab: "chat" }));
+    (text: string, userOnly?: boolean, isSystem?: boolean, isStreamUpdate?: boolean) => {
+      if (isStreamUpdate) {
+        // Update last assistant message or create one
+        update((s) => {
+          const last = s.thread[s.thread.length - 1];
+          if (last?.role === "assistant") {
+            const newThread = [...s.thread];
+            newThread[newThread.length - 1] = { ...last, content: text };
+            return { ...s, thread: newThread };
+          }
+          return { ...s, thread: [...s.thread, { id: crypto.randomUUID(), role: "assistant", content: text, timestamp: Date.now() }] };
+        });
+        return;
+      }
+
+      if (isSystem) {
+        const sysMsg: ChatMessage = { id: crypto.randomUUID(), role: "system", content: text, timestamp: Date.now() };
+        update((s) => ({ ...s, thread: [...s.thread, sysMsg], activeTab: "chat" }));
+        return;
+      }
+
+      if (userOnly) {
+        const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text, timestamp: Date.now() };
+        update((s) => ({ ...s, thread: [...s.thread, userMsg], activeTab: "chat" }));
+        return;
+      }
+
+      // Legacy: add user + mock assistant (for quick prompts that don't use streaming)
+      const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text, timestamp: Date.now() };
+      update((s) => ({ ...s, thread: [...s.thread, userMsg], activeTab: "chat" }));
     },
     [update]
   );

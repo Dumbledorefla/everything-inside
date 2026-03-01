@@ -1,114 +1,200 @@
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Palette, Type, Ruler, Image as ImageIcon } from "lucide-react";
+import { Save, Palette, Type, History, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
-const dnaFields = [
-  { section: "Identidade", fields: [
-    { label: "Nome do Projeto", value: "Lançamento Expert Pro" },
-    { label: "Nicho", value: "Infoprodutos / Marketing Digital" },
-    { label: "Produto", value: "Curso Expert Pro 2.0" },
-  ]},
-  { section: "Público e Voz", fields: [
-    { label: "Público Principal", value: "Empreendedores digitais iniciantes" },
-    { label: "Dor Principal", value: "Não conseguem vender online de forma consistente" },
-    { label: "Promessa", value: "Faturar R$10k em 90 dias com método validado" },
-    { label: "Tom de Voz", value: "Profissional" },
-  ]},
-  { section: "Estratégia", fields: [
-    { label: "Públicos Secundários", value: "Freelancers, coaches, consultores" },
-    { label: "Objeções", value: "\"Não tenho tempo\", \"Já tentei e não funcionou\"" },
-    { label: "Provas Sociais", value: "5.000+ alunos, 87% taxa de conclusão" },
-    { label: "CTA Padrão", value: "Quero começar agora →" },
-    { label: "Palavras Proibidas", value: "fácil, grátis, milagre" },
-    { label: "Pilares de Conteúdo", value: "Autoridade, Prova, Urgência, Transformação" },
-  ]},
-];
+interface DNAForm {
+  identity: { nome: string; nicho: string; produto: string; slogan: string; tom: string; personalidade: string };
+  audience: { perfil: string; dor_principal: string; desejo_principal: string; objecoes: string; provas: string };
+  strategy: { promessa: string; diferencial: string; mecanismo: string; cta_padrao: string; palavras_proibidas: string; pilares: string };
+  visual: { colors: { name: string; hex: string }[]; fonts: { role: string; family: string; weight: string; size: string }[] };
+}
 
-const designTokens = {
-  colors: [
-    { name: "Primária", hex: "#06B6D4" },
-    { name: "Secundária", hex: "#8B5CF6" },
-    { name: "Acento", hex: "#F59E0B" },
-    { name: "Fundo", hex: "#0F172A" },
-    { name: "Texto", hex: "#E2E8F0" },
-  ],
-  fonts: [
-    { role: "Headline", family: "JetBrains Mono", weight: "Bold", size: "32px" },
-    { role: "Corpo", family: "Inter", weight: "Regular", size: "16px" },
-    { role: "CTA", family: "Inter", weight: "Semibold", size: "14px" },
-  ],
+const DEFAULT_DNA: DNAForm = {
+  identity: { nome: "", nicho: "", produto: "", slogan: "", tom: "Profissional", personalidade: "" },
+  audience: { perfil: "", dor_principal: "", desejo_principal: "", objecoes: "", provas: "" },
+  strategy: { promessa: "", diferencial: "", mecanismo: "", cta_padrao: "", palavras_proibidas: "", pilares: "" },
+  visual: {
+    colors: [
+      { name: "Primária", hex: "#06B6D4" },
+      { name: "Secundária", hex: "#8B5CF6" },
+      { name: "Acento", hex: "#F59E0B" },
+      { name: "Fundo", hex: "#0F172A" },
+      { name: "Texto", hex: "#E2E8F0" },
+    ],
+    fonts: [
+      { role: "Headline", family: "JetBrains Mono", weight: "Bold", size: "32px" },
+      { role: "Corpo", family: "Inter", weight: "Regular", size: "16px" },
+      { role: "CTA", family: "Inter", weight: "Semibold", size: "14px" },
+    ],
+  },
 };
 
 export default function ProjectDNA() {
+  const { projectId } = useParams();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<DNAForm>(DEFAULT_DNA);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: async () => {
+      const { data } = await supabase.from("projects").select("*").eq("id", projectId!).single();
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const { data: dnaVersions } = useQuery({
+    queryKey: ["dna-versions", projectId],
+    queryFn: async () => {
+      const { data } = await supabase.from("project_dna").select("*").eq("project_id", projectId!).order("version", { ascending: false });
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  const latestDNA = dnaVersions?.[0];
+
+  useEffect(() => {
+    if (latestDNA) {
+      setForm({
+        identity: { ...DEFAULT_DNA.identity, ...(latestDNA.identity as any || {}) },
+        audience: { ...DEFAULT_DNA.audience, ...(latestDNA.audience as any || {}) },
+        strategy: { ...DEFAULT_DNA.strategy, ...(latestDNA.strategy as any || {}) },
+        visual: { ...DEFAULT_DNA.visual, ...(latestDNA.visual as any || {}) },
+      });
+    } else if (project) {
+      setForm((f) => ({ ...f, identity: { ...f.identity, nome: project.name || "", nicho: project.niche || "", produto: project.product || "" } }));
+    }
+  }, [latestDNA, project]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const nextVersion = (latestDNA?.version || 0) + 1;
+      const { error } = await supabase.from("project_dna").insert({
+        project_id: projectId!,
+        version: nextVersion,
+        identity: form.identity as any,
+        audience: form.audience as any,
+        strategy: form.strategy as any,
+        visual: form.visual as any,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dna-versions", projectId] });
+      toast.success("DNA salvo com sucesso (nova versão)");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const update = (section: keyof DNAForm, key: string, value: any) => {
+    setForm((f) => ({ ...f, [section]: { ...f[section], [key]: value } }));
+  };
+
+  const sections = [
+    { key: "identity" as const, title: "Identidade", fields: [
+      { k: "nome", label: "Nome do Projeto" }, { k: "nicho", label: "Nicho" }, { k: "produto", label: "Produto" },
+      { k: "slogan", label: "Slogan" }, { k: "tom", label: "Tom de Voz" }, { k: "personalidade", label: "Personalidade" },
+    ]},
+    { key: "audience" as const, title: "Público e Voz", fields: [
+      { k: "perfil", label: "Público Principal" }, { k: "dor_principal", label: "Dor Principal" }, { k: "desejo_principal", label: "Desejo Principal" },
+      { k: "objecoes", label: "Objeções" }, { k: "provas", label: "Provas Sociais" },
+    ]},
+    { key: "strategy" as const, title: "Estratégia", fields: [
+      { k: "promessa", label: "Promessa" }, { k: "diferencial", label: "Diferencial" }, { k: "mecanismo", label: "Mecanismo" },
+      { k: "cta_padrao", label: "CTA Padrão" }, { k: "palavras_proibidas", label: "Palavras Proibidas" }, { k: "pilares", label: "Pilares de Conteúdo" },
+    ]},
+  ];
+
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">DNA do Projeto</h1>
-          <p className="text-xs text-muted-foreground mt-1">Identidade estratégica e visual do projeto</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Identidade estratégica e visual — v{latestDNA?.version || 1}
+          </p>
         </div>
-        <button className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-          <Save className="h-3.5 w-3.5" />
-          Salvar
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-secondary transition-colors">
+            <History className="h-3.5 w-3.5" />
+            Histórico ({dnaVersions?.length || 0})
+          </button>
+          <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+            {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Salvar
+          </button>
+        </div>
       </div>
 
-      {/* DNA Fields */}
-      {dnaFields.map((section, si) => (
-        <motion.div
-          key={section.section}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: si * 0.1 }}
-          className="mb-6 rounded-lg border border-border bg-card p-5"
-        >
-          <h2 className="text-sm font-semibold mb-4">{section.section}</h2>
+      {showHistory && dnaVersions && dnaVersions.length > 0 && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-6 rounded-lg border border-border bg-card p-4">
+          <h3 className="text-xs font-semibold mb-2">Versões</h3>
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {dnaVersions.map((v) => (
+              <button key={v.id} onClick={() => {
+                setForm({
+                  identity: { ...DEFAULT_DNA.identity, ...(v.identity as any || {}) },
+                  audience: { ...DEFAULT_DNA.audience, ...(v.audience as any || {}) },
+                  strategy: { ...DEFAULT_DNA.strategy, ...(v.strategy as any || {}) },
+                  visual: { ...DEFAULT_DNA.visual, ...(v.visual as any || {}) },
+                });
+              }} className="w-full flex justify-between items-center rounded-md px-3 py-1.5 text-xs hover:bg-secondary transition-colors">
+                <span>v{v.version}</span>
+                <span className="text-muted-foreground">{new Date(v.created_at).toLocaleDateString("pt-BR")}</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {sections.map((section, si) => (
+        <motion.div key={section.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: si * 0.1 }} className="mb-6 rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold mb-4">{section.title}</h2>
           <div className="space-y-3">
             {section.fields.map((f) => (
-              <div key={f.label}>
+              <div key={f.k}>
                 <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">{f.label}</label>
-                <input
-                  type="text"
-                  defaultValue={f.value}
-                  className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                />
+                <input type="text" value={(form[section.key] as any)[f.k] || ""} onChange={(e) => update(section.key, f.k, e.target.value)} className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors" />
               </div>
             ))}
           </div>
         </motion.div>
       ))}
 
-      {/* Design Tokens */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="rounded-lg border border-border bg-card p-5"
-      >
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-center gap-2 mb-4">
           <Palette className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">Design Tokens</h2>
         </div>
-
-        {/* Colors */}
         <div className="mb-5">
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Cores</label>
           <div className="flex gap-3">
-            {designTokens.colors.map((c) => (
-              <div key={c.name} className="flex flex-col items-center gap-1.5">
-                <div className="h-10 w-10 rounded-lg border border-border" style={{ backgroundColor: c.hex }} />
+            {form.visual.colors.map((c, i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5">
+                <input type="color" value={c.hex} onChange={(e) => {
+                  const newColors = [...form.visual.colors];
+                  newColors[i] = { ...c, hex: e.target.value };
+                  setForm((f) => ({ ...f, visual: { ...f.visual, colors: newColors } }));
+                }} className="h-10 w-10 rounded-lg border border-border cursor-pointer" />
                 <span className="text-[10px] text-muted-foreground">{c.name}</span>
                 <span className="text-[9px] font-mono text-muted-foreground">{c.hex}</span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Fonts */}
         <div>
           <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Tipografia</label>
           <div className="space-y-2">
-            {designTokens.fonts.map((f) => (
-              <div key={f.role} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+            {form.visual.fonts.map((f, i) => (
+              <div key={i} className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                 <div className="flex items-center gap-3">
                   <Type className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium">{f.role}</span>
