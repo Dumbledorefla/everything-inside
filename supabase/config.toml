@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.memory-analyze]
 verify_jwt = false
+
+[functions.render-asset]
+verify_jwt = false
+
+[functions.page-assembler]
+verify_jwt = false
