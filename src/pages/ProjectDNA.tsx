@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Save, Palette, Type, History, Loader2 } from "lucide-react";
+import { Save, Palette, Type, History, Loader2, ImagePlus, Trash2, Link, Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,7 +11,7 @@ interface DNAForm {
   identity: { nome: string; nicho: string; produto: string; slogan: string; tom: string; personalidade: string };
   audience: { perfil: string; dor_principal: string; desejo_principal: string; objecoes: string; provas: string };
   strategy: { promessa: string; diferencial: string; mecanismo: string; cta_padrao: string; palavras_proibidas: string; pilares: string };
-  visual: { colors: { name: string; hex: string }[]; fonts: { role: string; family: string; weight: string; size: string }[] };
+  visual: { colors: { name: string; hex: string }[]; fonts: { role: string; family: string; weight: string; size: string }[]; references: string[] };
 }
 
 const DEFAULT_DNA: DNAForm = {
@@ -31,6 +31,7 @@ const DEFAULT_DNA: DNAForm = {
       { role: "Corpo", family: "Inter", weight: "Regular", size: "16px" },
       { role: "CTA", family: "Inter", weight: "Semibold", size: "14px" },
     ],
+    references: [],
   },
 };
 
@@ -40,7 +41,9 @@ export default function ProjectDNA() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<DNAForm>(DEFAULT_DNA);
   const [showHistory, setShowHistory] = useState(false);
-
+  const [refUrl, setRefUrl] = useState("");
+  const [uploadingRef, setUploadingRef] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: project } = useQuery({
     queryKey: ["project", projectId],
     queryFn: async () => {
@@ -67,7 +70,7 @@ export default function ProjectDNA() {
         identity: { ...DEFAULT_DNA.identity, ...(latestDNA.identity as any || {}) },
         audience: { ...DEFAULT_DNA.audience, ...(latestDNA.audience as any || {}) },
         strategy: { ...DEFAULT_DNA.strategy, ...(latestDNA.strategy as any || {}) },
-        visual: { ...DEFAULT_DNA.visual, ...(latestDNA.visual as any || {}) },
+        visual: { ...DEFAULT_DNA.visual, ...(latestDNA.visual as any || {}), references: (latestDNA.visual as any)?.references || [] },
       });
     } else if (project) {
       setForm((f) => ({ ...f, identity: { ...f.identity, nome: project.name || "", nicho: project.niche || "", produto: project.product || "" } }));
@@ -204,6 +207,111 @@ export default function ProjectDNA() {
             ))}
           </div>
         </div>
+      </motion.div>
+
+      {/* Visual References Section */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="mt-6 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <ImagePlus className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Referências Visuais</h2>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Adicione imagens de referência para guiar o estilo visual das suas criações. Cole uma URL ou faça upload.
+        </p>
+
+        {/* Add by URL */}
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="url"
+              value={refUrl}
+              onChange={(e) => setRefUrl(e.target.value)}
+              placeholder="https://exemplo.com/referencia.jpg"
+              className="w-full rounded-md border border-border bg-secondary/50 pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!refUrl.trim()) return;
+              setForm((f) => ({ ...f, visual: { ...f.visual, references: [...f.visual.references, refUrl.trim()] } }));
+              setRefUrl("");
+              toast.success("Referência adicionada");
+            }}
+            disabled={!refUrl.trim()}
+            className="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors"
+          >
+            Adicionar
+          </button>
+        </div>
+
+        {/* Upload button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={async (e) => {
+            const files = e.target.files;
+            if (!files?.length) return;
+            setUploadingRef(true);
+            try {
+              const newUrls: string[] = [];
+              for (const file of Array.from(files)) {
+                const ext = file.name.split(".").pop();
+                const path = `references/${projectId}/${crypto.randomUUID()}.${ext}`;
+                const { error } = await supabase.storage.from("assets").upload(path, file);
+                if (error) throw error;
+                const { data: urlData } = supabase.storage.from("assets").getPublicUrl(path);
+                newUrls.push(urlData.publicUrl);
+              }
+              setForm((f) => ({ ...f, visual: { ...f.visual, references: [...f.visual.references, ...newUrls] } }));
+              toast.success(`${newUrls.length} referência(s) enviada(s)`);
+            } catch (err: any) {
+              toast.error(err.message || "Erro no upload");
+            } finally {
+              setUploadingRef(false);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }
+          }}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadingRef}
+          className="w-full rounded-lg border border-dashed border-border p-4 text-center hover:bg-secondary/50 transition-colors mb-4"
+        >
+          {uploadingRef ? (
+            <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+          ) : (
+            <>
+              <Upload className="mx-auto h-5 w-5 text-muted-foreground mb-1" />
+              <p className="text-xs text-muted-foreground">Clique para enviar imagens de referência</p>
+            </>
+          )}
+        </button>
+
+        {/* Reference grid */}
+        {form.visual.references.length > 0 && (
+          <div className="grid grid-cols-4 gap-3">
+            {form.visual.references.map((url, i) => (
+              <div key={i} className="group relative rounded-lg border border-border overflow-hidden aspect-square bg-secondary">
+                <img src={url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => {
+                    setForm((f) => ({ ...f, visual: { ...f.visual, references: f.visual.references.filter((_, idx) => idx !== i) } }));
+                  }}
+                  className="absolute top-1 right-1 rounded-md bg-destructive/80 p-1 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {form.visual.references.length === 0 && (
+          <p className="text-[11px] text-muted-foreground text-center">Nenhuma referência adicionada ainda.</p>
+        )}
       </motion.div>
     </div>
   );
