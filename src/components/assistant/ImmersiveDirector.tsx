@@ -3,14 +3,10 @@ import { useAssistant } from "@/contexts/AssistantContext";
 import { motion, AnimatePresence } from "framer-motion";
 import BlackHoleShader from "../BlackHoleShader";
 import ReactMarkdown from "react-markdown";
-import { Send, Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 /**
  * ImmersiveDirector — Fullscreen "Singularity" experience.
- * The black hole dominates the center. Chat output is holographic
- * monospace text orbiting the singularity. UI collapses to edges.
+ * Zero shadcn. Zero lucide. Pure physics-inspired UI.
  */
 export default function ImmersiveDirector() {
   const {
@@ -21,10 +17,13 @@ export default function ImmersiveDirector() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [localMessages, setLocalMessages] = useState<{ role: string; content: string; id: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Toggle with keyboard shortcut (Ctrl+Shift+D)
+  const isGlobal = agentMode === "global";
+  const accentHue = isGlobal ? "270 70%" : "190 80%";
+
+  // Toggle with Ctrl+Shift+D
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === "D") {
@@ -40,7 +39,13 @@ export default function ImmersiveDirector() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [localMessages, thread]);
+  }, [thread]);
+
+  useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 600);
+    }
+  }, [open]);
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -156,88 +161,139 @@ export default function ImmersiveDirector() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
-        style={{ background: "radial-gradient(ellipse at center, #050510 0%, #000000 100%)" }}
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
+        style={{
+          background: "radial-gradient(ellipse 80% 60% at 50% 45%, hsl(240 15% 4%) 0%, hsl(0 0% 1%) 100%)",
+        }}
       >
-        {/* Close */}
+        {/* Ambient glow behind singularity */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: 600,
+            height: 600,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -60%)",
+            background: `radial-gradient(circle, hsl(${accentHue} 50% / 0.06) 0%, transparent 70%)`,
+            filter: "blur(40px)",
+          }}
+        />
+
+        {/* Close — top right, pure SVG */}
         <motion.button
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={{ opacity: 0.4 }}
+          whileHover={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           onClick={() => setOpen(false)}
-          className="absolute top-6 right-6 z-10 rounded-xl p-2 text-muted-foreground/60 hover:text-foreground transition-colors bg-card/10 backdrop-blur-sm border border-border/10"
+          className="absolute top-5 right-5 z-10 w-10 h-10 flex items-center justify-center transition-all duration-300"
+          style={{
+            borderRadius: 12,
+            background: "hsl(0 0% 100% / 0.02)",
+            border: "1px solid hsl(0 0% 100% / 0.04)",
+          }}
         >
-          <X className="h-5 w-5" />
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1L13 13M13 1L1 13" stroke="hsl(0 0% 50%)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
         </motion.button>
 
         {/* Shortcut hint */}
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.3 }}
-          transition={{ delay: 1 }}
-          className="absolute top-6 left-6 text-[10px] font-mono text-muted-foreground/40"
+          animate={{ opacity: 0.2 }}
+          transition={{ delay: 1.2 }}
+          className="absolute top-5 left-5 font-mono text-[9px] tracking-[0.3em] uppercase select-none"
+          style={{ color: "hsl(0 0% 35%)" }}
         >
-          Ctrl+Shift+D para fechar
+          CTRL+SHIFT+D ← EXIT
         </motion.div>
 
-        {/* Central Black Hole */}
+        {/* Central Singularity */}
         <motion.div
-          initial={{ scale: 0.3, opacity: 0 }}
+          initial={{ scale: 0.2, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           className="relative"
         >
           <BlackHoleShader
-            mode={agentMode === "global" ? "global" : "project"}
+            mode={isGlobal ? "global" : "project"}
             thinking={isStreaming}
             audioLevel={isRecording ? 0.5 : 0}
-            size={320}
+            size={360}
           />
 
-          {/* Holographic label */}
+          {/* Mode indicator — holographic label */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className={cn(
-              "absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono tracking-[0.3em] uppercase",
-              agentMode === "global" ? "text-cos-purple/60" : "text-primary/60"
-            )}
+            transition={{ delay: 0.8 }}
+            className="absolute -bottom-10 left-1/2 -translate-x-1/2 font-mono text-[9px] tracking-[0.4em] uppercase select-none"
+            style={{
+              color: `hsl(${accentHue} 60%)`,
+              textShadow: `0 0 20px hsl(${accentHue} 40% / 0.5)`,
+            }}
           >
-            {agentMode === "global" ? "DIRETOR GLOBAL" : "DIRETOR DE PROJETO"}
+            {isGlobal ? "◈ SINGULARIDADE GLOBAL" : "◎ SINGULARIDADE DE PROJETO"}
           </motion.div>
         </motion.div>
 
-        {/* Holographic Chat Output */}
+        {/* Holographic Chat Output — no boxes, floating monospace */}
         <div
           ref={scrollRef}
-          className="mt-12 w-full max-w-2xl max-h-[30vh] overflow-y-auto px-8 space-y-3 scrollbar-none"
+          className="mt-14 w-full max-w-2xl max-h-[28vh] overflow-y-auto px-8 space-y-4"
+          style={{
+            scrollbarWidth: "none",
+            maskImage: "linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)",
+          }}
         >
-          {thread.slice(-8).map((msg) => (
+          {thread.slice(-8).map((msg, i) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+              initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.4 }}
-              className={cn(
-                "font-mono text-sm leading-relaxed",
-                msg.role === "user"
-                  ? "text-foreground/70 text-right"
+              transition={{ duration: 0.5, delay: i * 0.03 }}
+              className="font-mono text-[13px] leading-[1.7]"
+              style={{
+                textAlign: msg.role === "user" ? "right" : "left",
+                color: msg.role === "user"
+                  ? "hsl(0 0% 55%)"
                   : msg.role === "system"
-                  ? "text-cos-warning/80"
-                  : agentMode === "global"
-                  ? "text-cos-purple/90"
-                  : "text-primary/90"
-              )}
+                    ? "hsl(40 80% 60%)"
+                    : `hsl(${accentHue} 75%)`,
+                textShadow: msg.role !== "user"
+                  ? `0 0 16px hsl(${accentHue} 40% / 0.3)`
+                  : "none",
+              }}
             >
               {msg.role !== "user" && (
-                <span className="text-[9px] uppercase tracking-widest opacity-40 block mb-0.5">
-                  {msg.role === "system" ? "SYS" : "COS"}
+                <span
+                  className="block font-mono text-[8px] uppercase tracking-[0.4em] mb-1 select-none"
+                  style={{
+                    color: msg.role === "system"
+                      ? "hsl(40 60% 45%)"
+                      : `hsl(${accentHue} 45%)`,
+                  }}
+                >
+                  {msg.role === "system" ? "▲ SYS" : "◈ COS"}
                 </span>
               )}
               <ReactMarkdown
                 components={{
-                  p: ({ children }) => <p className="my-0.5">{children}</p>,
+                  p: ({ children }) => <p style={{ margin: "2px 0" }}>{children}</p>,
+                  code: ({ children }) => (
+                    <code
+                      style={{
+                        background: "hsl(0 0% 100% / 0.04)",
+                        padding: "1px 5px",
+                        borderRadius: 3,
+                        fontSize: "12px",
+                      }}
+                    >
+                      {children}
+                    </code>
+                  ),
                 }}
               >
                 {msg.content}
@@ -245,60 +301,122 @@ export default function ImmersiveDirector() {
             </motion.div>
           ))}
 
+          {/* Streaming indicator — pulsing singularity dots */}
           {isStreaming && thread[thread.length - 1]?.role !== "assistant" && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className={cn(
-                "font-mono text-sm",
-                agentMode === "global" ? "text-cos-purple/60" : "text-primary/60"
-              )}
+              className="font-mono text-sm flex gap-1.5"
+              style={{ color: `hsl(${accentHue} 50%)` }}
             >
-              <span className="inline-flex gap-1">
-                <span className="animate-bounce">▪</span>
-                <span className="animate-bounce" style={{ animationDelay: "0.1s" }}>▪</span>
-                <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>▪</span>
-              </span>
+              {[0, 1, 2].map((i) => (
+                <motion.span
+                  key={i}
+                  animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }}
+                  transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.15 }}
+                  style={{
+                    display: "inline-block",
+                    width: 4,
+                    height: 4,
+                    borderRadius: "50%",
+                    background: `hsl(${accentHue} 60%)`,
+                    boxShadow: `0 0 8px hsl(${accentHue} 50% / 0.6)`,
+                  }}
+                />
+              ))}
             </motion.div>
           )}
         </div>
 
-        {/* Orbital Input */}
+        {/* Orbital Input — no standard input, pure singularity aesthetic */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="mt-6 w-full max-w-xl px-8"
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="mt-8 w-full max-w-xl px-8"
         >
           <div className="relative group">
-            <div className={cn(
-              "absolute -inset-px rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500",
-              agentMode === "global"
-                ? "bg-gradient-to-r from-cos-purple/20 via-cos-purple/5 to-cos-purple/20"
-                : "bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20"
-            )} />
-            <div className="relative flex items-center gap-3 rounded-2xl border border-border/15 bg-card/10 backdrop-blur-xl px-5 py-3">
+            {/* Orbital glow ring */}
+            <div
+              className="absolute -inset-px rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity duration-700 pointer-events-none"
+              style={{
+                background: `conic-gradient(from 180deg, transparent, hsl(${accentHue} 40% / 0.15), transparent 60%, hsl(${accentHue} 50% / 0.1), transparent)`,
+                filter: "blur(1px)",
+              }}
+            />
+
+            <div
+              className="relative flex items-center gap-3 px-6 py-3.5"
+              style={{
+                borderRadius: 28,
+                background: "hsl(0 0% 4% / 0.8)",
+                border: "1px solid hsl(0 0% 100% / 0.04)",
+                backdropFilter: "blur(20px)",
+              }}
+            >
+              {/* Orbit indicator */}
+              <span
+                className="shrink-0 w-2 h-2 rounded-full"
+                style={{
+                  background: isStreaming
+                    ? `hsl(${accentHue} 60%)`
+                    : input.trim()
+                      ? `hsl(${accentHue} 50%)`
+                      : "hsl(0 0% 20%)",
+                  boxShadow: input.trim()
+                    ? `0 0 10px hsl(${accentHue} 50% / 0.5)`
+                    : "none",
+                  transition: "all 0.3s ease",
+                }}
+              />
+
               <input
+                ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder="Comando ao Diretor..."
+                placeholder="transmitir comando à singularidade..."
                 disabled={isStreaming}
-                className="flex-1 bg-transparent text-sm font-mono text-foreground/90 placeholder:text-muted-foreground/30 focus:outline-none disabled:opacity-40"
+                className="flex-1 bg-transparent font-mono text-[13px] placeholder:select-none focus:outline-none disabled:opacity-30"
+                style={{
+                  color: "hsl(0 0% 75%)",
+                  caretColor: `hsl(${accentHue} 60%)`,
+                  letterSpacing: "0.02em",
+                }}
               />
+
+              {/* Send — pure SVG arrow */}
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isStreaming}
-                className={cn(
-                  "shrink-0 rounded-xl p-2 transition-all",
-                  agentMode === "global"
-                    ? "text-cos-purple hover:bg-cos-purple/10"
-                    : "text-primary hover:bg-primary/10",
-                  "disabled:opacity-20"
-                )}
+                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 disabled:opacity-10"
+                style={{
+                  background: input.trim() && !isStreaming
+                    ? `hsl(${accentHue} 50% / 0.1)`
+                    : "transparent",
+                }}
               >
-                {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isStreaming ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <circle cx="7" cy="7" r="5.5" stroke={`hsl(${accentHue} 50%)`} strokeWidth="1.5" strokeDasharray="8 6" />
+                    </svg>
+                  </motion.div>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path
+                      d="M2 7L12 7M12 7L8 3M12 7L8 11"
+                      stroke={input.trim() ? `hsl(${accentHue} 60%)` : "hsl(0 0% 25%)"}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
