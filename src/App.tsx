@@ -15,6 +15,9 @@ import ProjectDNA from "./pages/ProjectDNA";
 import Production from "./pages/Production";
 import ProjectLibrary from "./pages/ProjectLibrary";
 import Planning from "./pages/Planning";
+import Sprints from "./pages/Sprints";
+import ProjectHistory from "./pages/ProjectHistory";
+import ProjectPages from "./pages/ProjectPages";
 import GlobalLibrary from "./pages/GlobalLibrary";
 import Models from "./pages/Models";
 import SettingsPage from "./pages/SettingsPage";
@@ -44,6 +47,9 @@ const App = () => (
                 <Route path="/project/:projectId/production" element={<Production />} />
                 <Route path="/project/:projectId/library" element={<ProjectLibrary />} />
                 <Route path="/project/:projectId/planning" element={<Planning />} />
+                <Route path="/project/:projectId/sprints" element={<Sprints />} />
+                <Route path="/project/:projectId/history" element={<ProjectHistory />} />
+                <Route path="/project/:projectId/pages" element={<ProjectPages />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

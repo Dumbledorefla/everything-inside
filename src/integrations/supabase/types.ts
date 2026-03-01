@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_versions: {
         Row: {
           asset_id: string
@@ -221,6 +262,126 @@ export type Database = {
           },
         ]
       }
+      page_section_variants: {
+        Row: {
+          body: string | null
+          created_at: string
+          cta: string | null
+          headline: string | null
+          id: string
+          image_url: string | null
+          section_id: string
+          style: Json | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          cta?: string | null
+          headline?: string | null
+          id?: string
+          image_url?: string | null
+          section_id: string
+          style?: Json | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          cta?: string | null
+          headline?: string | null
+          id?: string
+          image_url?: string | null
+          section_id?: string
+          style?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_section_variants_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "page_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_sections: {
+        Row: {
+          created_at: string
+          id: string
+          page_id: string
+          section_type: string
+          selected_variant_id: string | null
+          sort_order: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_id: string
+          section_type: string
+          selected_variant_id?: string | null
+          sort_order?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_id?: string
+          section_type?: string
+          selected_variant_id?: string | null
+          sort_order?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_sections_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pages: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          page_type: Database["public"]["Enums"]["page_type"]
+          project_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          page_type?: Database["public"]["Enums"]["page_type"]
+          project_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          page_type?: Database["public"]["Enums"]["page_type"]
+          project_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -304,6 +465,50 @@ export type Database = {
           },
         ]
       }
+      project_memory: {
+        Row: {
+          category: string
+          confirmed: boolean
+          created_at: string
+          id: string
+          occurrences: number
+          pattern: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          confirmed?: boolean
+          created_at?: string
+          id?: string
+          occurrences?: number
+          pattern: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          confirmed?: boolean
+          created_at?: string
+          id?: string
+          occurrences?: number
+          pattern?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_memory_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
@@ -378,6 +583,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      saved_templates: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          tags: string[] | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sprint_items: {
         Row: {
@@ -474,7 +723,9 @@ export type Database = {
     }
     Functions: {
       is_asset_owner: { Args: { p_asset_id: string }; Returns: boolean }
+      is_page_owner: { Args: { p_page_id: string }; Returns: boolean }
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_section_owner: { Args: { p_section_id: string }; Returns: boolean }
       is_sprint_owner: { Args: { p_sprint_id: string }; Returns: boolean }
     }
     Enums: {
@@ -486,6 +737,15 @@ export type Database = {
         | "archived"
         | "error"
       output_type: "text" | "image" | "both"
+      page_type:
+        | "sales"
+        | "landing"
+        | "vsl"
+        | "presell"
+        | "advertorial"
+        | "checkout"
+        | "thankyou"
+        | "ecommerce"
       profile_level: "economy" | "standard" | "quality"
       provider_type: "text" | "image"
       sprint_status: "active" | "paused" | "completed"
@@ -625,6 +885,16 @@ export const Constants = {
         "error",
       ],
       output_type: ["text", "image", "both"],
+      page_type: [
+        "sales",
+        "landing",
+        "vsl",
+        "presell",
+        "advertorial",
+        "checkout",
+        "thankyou",
+        "ecommerce",
+      ],
       profile_level: ["economy", "standard", "quality"],
       provider_type: ["text", "image"],
       sprint_status: ["active", "paused", "completed"],
