@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Grid3X3, List, Search, Filter, Image, Star, Archive, MoreHorizontal } from "lucide-react";
+import { useAssistant } from "@/contexts/AssistantContext";
 
 const folders = [
   { name: "Ativos Oficiais", count: 5, icon: Star },
@@ -9,29 +10,30 @@ const folders = [
 ];
 
 const mockAssets = [
-  { id: 1, type: "Banner", title: "Banner BF — Variação A", status: "Rascunho", profile: "Padrão", provider: "Gemini Pro", date: "28/02" },
-  { id: 2, type: "Post", title: "Post IG — Lançamento v2", status: "Aprovado", profile: "Qualidade", provider: "OpenAI", date: "27/02" },
-  { id: 3, type: "Ad", title: "Facebook Ad — Topo Funil", status: "Rascunho", profile: "Economia", provider: "Gemini Flash", date: "27/02" },
-  { id: 4, type: "Story", title: "Story Countdown 3d", status: "Oficial", profile: "Padrão", provider: "Gemini Pro", date: "26/02" },
-  { id: 5, type: "Banner", title: "Banner Hero LP", status: "Aprovado", profile: "Qualidade", provider: "OpenAI", date: "25/02" },
-  { id: 6, type: "Post", title: "Carrossel 5 slides", status: "Rascunho", profile: "Economia", provider: "Gemini Flash", date: "25/02" },
+  { id: "a1", type: "Banner", title: "Banner BF — Variação A", status: "Rascunho", profile: "Padrão", provider: "Gemini Pro", date: "28/02" },
+  { id: "a2", type: "Post", title: "Post IG — Lançamento v2", status: "Aprovado", profile: "Qualidade", provider: "OpenAI", date: "27/02" },
+  { id: "a3", type: "Ad", title: "Facebook Ad — Topo Funil", status: "Rascunho", profile: "Economia", provider: "Gemini Flash", date: "27/02" },
+  { id: "a4", type: "Story", title: "Story Countdown 3d", status: "Oficial", profile: "Padrão", provider: "Gemini Pro", date: "26/02" },
+  { id: "a5", type: "Banner", title: "Banner Hero LP", status: "Aprovado", profile: "Qualidade", provider: "OpenAI", date: "25/02" },
+  { id: "a6", type: "Post", title: "Carrossel 5 slides", status: "Rascunho", profile: "Economia", provider: "Gemini Flash", date: "25/02" },
 ];
 
 const statusColors: Record<string, string> = {
   Rascunho: "bg-cos-warning/10 text-cos-warning",
-  Aprovado: "bg-cos-cyan/10 text-cos-cyan",
+  Aprovado: "bg-primary/10 text-primary",
   Oficial: "bg-cos-success/10 text-cos-success",
 };
 
 const profileColors: Record<string, string> = {
   Economia: "text-cos-warning",
-  Padrão: "text-cos-cyan",
+  Padrão: "text-primary",
   Qualidade: "text-cos-purple",
 };
 
 export default function ProjectLibrary() {
   const [view, setView] = useState<"grid" | "list">("list");
   const [search, setSearch] = useState("");
+  const { selectAsset, selectedAsset } = useAssistant();
 
   return (
     <div className="p-6">
@@ -88,7 +90,19 @@ export default function ProjectLibrary() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.03 }}
-              className="grid grid-cols-[1fr_100px_100px_100px_80px_40px] gap-4 items-center px-5 py-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+              onClick={() =>
+                selectAsset({
+                  id: asset.id,
+                  title: asset.title,
+                  type: asset.type,
+                  status: asset.status,
+                  profile: asset.profile,
+                  provider: asset.provider,
+                })
+              }
+              className={`grid grid-cols-[1fr_100px_100px_100px_80px_40px] gap-4 items-center px-5 py-3 hover:bg-secondary/30 transition-colors cursor-pointer ${
+                selectedAsset?.id === asset.id ? "bg-primary/5 border-l-2 border-l-primary" : ""
+              }`}
             >
               <div className="flex items-center gap-3">
                 <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">{asset.type}</span>
