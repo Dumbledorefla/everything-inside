@@ -1,17 +1,24 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useAssistant } from "@/contexts/AssistantContext";
-import { Send, Bot, User, Terminal, Loader2, Zap, Command } from "lucide-react";
+import { Send, Bot, User, Terminal, Loader2, Zap, Command, Mic, MicOff, Globe, FolderOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { motion, AnimatePresence } from "framer-motion";
 
 const roleConfig = {
   user: { icon: User, label: "Você", color: "text-foreground" },
   assistant: { icon: Bot, label: "COS", color: "text-primary" },
-  system: { icon: Terminal, label: "Sistema", color: "text-amber-500" },
+  system: { icon: Terminal, label: "Sistema", color: "text-cos-warning" },
 };
 
-const QUICK_COMMANDS = [
+const GLOBAL_COMMANDS = [
+  "Crie um novo projeto de Tarot",
+  "Qual projeto está rendendo mais?",
+  "Me mostre um resumo geral",
+];
+
+const PROJECT_COMMANDS = [
   "Faça um sprint de 10 peças",
   "Analise meus padrões",
   "Planeje 7 dias de conteúdo",
@@ -19,9 +26,21 @@ const QUICK_COMMANDS = [
 ];
 
 export default function ChatThread() {
-  const { thread, sendMessage, activeProjectId, selectedAsset, setSpec, setActiveTab } = useAssistant();
+  const {
+    thread, sendMessage, activeProjectId, selectedAsset, setSpec, agentMode,
+    isRecording, isTranscribing, startRecording, stopRecording,
+    isLoadingHistory, persistMessage, activeThreadId,
+  } = useAssistant();
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [thread]);
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -47,6 +66,7 @@ export default function ChatThread() {
           messages: apiMessages,
           projectId: activeProjectId,
           selectedAssetId: selectedAsset?.id || null,
+          agentMode,
         }),
       });
 
@@ -67,7 +87,6 @@ export default function ChatThread() {
         if (data.type === "command") {
           sendMessage(data.message, false, true);
 
-          // Execute action side-effects
           if (data.action?.type === "trigger_sprint") {
             setSpec({ quantity: data.action.quantity || 10 });
             toast.info(`Sprint de ${data.action.quantity} configurado. Vá para Produção.`);
@@ -82,10 +101,24 @@ export default function ChatThread() {
             toast.success("Ativo aprovado via CLI!");
           } else if (data.action?.type === "pattern_analysis") {
             toast.success("Análise salva no painel de Memória Adaptativa");
+          } else if (data.action?.type === "project_created") {
+            toast.success(`Projeto "${data.action.name}" criado!`);
           }
         } else {
           sendMessage(data.message || data.error || "Resposta inesperada", false, true);
         }
+
+        // Persist assistant response
+        if (activeThreadId && data.message) {
+          persistMessage({
+            id: crypto.randomUUID(),
+            role: "system",
+            content: data.message,
+            timestamp: Date.now(),
+            actions: data.action,
+          });
+        }
+
         setIsStreaming(false);
         return;
       }
@@ -149,90 +182,242 @@ export default function ChatThread() {
         }
       }
 
-      if (assistantContent) sendMessage(assistantContent, false, false, false);
+      if (assistantContent) {
+        sendMessage(assistantContent, false, false, false);
+        // Persist final assistant message
+        persistMessage({
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: assistantContent,
+          timestamp: Date.now(),
+        });
+      }
     } catch (e: any) {
       sendMessage(`❌ Erro: ${e.message}`, false, true);
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, thread, sendMessage, activeProjectId, selectedAsset, setSpec, setActiveTab]);
+  }, [input, isStreaming, thread, sendMessage, activeProjectId, selectedAsset, setSpec, agentMode, activeThreadId, persistMessage]);
 
-  const isCommand = /sprint|aprov|reger|analis|banner|criativo/i.test(input);
+  // Voice handling
+  const handleVoiceToggle = useCallback(async () => {
+    if (isRecording) {
+      const text = await stopRecording();
+      if (text) {
+        setInput(text);
+        // Auto-send voice commands
+        if (/sprint|aprov|reger|analis|cri[ae]|gere|planej/i.test(text)) {
+          setInput("");
+          sendMessage(text, true);
+          // Trigger send flow
+          setTimeout(() => {
+            const btn = document.getElementById("chat-send-btn");
+            btn?.click();
+          }, 100);
+        }
+      }
+    } else {
+      startRecording();
+    }
+  }, [isRecording, stopRecording, startRecording, sendMessage]);
+
+  const isCommand = /sprint|aprov|reger|analis|banner|criativo|cri[ae]\s+um|novo\s+projeto/i.test(input);
+  const quickCommands = agentMode === "global" ? GLOBAL_COMMANDS : PROJECT_COMMANDS;
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {thread.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-12">
-            <Bot className="h-8 w-8 text-muted-foreground/40" />
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+        {isLoadingHistory && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        )}
+
+        {!isLoadingHistory && thread.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center h-full text-center gap-4 py-12"
+          >
+            <div className={cn(
+              "rounded-2xl p-4",
+              agentMode === "global" ? "bg-cos-purple/10" : "bg-primary/10"
+            )}>
+              {agentMode === "global"
+                ? <Globe className="h-8 w-8 text-cos-purple" />
+                : <FolderOpen className="h-8 w-8 text-primary" />
+              }
+            </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Assistente COS</p>
-              <p className="text-xs text-muted-foreground/70 mt-1 max-w-[240px]">
-                Chat inteligente + CLI híbrido. Digite comandos ou converse sobre estratégia.
+              <p className="text-sm font-semibold">
+                {agentMode === "global" ? "Diretor Geral COS" : "Especialista de Projeto"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[260px]">
+                {agentMode === "global"
+                  ? "Gestão de portfólio, criação de projetos e análise global."
+                  : "Produção de ativos, refinamento de DNA e controle de Sprints."
+                }
               </p>
             </div>
-            <div className="flex flex-wrap gap-1.5 mt-2 max-w-[280px]">
-              {QUICK_COMMANDS.map((hint) => (
+            <div className="flex flex-wrap gap-1.5 mt-2 max-w-[300px]">
+              {quickCommands.map((hint) => (
                 <button key={hint} onClick={() => setInput(hint)}
-                  className="rounded-md border border-border bg-secondary/50 px-2.5 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors">
+                  className="rounded-lg border border-border/50 bg-secondary/30 px-2.5 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all">
                   {hint}
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
-        {thread.map((msg) => {
-          const cfg = roleConfig[msg.role];
-          const Icon = cfg.icon;
-          return (
-            <div key={msg.id} className={cn("flex gap-2", msg.role === "user" && "flex-row-reverse")}>
-              <div className={cn("shrink-0 mt-0.5 rounded-md p-1", msg.role === "user" ? "bg-secondary" : "bg-primary/10")}>
-                <Icon className={cn("h-3.5 w-3.5", cfg.color)} />
-              </div>
-              <div className={cn("rounded-lg px-3 py-2 text-sm max-w-[85%]",
-                msg.role === "user" ? "bg-secondary text-foreground" :
-                msg.role === "system" ? "bg-amber-500/5 text-foreground border border-amber-500/20" :
-                "bg-primary/5 text-foreground border border-primary/10")}>
-                <div className="prose prose-sm prose-invert max-w-none [&>*]:my-1 [&>p]:my-0.5 [&>ul]:my-1 [&>ol]:my-1 [&>h1]:text-sm [&>h2]:text-sm [&>h3]:text-xs">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+
+        <AnimatePresence initial={false}>
+          {thread.map((msg, i) => {
+            const cfg = roleConfig[msg.role];
+            const Icon = cfg.icon;
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className={cn("flex gap-2.5", msg.role === "user" && "flex-row-reverse")}
+              >
+                <div className={cn(
+                  "shrink-0 mt-0.5 rounded-xl p-1.5",
+                  msg.role === "user" ? "bg-secondary" :
+                  msg.role === "system" ? "bg-cos-warning/10" :
+                  "bg-primary/10"
+                )}>
+                  <Icon className={cn("h-3.5 w-3.5", cfg.color)} />
                 </div>
+                <div className={cn(
+                  "rounded-2xl px-3.5 py-2.5 text-sm max-w-[85%] shadow-sm",
+                  msg.role === "user"
+                    ? "bg-secondary/80 text-foreground rounded-tr-md"
+                    : msg.role === "system"
+                    ? "glass text-foreground border border-cos-warning/20 rounded-tl-md"
+                    : "glass text-foreground border border-primary/10 rounded-tl-md"
+                )}>
+                  <div className="prose prose-sm max-w-none [&>*]:my-1 [&>p]:my-0.5 [&>ul]:my-1 [&>ol]:my-1 [&>h1]:text-sm [&>h2]:text-sm [&>h3]:text-xs dark:prose-invert">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+
+        {isStreaming && thread[thread.length - 1]?.role !== "assistant" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5">
+            <div className="shrink-0 mt-0.5 rounded-xl p-1.5 bg-primary/10">
+              <Bot className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="glass rounded-2xl rounded-tl-md px-3.5 py-2.5 border border-primary/10">
+              <div className="flex gap-1">
+                <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
+                <span className="h-2 w-2 rounded-full bg-primary animate-bounce delay-100" />
+                <span className="h-2 w-2 rounded-full bg-primary animate-bounce delay-200" />
               </div>
             </div>
-          );
-        })}
-        {isStreaming && thread[thread.length - 1]?.role !== "assistant" && (
-          <div className="flex gap-2">
-            <div className="shrink-0 mt-0.5 rounded-md p-1 bg-primary/10"><Bot className="h-3.5 w-3.5 text-primary" /></div>
-            <div className="rounded-lg px-3 py-2 text-sm bg-primary/5 border border-primary/10"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>
-          </div>
+          </motion.div>
         )}
       </div>
-      <div className="border-t border-border p-3">
+
+      {/* Input Area */}
+      <div className="border-t border-border/50 p-3">
         {isCommand && (
-          <div className="flex items-center gap-1.5 mb-2 px-1">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-1.5 mb-2 px-1">
             <Command className="h-3 w-3 text-primary" />
             <span className="text-[10px] text-primary font-mono">Comando detectado — será executado como ação</span>
-          </div>
+          </motion.div>
         )}
+
+        {isTranscribing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 mb-2 px-1">
+            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            <span className="text-[10px] text-primary font-mono">Transcrevendo áudio...</span>
+          </motion.div>
+        )}
+
         {selectedAsset && (
           <div className="flex items-center gap-1.5 mb-2 px-1">
-            <Zap className="h-3 w-3 text-amber-500" />
+            <Zap className="h-3 w-3 text-cos-warning" />
             <span className="text-[10px] text-muted-foreground font-mono truncate">
               Ativo: {selectedAsset.title || selectedAsset.id.slice(0, 8)}
             </span>
           </div>
         )}
-        <div className="flex gap-2">
-          <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder={selectedAsset ? "Comando sobre o ativo selecionado..." : "Comando ou conversa..."}
-            disabled={isStreaming}
+
+        <div className="flex gap-2 items-end">
+          {/* Voice Button */}
+          <button
+            onClick={handleVoiceToggle}
+            disabled={isStreaming || isTranscribing}
             className={cn(
-              "flex-1 rounded-md border bg-secondary/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 transition-colors disabled:opacity-50",
-              isCommand ? "border-primary/50 focus:border-primary focus:ring-primary" : "border-border focus:border-primary focus:ring-primary"
-            )} />
-          <button onClick={handleSend} disabled={!input.trim() || isStreaming}
-            className="rounded-md bg-primary px-3 text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40">
+              "shrink-0 rounded-xl p-2.5 transition-all",
+              isRecording
+                ? "bg-destructive text-destructive-foreground animate-pulse shadow-lg"
+                : "bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary"
+            )}
+          >
+            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </button>
+
+          {/* Text Input */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              placeholder={
+                agentMode === "global"
+                  ? "Briefing, novo projeto, análise..."
+                  : selectedAsset
+                  ? "Comando sobre o ativo selecionado..."
+                  : "Comando ou conversa..."
+              }
+              disabled={isStreaming || isTranscribing}
+              className={cn(
+                "w-full rounded-xl border bg-secondary/30 px-4 py-2.5 text-sm text-foreground",
+                "placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 transition-all disabled:opacity-50",
+                isCommand
+                  ? "border-primary/40 focus:border-primary focus:ring-primary/20"
+                  : "border-border/50 focus:border-primary focus:ring-primary/20"
+              )}
+            />
+
+            {/* Waveform indicator when recording */}
+            {isRecording && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-0.5 items-end h-4">
+                {[...Array(5)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-0.5 bg-destructive rounded-full"
+                    animate={{ height: [4, 16, 8, 14, 6] }}
+                    transition={{
+                      duration: 0.8,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      delay: i * 0.1,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Send Button */}
+          <button
+            id="chat-send-btn"
+            onClick={handleSend}
+            disabled={!input.trim() || isStreaming || isTranscribing}
+            className={cn(
+              "shrink-0 rounded-xl p-2.5 transition-all",
+              "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 glow-cyan"
+            )}
+          >
             {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </div>
