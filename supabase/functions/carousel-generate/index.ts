@@ -9,21 +9,26 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+type Formula = "pas" | "tutorial" | "hero_journey";
+
 interface CarouselRequest {
   projectId: string;
   referenceId?: string;
-  slideCount: number; // 5-7
+  slideCount: number;
   topic?: string;
   profile: "economy" | "standard" | "quality";
   ratio: string;
-  mode: "storyline" | "generate"; // Step 1: storyline, Step 2: generate
-  approvedStoryline?: SlideStoryline[]; // For mode=generate
+  mode: "storyline" | "generate";
+  formula?: Formula;
+  approvedStoryline?: SlideStoryline[];
+  styleAnchor?: string;
 }
 
 interface SlideStoryline {
   slideNumber: number;
-  role: string; // "hook" | "content" | "cta"
+  role: string;
   headline: string;
+  body?: string;
   visualDirection: string;
   copyPlacement: string;
 }
@@ -38,6 +43,38 @@ const IMAGE_MODELS: Record<string, string> = {
   economy: "google/gemini-2.5-flash-image",
   standard: "google/gemini-2.5-flash-image",
   quality: "google/gemini-3-pro-image-preview",
+};
+
+// ── FORMULA DEFINITIONS ────────────────────────────────────────
+const FORMULA_PROMPTS: Record<Formula, (slideCount: number) => string> = {
+  pas: (n) => `Use a Fórmula PAS (Problema → Agitação → Solução). Estrutura OBRIGATÓRIA:
+
+Slide 1 (PROBLEMA): Visual que espelha a DOR do público-alvo. Headline agressiva que nomeia o problema.
+Slide 2 (AGITAÇÃO): Mostra as CONSEQUÊNCIAS de não resolver. Gera desconforto e urgência.
+Slide 3 (SOLUÇÃO): Introduz o produto/serviço como o "herói" que resolve a dor.
+${n >= 5 ? `Slide 4 (BENEFÍCIO REAL): Mostra o resultado final, a TRANSFORMAÇÃO. Antes vs Depois implícito.` : ""}
+Slide ${n} (CTA): Chamada clara e direta para compra, link na bio ou ação específica.
+
+TOM: Direto, persuasivo, focado em conversão. Cada slide deve aumentar a tensão até o alívio da solução.`,
+
+  tutorial: (n) => `Use a Fórmula TUTORIAL/LISTA (Promessa → Entrega → Recapitulação). Estrutura OBRIGATÓRIA:
+
+Slide 1 (A PROMESSA): "Como conseguir [X] em [Y] passos" ou "Os [N] segredos para [resultado]". Visual ultra-limpo e chamativo.
+Slides 2 a ${n - 2} (ENTREGA): Conteúdo prático, direto, visualmente rico. Cada slide = 1 dica/passo numerado. Informação ACIONÁVEL.
+Slide ${n - 1} (RECAPITULAÇÃO): Resumo visual rápido de todos os pontos para o usuário SALVAR o post.
+Slide ${n} (CTA): "Salve para não esquecer" ou "Compartilhe com quem precisa" ou "Siga para mais dicas".
+
+TOM: Educativo, acessível, generoso. O objetivo é viralizar por valor. Estética nativa de Instagram.`,
+
+  hero_journey: (n) => `Use a Fórmula JORNADA DO HERÓI (Gancho → Conflito → Epifania → Resultado). Estrutura OBRIGATÓRIA:
+
+Slide 1 (O GANCHO): Uma afirmação contraintuitiva, polêmica suave ou início de história pessoal que PARA o scroll.
+Slides 2 a ${Math.min(3, n - 3)} (O CONFLITO): O desafio enfrentado, o erro comum do mercado, ou a "mentira" que todos acreditam.
+Slide ${Math.min(4, n - 2)} (A EPIFANIA): O segredo, a virada de chave, o insight que muda tudo. O momento "aha!".
+Slide ${n - 1} (RESULTADO): Prova social, dados, screenshot, depoimento. A evidência da transformação.
+Slide ${n} (CTA): Convite para seguir, comentar ou "marque alguém que precisa ouvir isso".
+
+TOM: Narrativo, autêntico, inspirador. Construção de autoridade e conexão emocional. Storytelling puro.`,
 };
 
 serve(async (req) => {
@@ -65,7 +102,7 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: CarouselRequest = await req.json();
-    const { projectId, referenceId, slideCount, topic, profile, ratio, mode, approvedStoryline } = body;
+    const { projectId, referenceId, slideCount, topic, profile, ratio, mode, formula, approvedStoryline } = body;
 
     // Fetch project + DNA
     const [{ data: project }, { data: dna }] = await Promise.all([
@@ -74,13 +111,15 @@ serve(async (req) => {
         .order("version", { ascending: false }).limit(1).single(),
     ]);
 
-    // Fetch reference if provided
+    // Fetch reference context
     let refContext = "";
+    let refType = "instagram";
     if (referenceId) {
       const { data: ref } = await supabase.from("reference_analyses").select("*").eq("id", referenceId).single();
       if (ref) {
+        refType = ref.reference_type || "instagram";
         const raw = ref.raw_analysis as any || {};
-        refContext = `\n\nREFERÊNCIA VISUAL ATIVA:
+        refContext = `\n\nREFERÊNCIA VISUAL ATIVA (Tipo: ${refType.toUpperCase()}):
 Arquétipo: ${ref.visual_archetype}
 Tom: ${ref.emotional_tone}
 Composição: ${ref.composition_intent}
@@ -90,10 +129,14 @@ ${ref.generated_prompt ? `Direção Visual: ${ref.generated_prompt}` : ""}`;
       }
     }
 
+    // Auto-select formula based on reference type if not provided
+    const effectiveFormula: Formula = formula || autoSelectFormula(refType);
     const dnaContext = buildDNAContext(project, dna) + refContext;
 
     // ── MODE: STORYLINE ─────────────────────────────────────────
     if (mode === "storyline") {
+      const formulaPrompt = FORMULA_PROMPTS[effectiveFormula](slideCount);
+
       const resp = await fetch(AI_GATEWAY, {
         method: "POST",
         headers: {
@@ -108,20 +151,21 @@ ${ref.generated_prompt ? `Direção Visual: ${ref.generated_prompt}` : ""}`;
               content: `Você é um Roteirista de Carrosséis de Elite para Instagram/Redes Sociais.
 ${dnaContext}
 
-Crie um roteiro de carrossel com EXATAMENTE ${slideCount} slides seguindo esta estrutura narrativa:
+FÓRMULA SELECIONADA: ${effectiveFormula.toUpperCase()}
+${formulaPrompt}
 
-SLIDE 1 (O GANCHO): Visual de alto impacto com headline disruptiva que PARA o scroll.
-SLIDES 2 a ${slideCount - 1} (O CONTEÚDO): Desenvolvimento da ideia, cada slide avançando a narrativa.
-SLIDE ${slideCount} (O CTA): Chamada para ação clara (Comentar, Comprar, Seguir, Salvar).
+Crie um roteiro de carrossel com EXATAMENTE ${slideCount} slides.
 
-REGRAS:
-- Cada slide deve ter uma RAZÃO para existir na sequência
-- A narrativa deve criar CURIOSIDADE progressiva
-- O visual deve manter CONSISTÊNCIA (mesma luz, estilo, cores)
+REGRAS DE PERSUASÃO:
+- Cada slide deve ter uma RAZÃO ESTRATÉGICA para existir na sequência
+- A narrativa deve criar CURIOSIDADE PROGRESSIVA (cada slide puxa o próximo)
+- O visual deve manter CONSISTÊNCIA ABSOLUTA (mesma luz, estilo, cores, personagem)
 - Indique onde o texto deve ficar para NÃO poluir o design (topo, centro, rodapé, lateral)
+- Os roles devem seguir: "hook" para gancho, "problem" para problema, "agitation" para agitação, "solution" para solução, "benefit" para benefício, "content" para conteúdo, "recap" para recapitulação, "conflict" para conflito, "epiphany" para epifania, "proof" para prova, "cta" para chamada de ação
 
 Retorne APENAS JSON (sem markdown):
 {
+  "formula": "${effectiveFormula}",
   "storyline": [
     {
       "slideNumber": 1,
@@ -129,10 +173,10 @@ Retorne APENAS JSON (sem markdown):
       "headline": "...",
       "body": "...",
       "visualDirection": "Descrição detalhada da cena visual para este slide",
-      "copyPlacement": "topo-esquerdo" 
+      "copyPlacement": "topo-esquerdo"
     }
   ],
-  "styleAnchor": "Descrição do estilo visual unificado que deve ser mantido em TODOS os slides (luz, cor, textura, cenário)"
+  "styleAnchor": "Descrição do estilo visual unificado que deve ser mantido em TODOS os slides (luz, cor, textura, cenário, personagem)"
 }`,
             },
             { role: "user", content: topic || `Crie um carrossel estratégico para o nicho ${project?.niche || "geral"}.` },
@@ -150,9 +194,9 @@ Retorne APENAS JSON (sem markdown):
       const raw = data.choices?.[0]?.message?.content || "";
       const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      const storyline = jsonMatch ? JSON.parse(jsonMatch[0]) : { storyline: [], styleAnchor: "" };
+      const storyline = jsonMatch ? JSON.parse(jsonMatch[0]) : { storyline: [], styleAnchor: "", formula: effectiveFormula };
 
-      return new Response(JSON.stringify(storyline), {
+      return new Response(JSON.stringify({ ...storyline, formula: effectiveFormula }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -161,19 +205,16 @@ Retorne APENAS JSON (sem markdown):
     if (mode === "generate" && approvedStoryline?.length) {
       const results: any[] = [];
       const imageModel = IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
-
-      // The styleAnchor is the visual consistency seed
-      const styleAnchor = (body as any).styleAnchor || "Professional, consistent lighting and color grading across all slides.";
+      const styleAnchor = body.styleAnchor || "Professional, consistent lighting and color grading across all slides.";
 
       for (const slide of approvedStoryline) {
-        // Generate image with visual consistency lock
         const imagePrompt = `Create slide ${slide.slideNumber} of ${approvedStoryline.length} for an Instagram carousel.
 
 VISUAL CONSISTENCY LOCK (MUST MATCH ALL SLIDES):
 ${styleAnchor}
 
 THIS SLIDE:
-Role: ${slide.role === "hook" ? "GANCHO (alto impacto visual)" : slide.role === "cta" ? "CTA (chamada para ação)" : "CONTEÚDO (desenvolvimento)"}
+Role: ${getRoleDescription(slide.role)}
 Visual Direction: ${slide.visualDirection}
 Headline: ${slide.headline}
 Copy Placement Zone: ${slide.copyPlacement} (leave this area clean for text overlay)
@@ -203,7 +244,6 @@ CRITICAL: Maintain EXACT SAME lighting, color palette, style, and visual mood as
             imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
           }
 
-          // Save as asset
           const { data: savedAsset } = await supabase
             .from("assets")
             .insert({
@@ -217,7 +257,7 @@ CRITICAL: Maintain EXACT SAME lighting, color palette, style, and visual mood as
               provider_used: imageModel,
               destination: "feed",
               preset: ratio || "1:1",
-              tags: ["carousel", `slide-${slide.slideNumber}`],
+              tags: ["carousel", `slide-${slide.slideNumber}`, `formula-${effectiveFormula}`],
             })
             .select()
             .single();
@@ -232,6 +272,7 @@ CRITICAL: Maintain EXACT SAME lighting, color palette, style, and visual mood as
               image_url: imageUrl,
               generation_metadata: {
                 carousel: true,
+                formula: effectiveFormula,
                 slide_number: slide.slideNumber,
                 slide_role: slide.role,
                 visual_direction: slide.visualDirection,
@@ -280,6 +321,35 @@ CRITICAL: Maintain EXACT SAME lighting, color palette, style, and visual mood as
     });
   }
 });
+
+// ── HELPERS ─────────────────────────────────────────────────────
+
+function autoSelectFormula(refType: string): Formula {
+  switch (refType) {
+    case "sales": return "pas";
+    case "instagram": return "tutorial";
+    case "brand": return "hero_journey";
+    case "landing": return "pas";
+    default: return "tutorial";
+  }
+}
+
+function getRoleDescription(role: string): string {
+  const descriptions: Record<string, string> = {
+    hook: "GANCHO — alto impacto visual, para o scroll",
+    problem: "PROBLEMA — visual que espelha a dor do público",
+    agitation: "AGITAÇÃO — consequências, desconforto, urgência",
+    solution: "SOLUÇÃO — o herói que resolve tudo",
+    benefit: "BENEFÍCIO — resultado final, transformação",
+    content: "CONTEÚDO — desenvolvimento prático e visual",
+    recap: "RECAPITULAÇÃO — resumo visual para salvar",
+    conflict: "CONFLITO — desafio ou erro comum do mercado",
+    epiphany: "EPIFANIA — virada de chave, insight transformador",
+    proof: "PROVA — evidência, prova social, autoridade",
+    cta: "CTA — chamada para ação clara e direta",
+  };
+  return descriptions[role] || `${role.toUpperCase()} — desenvolvimento da narrativa`;
+}
 
 function buildDNAContext(project: any, dna: any): string {
   if (!project) return "Projeto sem dados de contexto.";

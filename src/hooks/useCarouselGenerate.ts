@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export type CarouselFormula = "pas" | "tutorial" | "hero_journey";
+
 export interface SlideStoryline {
   slideNumber: number;
   role: string;
@@ -29,6 +31,8 @@ export function useCarouselGenerate() {
   const [storyline, setStoryline] = useState<SlideStoryline[]>([]);
   const [styleAnchor, setStyleAnchor] = useState("");
   const [slides, setSlides] = useState<CarouselSlideResult[]>([]);
+  const [formula, setFormula] = useState<CarouselFormula>("tutorial");
+  const [activeFormula, setActiveFormula] = useState<CarouselFormula>("tutorial");
 
   const generateStoryline = useCallback(async (params: {
     projectId: string;
@@ -44,20 +48,21 @@ export function useCarouselGenerate() {
 
     try {
       const { data, error } = await supabase.functions.invoke("carousel-generate", {
-        body: { ...params, mode: "storyline" },
+        body: { ...params, mode: "storyline", formula },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       setStoryline(data.storyline || []);
       setStyleAnchor(data.styleAnchor || "");
+      setActiveFormula(data.formula || formula);
       setStep("reviewing");
-      toast.success(`Roteiro com ${data.storyline?.length || 0} slides gerado!`);
+      toast.success(`Roteiro "${formulaLabel(data.formula || formula)}" com ${data.storyline?.length || 0} slides gerado!`);
     } catch (e: any) {
       toast.error(e.message || "Erro ao gerar roteiro");
       setStep("idle");
     }
-  }, []);
+  }, [formula]);
 
   const generateSlides = useCallback(async (params: {
     projectId: string;
@@ -76,6 +81,7 @@ export function useCarouselGenerate() {
           slideCount: storyline.length,
           approvedStoryline: storyline,
           styleAnchor,
+          formula: activeFormula,
         },
       });
       if (error) throw error;
@@ -88,7 +94,7 @@ export function useCarouselGenerate() {
       toast.error(e.message || "Erro ao gerar slides");
       setStep("reviewing");
     }
-  }, [storyline, styleAnchor]);
+  }, [storyline, styleAnchor, activeFormula]);
 
   const reset = useCallback(() => {
     setStep("idle");
@@ -101,5 +107,10 @@ export function useCarouselGenerate() {
     setStoryline((prev) => prev.map((s, i) => i === index ? { ...s, ...updates } : s));
   }, []);
 
-  return { step, storyline, styleAnchor, slides, generateStoryline, generateSlides, reset, updateSlide };
+  return { step, storyline, styleAnchor, slides, formula, setFormula, activeFormula, generateStoryline, generateSlides, reset, updateSlide };
+}
+
+function formulaLabel(f: string): string {
+  const labels: Record<string, string> = { pas: "PAS (Dor → Solução)", tutorial: "Tutorial/Lista", hero_journey: "Jornada do Herói" };
+  return labels[f] || f;
 }
