@@ -10,17 +10,17 @@
      ═══════════════════════════════════════════════ */
   :root {
     --background: 0 0% 2%;
-    --foreground: 220 10% 92%;
+    --foreground: 220 10% 94%;
     --card: 0 0% 6.7%;
-    --card-foreground: 220 10% 92%;
+    --card-foreground: 220 10% 94%;
     --popover: 0 0% 5%;
-    --popover-foreground: 220 10% 92%;
+    --popover-foreground: 220 10% 94%;
     --primary: 187 94% 43%;
     --primary-foreground: 0 0% 2%;
     --secondary: 220 12% 12%;
-    --secondary-foreground: 220 10% 80%;
+    --secondary-foreground: 220 10% 85%;
     --muted: 220 12% 12%;
-    --muted-foreground: 215 10% 58%;
+    --muted-foreground: 215 12% 68%;
     --accent: 220 12% 12%;
     --accent-foreground: 220 10% 90%;
     --destructive: 0 72% 51%;
