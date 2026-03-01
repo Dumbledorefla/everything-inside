@@ -23,32 +23,30 @@ export default function AppLayout() {
 
       <header
         className={cn(
-          "fixed top-0 right-0 z-30 flex h-12 items-center justify-between border-b border-border/50 glass px-4 transition-all duration-300",
+          "fixed top-0 right-0 z-30 flex h-12 items-center justify-between border-b border-border/40 glass px-4 transition-all duration-300",
           collapsed ? "left-16" : "left-60"
         )}
       >
         <div className="flex items-center gap-3 flex-1">
-          {/* Command+K Trigger */}
           <button
             onClick={() => {
               const e = new KeyboardEvent("keydown", { key: "k", metaKey: true });
               document.dispatchEvent(e);
             }}
-            className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/30 px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-all max-w-xs flex-1"
+            className="flex items-center gap-2 rounded-xl border border-border/40 bg-secondary/20 px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary/40 hover:text-foreground transition-all max-w-xs flex-1"
           >
             <Search className="h-3.5 w-3.5" />
             <span className="flex-1 text-left">Buscar...</span>
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border/50 bg-background/50 px-1 py-0.5 text-[10px] font-mono text-muted-foreground">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-border/40 bg-background/50 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
               <Command className="h-2.5 w-2.5" />K
             </kbd>
           </button>
         </div>
-        <div className="flex items-center gap-1">
-          {/* Assistant Toggle - always visible */}
+        <div className="flex items-center gap-1.5">
           <button
             onClick={dockOpen ? toggleDock : openDock}
             className={cn(
-              "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all",
+              "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all",
               dockOpen
                 ? "bg-primary/10 text-primary"
                 : agentMode === "global"
@@ -62,22 +60,22 @@ export default function AppLayout() {
             </span>
           </button>
 
-          <button className="flex items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors glow-cyan">
+          <button className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Criar</span>
           </button>
-          <button className="rounded-lg p-2 text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors">
+          <button className="rounded-xl p-2 text-muted-foreground hover:bg-secondary/40 hover:text-foreground transition-colors">
             <Bell className="h-4 w-4" />
           </button>
           <ThemeToggle />
-          <div className="flex items-center gap-1 ml-1 pl-1 border-l border-border/50">
+          <div className="flex items-center gap-1.5 ml-1.5 pl-1.5 border-l border-border/40">
             <span className="text-[10px] text-muted-foreground max-w-[100px] truncate hidden sm:block font-mono">
               {user?.email}
             </span>
             <button
               onClick={signOut}
               title="Sair"
-              className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              className="rounded-xl p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
