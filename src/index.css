@@ -175,6 +175,12 @@
     -webkit-backdrop-filter: blur(40px) saturate(1.6);
   }
 
+  /* Ultra-deep blur for dock */
+  .backdrop-blur-3xl {
+    backdrop-filter: blur(64px) saturate(1.8);
+    -webkit-backdrop-filter: blur(64px) saturate(1.8);
+  }
+
   /* Soft Clay Elevation */
   .elevation-1 { box-shadow: var(--shadow-sm); }
   .elevation-2 { box-shadow: var(--shadow-md); }

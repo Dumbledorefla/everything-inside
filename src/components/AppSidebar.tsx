@@ -4,6 +4,7 @@ import {
   ChevronLeft, FolderOpen, Dna, Home, History, Layers, FileText, Sparkles, ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const globalNav = [
   { to: "/", icon: LayoutDashboard, label: "Projetos" },
@@ -31,26 +32,28 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-300",
+      "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
+      "border-r border-border/20 bg-background/70 backdrop-blur-2xl",
       collapsed ? "w-16" : "w-60"
     )}>
       {/* Brand header */}
-      <div className="flex h-14 items-center justify-between border-b border-border px-4">
+      <div className="flex h-14 items-center justify-between border-b border-border/20 px-4">
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-cos-cyan-glow flex items-center justify-center">
-              <span className="text-[10px] font-bold text-primary-foreground">C</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-cos-purple flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="text-[11px] font-bold text-primary-foreground">C</span>
             </div>
             <span className="font-mono text-sm font-bold tracking-wider text-gradient-cyan">COS</span>
+            <span className="text-[8px] font-mono text-muted-foreground/40 tracking-widest">v2</span>
           </div>
         )}
         {collapsed && (
-          <div className="w-6 h-6 mx-auto rounded-lg bg-gradient-to-br from-primary to-cos-cyan-glow flex items-center justify-center">
-            <span className="text-[10px] font-bold text-primary-foreground">C</span>
+          <div className="w-7 h-7 mx-auto rounded-lg bg-gradient-to-br from-primary to-cos-purple flex items-center justify-center shadow-lg shadow-primary/20">
+            <span className="text-[11px] font-bold text-primary-foreground">C</span>
           </div>
         )}
         <button onClick={onToggle} className={cn(
-          "rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors",
+          "rounded-lg p-1.5 text-muted-foreground hover:bg-card/50 hover:text-foreground transition-colors",
           collapsed && "hidden"
         )}>
           <ChevronLeft className="h-4 w-4" />
@@ -61,7 +64,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
         {isInProject && (
           <>
             <div className={cn("mb-3 px-2", collapsed && "text-center")}>
-              {!collapsed && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/70">Projeto</span>}
+              {!collapsed && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/50">Projeto</span>}
             </div>
             {projectNav.map((item) => {
               const projectBase = location.pathname.split("/").slice(0, 3).join("/");
@@ -71,21 +74,32 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
                   key={item.to}
                   to={to}
                   className={({ isActive }) => cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200",
+                    "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 relative",
                     isActive
-                      ? "bg-primary/10 text-primary font-medium elevation-1"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-card/40 hover:text-foreground",
                     collapsed && "justify-center px-2"
                   )}
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <motion.div
+                          layoutId="sidebar-active"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary"
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                        />
+                      )}
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.label}</span>}
+                    </>
+                  )}
                 </NavLink>
               );
             })}
-            <div className="my-4 mx-3 border-t border-border/50" />
+            <div className="my-4 mx-3 border-t border-border/20" />
             <div className={cn("mb-3 px-2", collapsed && "text-center")}>
-              {!collapsed && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/70">Global</span>}
+              {!collapsed && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/50">Global</span>}
             </div>
           </>
         )}
@@ -95,23 +109,34 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
             to={item.to}
             end={item.to === "/"}
             className={({ isActive }) => cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200",
+              "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 relative",
               isActive && !isInProject
-                ? "bg-primary/10 text-primary font-medium elevation-1"
-                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-card/40 hover:text-foreground",
               collapsed && "justify-center px-2"
             )}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>{item.label}</span>}
+            {({ isActive }) => (
+              <>
+                {isActive && !isInProject && (
+                  <motion.div
+                    layoutId="sidebar-active-global"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                  />
+                )}
+                <item.icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
       {/* Bottom brand mark */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-border/50">
-          <p className="text-[9px] text-muted-foreground/40 font-mono text-center tracking-widest">CREATIVE OS v2</p>
+        <div className="px-4 py-3 border-t border-border/20">
+          <p className="text-[9px] text-muted-foreground/30 font-mono text-center tracking-widest uppercase">Creative OS v2</p>
         </div>
       )}
     </aside>

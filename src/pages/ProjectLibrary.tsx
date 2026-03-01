@@ -76,7 +76,7 @@ export default function ProjectLibrary() {
   ];
 
   return (
-    <div className="p-6 space-bg">
+    <div className="p-6">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -113,10 +113,10 @@ export default function ProjectLibrary() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar ativos..."
-            className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+            className="w-full rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
           />
         </div>
-        <div className="flex items-center gap-1.5 rounded-xl bg-secondary/50 p-1">
+        <div className="flex items-center gap-1.5 rounded-xl bg-card/30 p-1 border border-border/20">
           {statusFilterOptions.map((opt) => (
             <button
               key={opt.value}
@@ -154,7 +154,7 @@ export default function ProjectLibrary() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="rounded-2xl border border-dashed border-border bg-card/50 p-16 text-center nebula-glow relative overflow-hidden"
+          className="rounded-2xl border border-dashed border-border/20 bg-card/10 backdrop-blur-sm p-16 text-center relative overflow-hidden"
         >
           <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary/10 to-cos-purple/10 flex items-center justify-center mb-4 animate-float">
             <Image className="h-8 w-8 text-primary/50" />
@@ -183,8 +183,8 @@ export default function ProjectLibrary() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ delay: i * 0.03 }}
                   className={cn(
-                    "group relative rounded-2xl border border-border bg-card overflow-hidden transition-all duration-300",
-                    "hover:border-primary/30 hover:elevation-3 hover:-translate-y-0.5",
+                    "group relative rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden transition-all duration-300",
+                    "hover:border-primary/20 hover:bg-card/50",
                     selectedAsset?.id === asset.id && "ring-2 ring-primary/50",
                     isApproved && "ring-2 ring-cos-success"
                   )}
@@ -272,7 +272,7 @@ export default function ProjectLibrary() {
 
       {/* ═══ List View ═══ */}
       {!isLoading && filtered.length > 0 && view === "list" && (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden elevation-clay">
+        <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden">
           <div className="grid grid-cols-[1fr_90px_90px_120px_80px] gap-4 border-b border-border px-5 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             <span>Ativo</span><span>Status</span><span>Perfil</span><span>Provedor</span><span>Data</span>
           </div>
