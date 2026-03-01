@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Search, Bell, Plus, User, LogOut } from "lucide-react";
+import { Search, Bell, Plus, User, LogOut, Bot } from "lucide-react";
 import AppSidebar from "./AppSidebar";
+import AssistantDock from "./assistant/AssistantDock";
 import { useAuth } from "@/hooks/useAuth";
+import { useAssistant } from "@/contexts/AssistantContext";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isInProject, dockOpen, toggleDock } = useAssistant();
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,6 +34,20 @@ export default function AppLayout() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isInProject && (
+            <button
+              onClick={toggleDock}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                dockOpen
+                  ? "bg-primary/10 text-primary"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90 glow-cyan"
+              )}
+            >
+              <Bot className="h-3.5 w-3.5" />
+              <span>Assistente</span>
+            </button>
+          )}
           <button className="flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors glow-cyan">
             <Plus className="h-3.5 w-3.5" />
             <span>Criar</span>
@@ -39,7 +56,6 @@ export default function AppLayout() {
             <Bell className="h-4 w-4" />
           </button>
 
-          {/* User menu */}
           <div className="flex items-center gap-2 ml-1">
             <span className="text-xs text-muted-foreground max-w-[120px] truncate hidden sm:block">
               {user?.email}
@@ -55,14 +71,17 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <main
+      <div
         className={cn(
-          "pt-14 min-h-screen transition-all duration-300",
+          "pt-14 min-h-screen flex transition-all duration-300",
           collapsed ? "ml-16" : "ml-60"
         )}
       >
-        <Outlet />
-      </main>
+        <main className="flex-1 min-w-0">
+          <Outlet />
+        </main>
+        <AssistantDock />
+      </div>
     </div>
   );
 }

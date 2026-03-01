@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AssistantProvider } from "@/contexts/AssistantContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
 import Auth from "./pages/Auth";
@@ -28,23 +29,25 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/library" element={<GlobalLibrary />} />
-              <Route path="/models" element={<Models />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/project/:projectId" element={<Navigate to="home" replace />} />
-              <Route path="/project/:projectId/home" element={<ProjectHome />} />
-              <Route path="/project/:projectId/dna" element={<ProjectDNA />} />
-              <Route path="/project/:projectId/production" element={<Production />} />
-              <Route path="/project/:projectId/library" element={<ProjectLibrary />} />
-              <Route path="/project/:projectId/planning" element={<Planning />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AssistantProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/library" element={<GlobalLibrary />} />
+                <Route path="/models" element={<Models />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/project/:projectId" element={<Navigate to="home" replace />} />
+                <Route path="/project/:projectId/home" element={<ProjectHome />} />
+                <Route path="/project/:projectId/dna" element={<ProjectDNA />} />
+                <Route path="/project/:projectId/production" element={<Production />} />
+                <Route path="/project/:projectId/library" element={<ProjectLibrary />} />
+                <Route path="/project/:projectId/planning" element={<Planning />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AssistantProvider>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

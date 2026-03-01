@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, FileCheck, Star, ArrowRight, Plus, Upload, TrendingUp } from "lucide-react";
+import { Zap, FileCheck, Star, ArrowRight, Plus, Upload, TrendingUp, Bot } from "lucide-react";
+import { useAssistant } from "@/contexts/AssistantContext";
 
 const stats = [
   { label: "Rascunhos", value: 24, icon: Zap, color: "text-cos-warning" },
@@ -24,6 +25,13 @@ const statusColors: Record<string, string> = {
 export default function ProjectHome() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { sendMessage, openDock } = useAssistant();
+
+  const quickChips = [
+    { label: "Gerar 5 criativos topo de funil", msg: "Gere 5 criativos de topo de funil para o projeto atual" },
+    { label: "Planejar 7 dias", msg: "Crie um plano de conteúdo para os próximos 7 dias" },
+    { label: "Sprint de ads 4:5", msg: "Crie um sprint de ads com formato 4:5 para Instagram" },
+  ];
 
   return (
     <div className="p-6 max-w-5xl">
@@ -101,6 +109,25 @@ export default function ProjectHome() {
                 <span className="text-[10px] text-muted-foreground">{asset.time}</span>
               </div>
             </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick chips for assistant */}
+      <div className="mt-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Bot className="h-4 w-4 text-primary" />
+          <span className="text-xs font-semibold">Atalhos do Assistente</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {quickChips.map((chip) => (
+            <button
+              key={chip.label}
+              onClick={() => { openDock(); sendMessage(chip.msg); }}
+              className="rounded-full border border-border bg-card px-4 py-2 text-xs text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            >
+              {chip.label}
+            </button>
           ))}
         </div>
       </div>
