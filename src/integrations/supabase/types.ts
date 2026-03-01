@@ -113,6 +113,7 @@ export type Database = {
           folder: string | null
           id: string
           output: Database["public"]["Enums"]["output_type"]
+          platform: string | null
           preset: string | null
           profile_used: Database["public"]["Enums"]["profile_level"] | null
           profile_visual_applied: boolean | null
@@ -120,6 +121,7 @@ export type Database = {
           project_id: string
           provider_selected: string | null
           provider_used: string | null
+          scheduled_for: string | null
           status: Database["public"]["Enums"]["asset_status"]
           tags: string[] | null
           template_id: string | null
@@ -137,6 +139,7 @@ export type Database = {
           folder?: string | null
           id?: string
           output?: Database["public"]["Enums"]["output_type"]
+          platform?: string | null
           preset?: string | null
           profile_used?: Database["public"]["Enums"]["profile_level"] | null
           profile_visual_applied?: boolean | null
@@ -144,6 +147,7 @@ export type Database = {
           project_id: string
           provider_selected?: string | null
           provider_used?: string | null
+          scheduled_for?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
           template_id?: string | null
@@ -161,6 +165,7 @@ export type Database = {
           folder?: string | null
           id?: string
           output?: Database["public"]["Enums"]["output_type"]
+          platform?: string | null
           preset?: string | null
           profile_used?: Database["public"]["Enums"]["profile_level"] | null
           profile_visual_applied?: boolean | null
@@ -168,6 +173,7 @@ export type Database = {
           project_id?: string
           provider_selected?: string | null
           provider_used?: string | null
+          scheduled_for?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
           template_id?: string | null
@@ -195,6 +201,53 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_kits: {
+        Row: {
+          color_palette: Json
+          created_at: string
+          editorial_line: Json
+          id: string
+          moodboard_urls: string[] | null
+          project_id: string
+          status: string
+          typography: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color_palette?: Json
+          created_at?: string
+          editorial_line?: Json
+          id?: string
+          moodboard_urls?: string[] | null
+          project_id: string
+          status?: string
+          typography?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color_palette?: Json
+          created_at?: string
+          editorial_line?: Json
+          id?: string
+          moodboard_urls?: string[] | null
+          project_id?: string
+          status?: string
+          typography?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_kits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -841,11 +894,14 @@ export type Database = {
           brand_overlay: boolean
           created_at: string
           id: string
+          is_custom_model: boolean | null
           name: string
           niche_style: string | null
           project_id: string | null
           safe_zones: Json
           slots: Json
+          source_asset_id: string | null
+          template_content: Json | null
           updated_at: string
           user_id: string
         }
@@ -854,11 +910,14 @@ export type Database = {
           brand_overlay?: boolean
           created_at?: string
           id?: string
+          is_custom_model?: boolean | null
           name: string
           niche_style?: string | null
           project_id?: string | null
           safe_zones?: Json
           slots?: Json
+          source_asset_id?: string | null
+          template_content?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -867,15 +926,26 @@ export type Database = {
           brand_overlay?: boolean
           created_at?: string
           id?: string
+          is_custom_model?: boolean | null
           name?: string
           niche_style?: string | null
           project_id?: string | null
           safe_zones?: Json
           slots?: Json
+          source_asset_id?: string | null
+          template_content?: Json | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "templates_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

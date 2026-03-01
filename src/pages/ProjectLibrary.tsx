@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Grid3X3, List, Search, Filter, Image, MoreHorizontal, Loader2 } from "lucide-react";
+import { Grid3X3, List, Search, Filter, Image, MoreHorizontal, Loader2, Sparkles } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   draft: "bg-cos-warning/10 text-cos-warning",
@@ -130,7 +131,25 @@ export default function ProjectLibrary() {
                 <span className={`text-[11px] font-mono ${profileColors[asset.profile_used || "standard"]}`}>{profileLabels[asset.profile_used || "standard"]}</span>
                 <span className="text-[11px] text-muted-foreground truncate">{asset.provider_used || "—"}</span>
                 <span className="text-[11px] text-muted-foreground">{new Date(asset.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
-                <button className="rounded-md p-1 text-muted-foreground hover:bg-secondary transition-colors"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!["approved", "official"].includes(asset.status)) {
+                      toast.error("Apenas ativos aprovados/oficiais podem virar modelo");
+                      return;
+                    }
+                    supabase.functions.invoke("template-extract", {
+                      body: { assetId: asset.id },
+                    }).then(({ data, error }) => {
+                      if (error) toast.error(error.message);
+                      else toast.success(`Modelo "${data?.template?.name}" salvo com sucesso`);
+                    });
+                  }}
+                  title="Salvar como Modelo"
+                  className="rounded-md p-1 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                </button>
               </motion.div>
             ))}
           </div>
