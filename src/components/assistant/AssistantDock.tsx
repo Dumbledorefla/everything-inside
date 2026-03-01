@@ -4,8 +4,8 @@ import ChatThread from "./ChatThread";
 import ContextPanel from "./ContextPanel";
 import QuickActions from "./QuickActions";
 import AdaptiveMemoryObserver from "./AdaptiveMemoryObserver";
-import { MessageSquare, Layers, Zap, X, FolderOpen } from "lucide-react";
-import BlackHoleIcon from "../BlackHoleIcon";
+import { MessageSquare, Layers, Zap, X } from "lucide-react";
+import BlackHoleShader from "../BlackHoleShader";
 import { cn } from "@/lib/utils";
 import { getNicheClass } from "@/lib/nicheAccent";
 import { useParams } from "react-router-dom";
@@ -51,9 +51,9 @@ export default function AssistantDock() {
           whileTap={{ scale: 0.95 }}
           className="rounded-2xl p-2.5 flex items-center gap-2 transition-transform group bg-card/40 backdrop-blur-2xl border border-border/30 shadow-xl shadow-primary/5"
         >
-          <BlackHoleIcon
+          <BlackHoleShader
             mode={agentMode === "global" ? "global" : "project"}
-            size={28}
+            size={36}
             thinking={false}
           />
         </motion.button>
@@ -77,19 +77,16 @@ export default function AssistantDock() {
             nicheClass
           )}
           style={{
-            minWidth: 340,
-            maxWidth: 520,
-            boxShadow: dockFocused
-              ? `0 0 80px -20px hsl(var(--primary) / 0.1)`
-              : "none",
+            minWidth: 340, maxWidth: 520,
+            boxShadow: dockFocused ? `0 0 80px -20px hsl(var(--primary) / 0.1)` : "none",
           }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             <div className="flex items-center gap-2">
-              <BlackHoleIcon
+              <BlackHoleShader
                 mode={agentMode === "global" ? "global" : "project"}
-                size={22}
+                size={28}
                 thinking={false}
               />
               <div className={cn(

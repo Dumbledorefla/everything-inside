@@ -5,10 +5,9 @@ import { AnimatePresence } from "framer-motion";
 import AppSidebar from "./AppSidebar";
 import AssistantDock from "./assistant/AssistantDock";
 import CommandPalette from "./CommandPalette";
-import ThemeToggle from "./ThemeToggle";
 import StarField from "./StarField";
 import PageTransition from "./PageTransition";
-import BlackHoleIcon from "./BlackHoleIcon";
+import BlackHoleShader from "./BlackHoleShader";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { cn } from "@/lib/utils";
@@ -21,7 +20,7 @@ export default function AppLayout() {
   const { isInProject, dockOpen, toggleDock, openDock, agentMode } = useAssistant();
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-hidden noise-overlay">
       <StarField />
       <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
 
@@ -62,9 +61,9 @@ export default function AppLayout() {
                 : "bg-primary/10 text-primary/80 border border-primary/15 hover:bg-primary/20"
             )}
           >
-            <BlackHoleIcon
+            <BlackHoleShader
               mode={agentMode === "global" ? "global" : "project"}
-              size={18}
+              size={22}
               thinking={false}
             />
             <span className="hidden sm:inline">
@@ -81,8 +80,6 @@ export default function AppLayout() {
           <button className="rounded-xl p-2 text-muted-foreground/50 hover:bg-card/30 hover:text-muted-foreground transition-colors">
             <Bell className="h-4 w-4" />
           </button>
-
-          <ThemeToggle />
 
           <div className="flex items-center gap-1 ml-1 pl-2 border-l border-border/10">
             <span className="text-[10px] text-muted-foreground/60 max-w-[90px] truncate hidden sm:block font-mono-brand">
