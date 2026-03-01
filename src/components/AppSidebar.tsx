@@ -30,42 +30,90 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
   const isInProject = location.pathname.startsWith("/project/");
 
   return (
-    <aside className={cn("fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-300", collapsed ? "w-16" : "w-60")}>
+    <aside className={cn(
+      "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-300",
+      collapsed ? "w-16" : "w-60"
+    )}>
+      {/* Brand header */}
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
-        {!collapsed && <span className="font-mono text-sm font-bold tracking-wider text-gradient-cyan">COS</span>}
-        <button onClick={onToggle} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
-          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+        {!collapsed && (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-cos-cyan-glow flex items-center justify-center">
+              <span className="text-[10px] font-bold text-primary-foreground">C</span>
+            </div>
+            <span className="font-mono text-sm font-bold tracking-wider text-gradient-cyan">COS</span>
+          </div>
+        )}
+        {collapsed && (
+          <div className="w-6 h-6 mx-auto rounded-lg bg-gradient-to-br from-primary to-cos-cyan-glow flex items-center justify-center">
+            <span className="text-[10px] font-bold text-primary-foreground">C</span>
+          </div>
+        )}
+        <button onClick={onToggle} className={cn(
+          "rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors",
+          collapsed && "hidden"
+        )}>
+          <ChevronLeft className="h-4 w-4" />
         </button>
       </div>
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         {isInProject && (
           <>
-            <div className={cn("mb-2 px-2", collapsed && "text-center")}>
-              {!collapsed && <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Projeto</span>}
+            <div className={cn("mb-3 px-2", collapsed && "text-center")}>
+              {!collapsed && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/70">Projeto</span>}
             </div>
             {projectNav.map((item) => {
               const projectBase = location.pathname.split("/").slice(0, 3).join("/");
               const to = `${projectBase}/${item.to}`;
               return (
-                <NavLink key={item.to} to={to} className={({ isActive }) => cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors", isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground", collapsed && "justify-center px-2")}>
+                <NavLink
+                  key={item.to}
+                  to={to}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200",
+                    isActive
+                      ? "bg-primary/10 text-primary font-medium elevation-1"
+                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                    collapsed && "justify-center px-2"
+                  )}
+                >
                   <item.icon className="h-4 w-4 shrink-0" />
                   {!collapsed && <span>{item.label}</span>}
                 </NavLink>
               );
             })}
-            <div className="my-3 border-t border-border" />
-            <div className={cn("mb-2 px-2", collapsed && "text-center")}>
-              {!collapsed && <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Global</span>}
+            <div className="my-4 mx-3 border-t border-border/50" />
+            <div className={cn("mb-3 px-2", collapsed && "text-center")}>
+              {!collapsed && <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-muted-foreground/70">Global</span>}
             </div>
           </>
         )}
         {globalNav.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.to === "/"} className={({ isActive }) => cn("flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors", isActive && !isInProject ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground", collapsed && "justify-center px-2")}>
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            className={({ isActive }) => cn(
+              "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200",
+              isActive && !isInProject
+                ? "bg-primary/10 text-primary font-medium elevation-1"
+                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+              collapsed && "justify-center px-2"
+            )}
+          >
             <item.icon className="h-4 w-4 shrink-0" />
             {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
       </nav>
+
+      {/* Bottom brand mark */}
+      {!collapsed && (
+        <div className="px-4 py-3 border-t border-border/50">
+          <p className="text-[9px] text-muted-foreground/40 font-mono text-center tracking-widest">CREATIVE OS v2</p>
+        </div>
+      )}
     </aside>
   );
 }

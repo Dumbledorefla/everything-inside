@@ -26,7 +26,6 @@ export default function AssistantDock() {
   const { projectId } = useParams();
   const pid = activeProjectId || projectId;
 
-  // Fetch project niche for accent shadow
   const { data: project } = useQuery({
     queryKey: ["project-niche-dock", pid],
     queryFn: async () => {
@@ -38,7 +37,6 @@ export default function AssistantDock() {
 
   const nicheClass = project?.niche ? getNicheClass(project.niche) : "";
 
-  // Status indicator dots (when dock is closed)
   if (!dockOpen) {
     return (
       <motion.div
@@ -47,15 +45,15 @@ export default function AssistantDock() {
         className="fixed bottom-6 right-6 z-50"
       >
         <button
-          onClick={() => { setDockFocused(true); }}
-          className="glass rounded-2xl p-3 flex items-center gap-2 hover:scale-105 transition-transform glow-cyan"
+          onClick={() => setDockFocused(true)}
+          className="glass-intense rounded-2xl p-3.5 flex items-center gap-2.5 hover:scale-105 transition-transform glow-cyan elevation-clay group"
         >
           <div className="flex gap-1.5">
             <span className="h-2 w-2 rounded-full bg-cos-success animate-pulse" />
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse delay-75" />
-            <span className="h-2 w-2 rounded-full bg-cos-purple animate-pulse delay-150" />
+            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: "0.15s" }} />
+            <span className="h-2 w-2 rounded-full bg-cos-purple animate-pulse" style={{ animationDelay: "0.3s" }} />
           </div>
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Sparkles className="h-4 w-4 text-primary group-hover:rotate-12 transition-transform" />
         </button>
       </motion.div>
     );
@@ -66,28 +64,27 @@ export default function AssistantDock() {
       {dockOpen && (
         <motion.aside
           initial={{ width: 0, opacity: 0, x: 40 }}
-          animate={{ width: dockWidth, opacity: dockFocused ? 1 : 0.4, x: 0 }}
+          animate={{ width: dockWidth, opacity: dockFocused ? 1 : 0.35, x: 0 }}
           exit={{ width: 0, opacity: 0, x: 40 }}
-          transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
           onMouseEnter={() => setDockFocused(true)}
           onMouseLeave={() => setDockFocused(false)}
           className={cn(
-            "shrink-0 h-full flex flex-col overflow-hidden transition-opacity duration-300",
-            "glass rounded-l-3xl border-l-0",
+            "shrink-0 h-full flex flex-col overflow-hidden transition-opacity duration-500",
+            "glass-intense rounded-l-3xl border-l-0",
             nicheClass
           )}
           style={{
             minWidth: 340,
             maxWidth: 520,
             boxShadow: dockFocused
-              ? `var(--shadow-xl), 0 0 40px -10px hsl(var(--primary) / 0.2)`
+              ? `var(--shadow-xl), 0 0 60px -15px hsl(var(--primary) / 0.15)`
               : "var(--shadow-md)",
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
             <div className="flex items-center gap-2">
-              {/* Agent Mode Indicator */}
               <div className={cn(
                 "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider",
                 agentMode === "global"
@@ -99,9 +96,8 @@ export default function AssistantDock() {
               </div>
             </div>
 
-            <div className="flex gap-0.5">
+            <div className="flex gap-0.5 rounded-xl bg-secondary/30 p-0.5">
               {tabs.map((t) => {
-                // In global mode, only show chat tab
                 if (agentMode === "global" && t.id !== "chat") return null;
                 return (
                   <button
@@ -110,8 +106,8 @@ export default function AssistantDock() {
                     className={cn(
                       "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-all",
                       activeTab === t.id
-                        ? "bg-primary/15 text-primary shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                        ? "bg-card text-primary elevation-1"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <t.icon className="h-3.5 w-3.5" />
@@ -129,7 +125,7 @@ export default function AssistantDock() {
             </button>
           </div>
 
-          {/* Memory Alert (project mode only) */}
+          {/* Memory Alert */}
           {agentMode === "project" && (
             <div className="px-4 pt-2">
               <AdaptiveMemoryObserver />
