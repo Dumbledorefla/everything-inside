@@ -19,6 +19,51 @@ const CREDIT_COSTS: Record<string, { credits: number; usd: number }> = {
   "intent_classify": { credits: 0.1, usd: 0.001 },
 };
 
+// ═══ SYSTEM PROMPTS ═══
+const GLOBAL_SYSTEM_PROMPT = `Você é o **Diretor Geral do COS** — o cérebro estratégico por trás de toda a operação.
+Sua função é transformar ideias brutas do usuário em Projetos estruturados.
+
+SUAS CAPACIDADES:
+- Criar novos projetos com Nicho, Público e Tom de Voz sugeridos
+- Analisar o portfólio do usuário e sugerir otimizações
+- Comparar métricas entre projetos
+- Organizar e priorizar a produção
+
+COMPORTAMENTO:
+- Seja direto, estratégico e orientado a resultados
+- Quando o usuário descrever uma ideia, sugira estrutura de projeto imediatamente
+- Use português brasileiro
+- Formate respostas com markdown para clareza
+
+IMPORTANTE: Se o usuário descrever um briefing para projeto, use a função create_project_flow mentalmente e responda com a estrutura sugerida.`;
+
+function buildProjectSystemPrompt(projectName: string, dnaContext: string): string {
+  return `Você é o **Especialista dedicado ao projeto "${projectName}"** no COS.
+Use o DNA do projeto para todas as gerações e sugestões.
+
+SUAS CAPACIDADES:
+- Gerar ativos (textos + imagens) alinhados ao DNA
+- Refinar e atualizar o DNA baseado em feedback
+- Controlar Sprints de produção
+- Aprovar, promover e arquivar ativos
+- Analisar padrões nos ativos aprovados
+- Montar e otimizar páginas de vendas
+
+COMANDOS CLI QUE O USUÁRIO PODE USAR:
+- "Faça um sprint de X peças" → Gera em massa
+- "Cria um banner 1:1" → Gera criativo específico
+- "Aprove o criativo atual" → Muda status para oficial
+- "Regere com qualidade" → Nova versão premium
+- "Analise meus padrões" → Detecta padrões e sugere DNA updates
+
+COMPORTAMENTO:
+- Seja direto, prático e focado em resultados
+- Sempre considere o DNA e o nicho nas respostas
+- Use português brasileiro
+- Formate com markdown
+${dnaContext}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -40,13 +85,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { messages, projectId, selectedAssetId } = await req.json();
+    const { messages, projectId, selectedAssetId, agentMode } = await req.json();
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // ── Full DNA context ────────────────────────────────
+    // ── Build context based on agent mode ────────────────────────
     let dnaContext = "";
     let projectName = "";
-    if (projectId) {
+    let systemPrompt = GLOBAL_SYSTEM_PROMPT;
+
+    if (projectId && agentMode === "project") {
       const { data: project } = await serviceClient
         .from("projects").select("name, niche, product, description")
         .eq("id", projectId).single();
@@ -74,81 +121,86 @@ Deno.serve(async (req) => {
         if (str?.promessa) dnaContext += `\nPromessa: ${str.promessa}`;
         if (vis?.estilo) dnaContext += `\nEstilo visual: ${vis.estilo}`;
       }
+
+      systemPrompt = buildProjectSystemPrompt(projectName, dnaContext);
+    } else if (agentMode === "global") {
+      // For global mode, inject portfolio summary
+      const { data: projects } = await serviceClient
+        .from("projects").select("name, niche, product")
+        .eq("user_id", user.id).limit(20);
+
+      if (projects && projects.length > 0) {
+        const summary = projects.map((p: any) => `• ${p.name} (${p.niche || "sem nicho"})`).join("\n");
+        systemPrompt += `\n\n## PORTFÓLIO DO USUÁRIO (${projects.length} projetos)\n${summary}`;
+      }
     }
 
-    // ═══ PHASE 1: LLM INTENT CLASSIFICATION ═══
-    const lastUserMsg = messages[messages.length - 1]?.content || "";
-    const intent = await classifyIntentLLM(lastUserMsg, LOVABLE_API_KEY);
+    // ═══ PHASE 1: LLM INTENT CLASSIFICATION (project mode only) ═══
+    if (agentMode === "project") {
+      const lastUserMsg = messages[messages.length - 1]?.content || "";
+      const intent = await classifyIntentLLM(lastUserMsg, LOVABLE_API_KEY);
 
-    // Log telemetry for classification
-    if (projectId) {
-      await serviceClient.from("cos_ledger").insert({
-        project_id: projectId,
-        user_id: user.id,
-        provider_used: "gemini-2.5-flash-lite",
-        operation_type: "INTENT_CLASSIFY",
-        credits_cost: CREDIT_COSTS.intent_classify.credits,
-        estimated_usd: CREDIT_COSTS.intent_classify.usd,
-        metadata: { intent: intent.intent },
-      }).then(() => {}).catch(() => {});
-    }
-
-    // ═══ PHASE 2: EXECUTE COMMANDS ═══
-    if (intent.intent !== "CHAT_STRATEGY") {
-      const result = await executeCommand(
-        intent, projectId, user.id, serviceClient, LOVABLE_API_KEY, dnaContext, selectedAssetId
-      );
-
-      // Log command telemetry
+      // Log telemetry
       if (projectId) {
-        const opType = intent.intent === "COMMAND_SPRINT" ? "SPRINT" :
-          intent.intent === "COMMAND_GENERATE" ? "TEXT_GEN" :
-          intent.intent === "ACTION_APPROVE" ? "CHAT" :
-          intent.intent === "ACTION_UPSCALE" ? "TEXT_GEN" :
-          intent.intent === "ANALYZE_PATTERNS" ? "MEMORY_ANALYSIS" : "CHAT";
-        const cost = opType === "MEMORY_ANALYSIS" ? CREDIT_COSTS.memory_analysis :
-          opType === "SPRINT" ? { credits: (intent.params?.quantity || 10) * 2, usd: (intent.params?.quantity || 10) * 0.02 } :
-          CREDIT_COSTS.chat_message;
-
         await serviceClient.from("cos_ledger").insert({
-          project_id: projectId,
-          user_id: user.id,
-          provider_used: "cos-system",
-          operation_type: opType,
-          credits_cost: cost.credits,
-          estimated_usd: cost.usd,
-          metadata: { intent: intent.intent, params: intent.params },
+          project_id: projectId, user_id: user.id,
+          provider_used: "gemini-2.5-flash-lite", operation_type: "INTENT_CLASSIFY",
+          credits_cost: CREDIT_COSTS.intent_classify.credits,
+          estimated_usd: CREDIT_COSTS.intent_classify.usd,
+          metadata: { intent: intent.intent },
         }).then(() => {}).catch(() => {});
       }
 
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // ═══ PHASE 2: EXECUTE COMMANDS ═══
+      if (intent.intent !== "CHAT_STRATEGY") {
+        const result = await executeCommand(
+          intent, projectId, user.id, serviceClient, LOVABLE_API_KEY, dnaContext, selectedAssetId
+        );
+
+        if (projectId) {
+          const opType = intent.intent === "COMMAND_SPRINT" ? "SPRINT" :
+            intent.intent === "COMMAND_GENERATE" ? "TEXT_GEN" :
+            intent.intent === "ANALYZE_PATTERNS" ? "MEMORY_ANALYSIS" : "CHAT";
+          const cost = opType === "MEMORY_ANALYSIS" ? CREDIT_COSTS.memory_analysis :
+            opType === "SPRINT" ? { credits: (intent.params?.quantity || 10) * 2, usd: (intent.params?.quantity || 10) * 0.02 } :
+            CREDIT_COSTS.chat_message;
+
+          await serviceClient.from("cos_ledger").insert({
+            project_id: projectId, user_id: user.id,
+            provider_used: "cos-system", operation_type: opType,
+            credits_cost: cost.credits, estimated_usd: cost.usd,
+            metadata: { intent: intent.intent, params: intent.params },
+          }).then(() => {}).catch(() => {});
+        }
+
+        return new Response(JSON.stringify(result), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // ═══ GLOBAL MODE: Check for project creation intent ═══
+    if (agentMode === "global") {
+      const lastUserMsg = messages[messages.length - 1]?.content || "";
+      const globalIntent = await classifyGlobalIntent(lastUserMsg, LOVABLE_API_KEY);
+
+      if (globalIntent.intent === "CREATE_PROJECT") {
+        const result = await executeGlobalCommand(globalIntent, user.id, serviceClient, LOVABLE_API_KEY);
+        return new Response(JSON.stringify(result), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // ═══ PHASE 3: STREAMING CONVERSATION ═══
-    // Log chat telemetry
     if (projectId) {
       await serviceClient.from("cos_ledger").insert({
-        project_id: projectId,
-        user_id: user.id,
-        provider_used: "gemini-3-flash-preview",
-        operation_type: "CHAT",
+        project_id: projectId, user_id: user.id,
+        provider_used: "gemini-3-flash-preview", operation_type: "CHAT",
         credits_cost: CREDIT_COSTS.chat_message.credits,
         estimated_usd: CREDIT_COSTS.chat_message.usd,
       }).then(() => {}).catch(() => {});
     }
-
-    const systemPrompt = `Você é o Assistente COS — especialista em marketing digital e criação de conteúdo.
-Seja direto, prático e focado em resultados. Use português brasileiro.
-
-COMANDOS CLI que o usuário pode usar:
-- "Faça um sprint de X peças" → Gera em massa
-- "Cria um banner 1:1" → Gera criativo específico
-- "Aprove o criativo atual" → Muda status para oficial
-- "Regere com qualidade" → Nova versão premium
-- "Analise meus padrões" → Detecta padrões e sugere DNA updates
-${dnaContext}`;
 
     const response = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -161,8 +213,8 @@ ${dnaContext}`;
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos em Settings → Workspace → Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições excedido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ error: "Erro no gateway de IA" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -184,11 +236,9 @@ interface IntentResult {
 }
 
 async function classifyIntentLLM(message: string, apiKey: string): Promise<IntentResult> {
-  // Fast regex pre-check for obvious commands
   const quick = quickClassify(message);
   if (quick) return quick;
 
-  // LLM classification for ambiguous messages
   try {
     const resp = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -207,7 +257,7 @@ Tipos possíveis:
 - ACTION_APPROVE: quer aprovar/promover um ativo
 - ACTION_UPSCALE: quer regerar com qualidade melhor
 - ANALYZE_PATTERNS: quer análise de padrões/memória
-- CHAT_STRATEGY: qualquer outra conversa sobre estratégia/marketing
+- CHAT_STRATEGY: qualquer outra conversa
 
 Retorne APENAS o JSON, sem markdown.`
           },
@@ -251,7 +301,95 @@ function quickClassify(msg: string): IntentResult | null {
   return null;
 }
 
-// ═══ COMMAND EXECUTION ═══
+// ═══ GLOBAL INTENT CLASSIFICATION ═══
+interface GlobalIntentResult {
+  intent: "CREATE_PROJECT" | "CHAT_GENERAL";
+  params: Record<string, any>;
+}
+
+async function classifyGlobalIntent(message: string, apiKey: string): Promise<GlobalIntentResult> {
+  const lower = message.toLowerCase();
+  if (/(?:cri[ae]|novo|montar?|iniciar?)\s+(?:um\s+)?(?:projeto|marca|negócio)/i.test(lower)) {
+    // Extract project details via LLM
+    try {
+      const resp = await fetch(AI_GATEWAY, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-lite",
+          messages: [
+            {
+              role: "system",
+              content: `Extraia informações do briefing para criar um projeto. Retorne APENAS JSON:
+{ "name": "Nome do Projeto", "niche": "nicho detectado", "product": "produto/serviço", "description": "descrição breve" }
+Se não conseguir detectar algum campo, use null. Retorne APENAS JSON.`
+            },
+            { role: "user", content: message },
+          ],
+          temperature: 0.2,
+          max_tokens: 200,
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        const match = content.match(/\{[\s\S]*\}/);
+        if (match) {
+          const params = JSON.parse(match[0]);
+          return { intent: "CREATE_PROJECT", params };
+        }
+      }
+    } catch {}
+
+    return { intent: "CREATE_PROJECT", params: { name: "Novo Projeto" } };
+  }
+
+  return { intent: "CHAT_GENERAL", params: {} };
+}
+
+// ═══ GLOBAL COMMAND EXECUTION ═══
+async function executeGlobalCommand(
+  intent: GlobalIntentResult, userId: string, supabase: any, apiKey: string
+): Promise<{ type: string; message: string; action?: any }> {
+  if (intent.intent === "CREATE_PROJECT") {
+    const { name, niche, product, description } = intent.params;
+    
+    try {
+      const { data: project, error } = await supabase.from("projects").insert({
+        user_id: userId,
+        name: name || "Novo Projeto",
+        niche: niche || null,
+        product: product || null,
+        description: description || null,
+      }).select("id, name").single();
+
+      if (error) throw error;
+
+      // Create initial DNA
+      await supabase.from("project_dna").insert({
+        project_id: project.id,
+        identity: niche ? { tom: "profissional", personalidade: "confiável" } : {},
+        audience: {},
+        strategy: {},
+        visual: {},
+        version: 1,
+      }).then(() => {}).catch(() => {});
+
+      return {
+        type: "command",
+        message: `🚀 **Projeto "${project.name}" criado com sucesso!**\n\n${niche ? `**Nicho:** ${niche}\n` : ""}${product ? `**Produto:** ${product}\n` : ""}${description ? `**Descrição:** ${description}\n` : ""}\n📋 Próximos passos:\n1. Acesse o projeto e configure o DNA\n2. Gere o BrandKit para definir identidade visual\n3. Comece a produzir ativos`,
+        action: { type: "project_created", projectId: project.id, name: project.name },
+      };
+    } catch (e: any) {
+      return { type: "command", message: `❌ Erro ao criar projeto: ${e.message}` };
+    }
+  }
+
+  return { type: "command", message: "Comando global não reconhecido." };
+}
+
+// ═══ PROJECT COMMAND EXECUTION ═══
 async function executeCommand(
   intent: IntentResult, projectId: string, userId: string,
   supabase: any, apiKey: string, dnaContext: string, selectedAssetId?: string
@@ -262,7 +400,7 @@ async function executeCommand(
       const profile = intent.params.profile || "standard";
       return {
         type: "command",
-        message: `🚀 **Sprint de ${qty} peças configurado!**\n\nPerfil: ${profile}\nQuantidade: ${qty}\n\nVá para a tela de **Produção** e clique em **Gerar** para iniciar. O progresso aparecerá na barra.`,
+        message: `🚀 **Sprint de ${qty} peças configurado!**\n\nPerfil: ${profile}\nQuantidade: ${qty}\n\nVá para a tela de **Produção** e clique em **Gerar** para iniciar.`,
         action: { type: "trigger_sprint", quantity: qty, profile },
       };
     }
@@ -280,47 +418,33 @@ async function executeCommand(
 
     case "ACTION_APPROVE": {
       if (!selectedAssetId) {
-        return {
-          type: "command",
-          message: "⚠️ Nenhum ativo selecionado. Selecione um ativo na Biblioteca primeiro e tente novamente.",
-        };
+        return { type: "command", message: "⚠️ Nenhum ativo selecionado. Selecione um ativo na Biblioteca primeiro." };
       }
       try {
-        await supabase.from("assets")
-          .update({ status: "official", folder: "Ativos Oficiais" })
-          .eq("id", selectedAssetId);
-
+        await supabase.from("assets").update({ status: "official", folder: "Ativos Oficiais" }).eq("id", selectedAssetId);
         await supabase.from("activity_log").insert({
           project_id: projectId, user_id: userId,
           action: "Aprovação via CLI", entity_type: "asset", entity_id: selectedAssetId,
         });
 
-        // Check if we should trigger memory analysis (every 5 officials)
-        const { count } = await supabase
-          .from("assets")
-          .select("id", { count: "exact", head: true })
-          .eq("project_id", projectId)
-          .eq("status", "official");
+        const { count } = await supabase.from("assets").select("id", { count: "exact", head: true })
+          .eq("project_id", projectId).eq("status", "official");
 
         let memoryNote = "";
         if (count && count % 5 === 0) {
-          memoryNote = "\n\n🧠 _5 ativos oficiais acumulados — análise de memória será executada automaticamente._";
-          // Trigger memory analysis in background
+          memoryNote = "\n\n🧠 _Análise de memória será executada automaticamente._";
           try {
             await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/memory-analyze`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
               body: JSON.stringify({ projectId, autoTriggered: true }),
             });
-          } catch { /* non-blocking */ }
+          } catch {}
         }
 
         return {
           type: "command",
-          message: `✅ **Ativo aprovado e promovido a Oficial!**\n\nMovido para a pasta "Ativos Oficiais".${memoryNote}`,
+          message: `✅ **Ativo aprovado e promovido a Oficial!**${memoryNote}`,
           action: { type: "asset_approved", assetId: selectedAssetId },
         };
       } catch (e: any) {
@@ -330,32 +454,23 @@ async function executeCommand(
 
     case "ACTION_UPSCALE": {
       if (!selectedAssetId) {
-        return {
-          type: "command",
-          message: "⚠️ Nenhum ativo selecionado. Selecione um ativo para regerar com qualidade premium.",
-        };
+        return { type: "command", message: "⚠️ Nenhum ativo selecionado." };
       }
       return {
         type: "command",
-        message: `✨ **Regeração Premium configurada!**\n\nO ativo selecionado será regerado com perfil **Qualidade** (modelos premium). Clique em "Regerar com Qualidade" nas Ações Rápidas ou aguarde a execução.`,
+        message: `✨ **Regeração Premium configurada!**\n\nClique em "Regerar com Qualidade" nas Ações Rápidas.`,
         action: { type: "regenerate_quality", assetId: selectedAssetId },
       };
     }
 
     case "ANALYZE_PATTERNS": {
-      const { data: assets } = await supabase
-        .from("assets")
+      const { data: assets } = await supabase.from("assets")
         .select("title, profile_used, provider_used, preset, status, asset_versions(headline, body, cta)")
-        .eq("project_id", projectId)
-        .in("status", ["approved", "official"])
-        .order("updated_at", { ascending: false })
-        .limit(10);
+        .eq("project_id", projectId).in("status", ["approved", "official"])
+        .order("updated_at", { ascending: false }).limit(10);
 
       if (!assets || assets.length < 3) {
-        return {
-          type: "command",
-          message: "📊 Mínimo de 3 ativos aprovados necessário para análise. Continue gerando e aprovando!",
-        };
+        return { type: "command", message: "📊 Mínimo de 3 ativos aprovados necessário para análise." };
       }
 
       const summary = assets.map((a: any, i: number) => {
@@ -370,15 +485,8 @@ async function executeCommand(
           body: JSON.stringify({
             model: "google/gemini-3-flash-preview",
             messages: [
-              {
-                role: "system",
-                content: `Você é um Diretor de Arte e Copywriter. Compare o DNA atual com as últimas entregas aprovadas.
-Identifique padrões fortes que contrariam ou expandem o DNA. 
-Retorne análise em texto formatado com markdown.
-No final, sugira 1-3 atualizações específicas para o DNA.
-${dnaContext}`
-              },
-              { role: "user", content: `Analise estes ${assets.length} criativos aprovados:\n\n${summary}\n\nIdentifique padrões e sugira atualizações para o DNA.` },
+              { role: "system", content: `Analise criativos aprovados vs DNA. Identifique padrões. Sugira 1-3 atualizações para o DNA.\n${dnaContext}` },
+              { role: "user", content: `Analise:\n\n${summary}` },
             ],
           }),
         });
@@ -387,7 +495,6 @@ ${dnaContext}`
         const data = await resp.json();
         const analysis = data.choices?.[0]?.message?.content || "Análise inconclusiva.";
 
-        // Save as pending DNA update
         await supabase.from("pending_dna_updates").insert({
           project_id: projectId, user_id: userId,
           suggestion_text: analysis, json_patch: {}, status: "pending",
@@ -395,7 +502,7 @@ ${dnaContext}`
 
         return {
           type: "command",
-          message: `🧠 **Análise de Padrões**\n\n${analysis}\n\n---\n_Sugestão salva no painel de Memória Adaptativa._`,
+          message: `🧠 **Análise de Padrões**\n\n${analysis}\n\n---\n_Sugestão salva na Memória Adaptativa._`,
           action: { type: "pattern_analysis" },
         };
       } catch (e: any) {

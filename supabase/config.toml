@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.template-extract]
 verify_jwt = false
+
+[functions.cos-transcribe]
+verify_jwt = false
+
+[functions.dna-autofill]
+verify_jwt = false

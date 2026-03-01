@@ -252,6 +252,79 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          actions: Json | null
+          audio_url: string | null
+          content: string
+          created_at: string
+          id: string
+          role: string
+          thread_id: string
+        }
+        Insert: {
+          actions?: Json | null
+          audio_url?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          thread_id: string
+        }
+        Update: {
+          actions?: Json | null
+          audio_url?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          created_at: string
+          id: string
+          last_active: string
+          project_id: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_active?: string
+          project_id?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_active?: string
+          project_id?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cos_credits_log: {
         Row: {
           amount: number
@@ -957,6 +1030,7 @@ export type Database = {
       is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
       is_section_owner: { Args: { p_section_id: string }; Returns: boolean }
       is_sprint_owner: { Args: { p_sprint_id: string }; Returns: boolean }
+      is_thread_owner: { Args: { p_thread_id: string }; Returns: boolean }
     }
     Enums: {
       asset_status:
