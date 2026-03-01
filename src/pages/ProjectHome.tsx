@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Zap, FileCheck, Star, ArrowRight, Upload, Bot, Loader2 } from "lucide-react";
+import { Zap, FileCheck, Star, ArrowRight, Upload, Bot, Loader2, BarChart3, DollarSign } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 const statusColors: Record<string, string> = {
   draft: "bg-cos-warning/10 text-cos-warning",
@@ -14,12 +15,10 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  draft: "Rascunho",
-  review: "Revisão",
-  approved: "Aprovado",
-  official: "Oficial",
-  archived: "Arquivado",
+  draft: "Rascunho", review: "Revisão", approved: "Aprovado", official: "Oficial", archived: "Arquivado",
 };
+
+const PIE_COLORS = ["hsl(45, 93%, 47%)", "hsl(171, 77%, 64%)", "hsl(142, 71%, 45%)", "hsl(var(--muted-foreground))"];
 
 export default function ProjectHome() {
   const { projectId } = useParams();
@@ -43,11 +42,22 @@ export default function ProjectHome() {
       const drafts = assets?.filter((a) => a.status === "draft").length || 0;
       const approved = assets?.filter((a) => a.status === "approved").length || 0;
       const official = assets?.filter((a) => a.status === "official").length || 0;
-      return [
-        { label: "Rascunhos", value: drafts, icon: Zap, color: "text-cos-warning" },
-        { label: "Aprovados", value: approved, icon: FileCheck, color: "text-cos-cyan" },
-        { label: "Ativos Oficiais", value: official, icon: Star, color: "text-cos-success" },
-      ];
+      return { drafts, approved, official, total: assets?.length || 0 };
+    },
+    enabled: !!projectId,
+  });
+
+  // Credits/cost data for efficiency charts
+  const { data: creditsData } = useQuery({
+    queryKey: ["project-credits-chart", projectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("cos_credits_log")
+        .select("amount, created_at, description")
+        .eq("project_id", projectId!)
+        .order("created_at", { ascending: true })
+        .limit(100);
+      return data || [];
     },
     enabled: !!projectId,
   });
@@ -66,6 +76,29 @@ export default function ProjectHome() {
     enabled: !!projectId,
   });
 
+  // Build chart data
+  const pieData = stats ? [
+    { name: "Rascunhos", value: stats.drafts },
+    { name: "Aprovados", value: stats.approved },
+    { name: "Oficiais", value: stats.official },
+  ].filter((d) => d.value > 0) : [];
+
+  // Aggregate credits by day
+  const creditsByDay = (creditsData || []).reduce((acc: Record<string, number>, log) => {
+    const day = new Date(log.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    acc[day] = (acc[day] || 0) + Math.abs(log.amount);
+    return acc;
+  }, {});
+
+  const barData = Object.entries(creditsByDay).slice(-14).map(([day, credits]) => ({
+    day,
+    credits,
+    estimatedUSD: (credits * 0.002).toFixed(3), // rough estimate
+  }));
+
+  const totalCreditsSpent = (creditsData || []).reduce((s, l) => s + Math.abs(l.amount), 0);
+  const estimatedTotalUSD = (totalCreditsSpent * 0.002).toFixed(2);
+
   const quickChips = [
     { label: "Gerar 5 criativos topo de funil", msg: "Gere 5 criativos de topo de funil para o projeto atual" },
     { label: "Planejar 7 dias", msg: "Crie um plano de conteúdo para os próximos 7 dias" },
@@ -81,6 +114,12 @@ export default function ProjectHome() {
     return `${Math.floor(hrs / 24)}d atrás`;
   };
 
+  const statCards = [
+    { label: "Rascunhos", value: stats?.drafts || 0, icon: Zap, color: "text-cos-warning" },
+    { label: "Aprovados", value: stats?.approved || 0, icon: FileCheck, color: "text-cos-cyan" },
+    { label: "Oficiais", value: stats?.official || 0, icon: Star, color: "text-cos-success" },
+  ];
+
   return (
     <div className="p-6 max-w-5xl">
       <div className="mb-8 flex items-start justify-between">
@@ -90,21 +129,18 @@ export default function ProjectHome() {
         </div>
         <div className="flex gap-2">
           <button className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-secondary transition-colors">
-            <Upload className="h-3.5 w-3.5" />
-            Importar Referência
+            <Upload className="h-3.5 w-3.5" />Importar Referência
           </button>
-          <button
-            onClick={() => navigate(`/project/${projectId}/production`)}
-            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors glow-cyan"
-          >
-            <Zap className="h-3.5 w-3.5" />
-            Gerar
+          <button onClick={() => navigate(`/project/${projectId}/production`)}
+            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors glow-cyan">
+            <Zap className="h-3.5 w-3.5" />Gerar
           </button>
         </div>
       </div>
 
+      {/* Stats cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        {(stats || []).map((s, i) => (
+        {statCards.map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center gap-3">
               <div className="rounded-md bg-secondary p-2"><s.icon className={`h-5 w-5 ${s.color}`} /></div>
@@ -117,6 +153,74 @@ export default function ProjectHome() {
         ))}
       </div>
 
+      {/* Efficiency Dashboard */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        {/* Drafts vs Officials Pie */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Rascunhos vs Oficiais</h3>
+          </div>
+          {pieData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                  {pieData.map((_, idx) => (
+                    <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-12">Sem dados ainda</p>
+          )}
+          <p className="text-[10px] text-muted-foreground text-center mt-2">
+            Taxa de aprovação: {stats && stats.total > 0 ? Math.round(((stats.official + stats.approved) / stats.total) * 100) : 0}%
+          </p>
+        </motion.div>
+
+        {/* API Cost Bar Chart */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-cos-success" />
+              <h3 className="text-sm font-semibold">Custo Estimado (API)</h3>
+            </div>
+            <span className="rounded-md bg-cos-success/10 px-2 py-0.5 text-[10px] font-mono text-cos-success">
+              ~${estimatedTotalUSD} USD
+            </span>
+          </div>
+          {barData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={barData}>
+                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.[0]) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="rounded-md border border-border bg-card px-3 py-2 text-xs shadow-md">
+                        <p className="font-medium">{d.day}</p>
+                        <p className="text-muted-foreground">{d.credits} créditos (~${d.estimatedUSD} USD)</p>
+                      </div>
+                    );
+                  }}
+                />
+                <Bar dataKey="credits" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-12">Sem dados de consumo</p>
+          )}
+          <p className="text-[10px] text-muted-foreground text-center mt-2">
+            {totalCreditsSpent} créditos consumidos neste projeto
+          </p>
+        </motion.div>
+      </div>
+
+      {/* Recent assets */}
       <div className="rounded-lg border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-5 py-3">
           <h2 className="text-sm font-semibold">Últimos Ativos</h2>
@@ -143,6 +247,7 @@ export default function ProjectHome() {
         </div>
       </div>
 
+      {/* Quick chips */}
       <div className="mt-6">
         <div className="flex items-center gap-2 mb-3">
           <Bot className="h-4 w-4 text-primary" />
