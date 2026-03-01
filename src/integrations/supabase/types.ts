@@ -109,6 +109,7 @@ export type Database = {
           destination: string | null
           dna_version_id: string | null
           fallback_chain: Json | null
+          final_render_url: string | null
           folder: string | null
           id: string
           output: Database["public"]["Enums"]["output_type"]
@@ -121,6 +122,7 @@ export type Database = {
           provider_used: string | null
           status: Database["public"]["Enums"]["asset_status"]
           tags: string[] | null
+          template_id: string | null
           title: string | null
           updated_at: string
           user_id: string
@@ -131,6 +133,7 @@ export type Database = {
           destination?: string | null
           dna_version_id?: string | null
           fallback_chain?: Json | null
+          final_render_url?: string | null
           folder?: string | null
           id?: string
           output?: Database["public"]["Enums"]["output_type"]
@@ -143,6 +146,7 @@ export type Database = {
           provider_used?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
+          template_id?: string | null
           title?: string | null
           updated_at?: string
           user_id: string
@@ -153,6 +157,7 @@ export type Database = {
           destination?: string | null
           dna_version_id?: string | null
           fallback_chain?: Json | null
+          final_render_url?: string | null
           folder?: string | null
           id?: string
           output?: Database["public"]["Enums"]["output_type"]
@@ -165,6 +170,7 @@ export type Database = {
           provider_used?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
+          template_id?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -182,6 +188,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
             referencedColumns: ["id"]
           },
         ]
@@ -385,6 +398,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "pages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_dna_updates: {
+        Row: {
+          created_at: string
+          id: string
+          json_patch: Json
+          project_id: string
+          status: string
+          suggestion_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          json_patch?: Json
+          project_id: string
+          status?: string
+          suggestion_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          json_patch?: Json
+          project_id?: string
+          status?: string
+          suggestion_text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_dna_updates_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -726,6 +777,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      templates: {
+        Row: {
+          aspect_ratio: string
+          brand_overlay: boolean
+          created_at: string
+          id: string
+          name: string
+          niche_style: string | null
+          project_id: string | null
+          safe_zones: Json
+          slots: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aspect_ratio?: string
+          brand_overlay?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          niche_style?: string | null
+          project_id?: string | null
+          safe_zones?: Json
+          slots?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aspect_ratio?: string
+          brand_overlay?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          niche_style?: string | null
+          project_id?: string | null
+          safe_zones?: Json
+          slots?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
