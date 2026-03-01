@@ -47,23 +47,58 @@ serve(async (req) => {
     let pageMetadata: any = {};
 
     if (isInstagram) {
-      // Instagram is blocked by Firecrawl — use Microlink screenshot + AI vision
+      // Instagram often blocks regular scraping — fallback to screenshot + metadata
       console.log("Instagram detected — using Microlink screenshot fallback");
-      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(pageUrl)}&screenshot=true&meta=true&embed=screenshot.url`;
-      const mlResponse = await fetch(microlinkUrl);
+      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(pageUrl)}&screenshot=true&meta=true`;
+      const mlResponse = await fetch(microlinkUrl, {
+        headers: { Accept: "application/json, image/*;q=0.9, */*;q=0.8" },
+      });
+
       if (mlResponse.ok) {
-        const mlData = await mlResponse.json();
-        pageScreenshot = mlData.data?.screenshot?.url || null;
-        pageMetadata = {
-          title: mlData.data?.title || "Instagram Profile",
-          description: mlData.data?.description || "",
-          ogImage: mlData.data?.image?.url || null,
-        };
-        pageMarkdown = `# ${pageMetadata.title}\n\n${pageMetadata.description || "Instagram page — análise visual via screenshot."}`;
+        const contentType = (mlResponse.headers.get("content-type") || "").toLowerCase();
+
+        if (contentType.includes("application/json")) {
+          const mlData = await mlResponse.json();
+          pageScreenshot = mlData.data?.screenshot?.url || null;
+          pageMetadata = {
+            title: mlData.data?.title || "Instagram Profile",
+            description: mlData.data?.description || "",
+            ogImage: mlData.data?.image?.url || null,
+          };
+        } else if (contentType.startsWith("image/")) {
+          const imageBytes = new Uint8Array(await mlResponse.arrayBuffer());
+          let binary = "";
+          const chunkSize = 0x8000;
+          for (let i = 0; i < imageBytes.length; i += chunkSize) {
+            binary += String.fromCharCode(...imageBytes.subarray(i, i + chunkSize));
+          }
+          const base64Image = btoa(binary);
+          pageScreenshot = `data:image/png;base64,${base64Image}`;
+          pageMetadata = { title: "Instagram Profile", description: "" };
+        } else {
+          const fallbackText = await mlResponse.text();
+          try {
+            const mlData = JSON.parse(fallbackText);
+            pageScreenshot = mlData.data?.screenshot?.url || null;
+            pageMetadata = {
+              title: mlData.data?.title || "Instagram Profile",
+              description: mlData.data?.description || "",
+              ogImage: mlData.data?.image?.url || null,
+            };
+          } catch {
+            pageMetadata = { title: "Instagram Profile", description: "" };
+          }
+        }
+
+        pageMarkdown = `# ${pageMetadata.title}
+
+${pageMetadata.description || "Instagram page — análise visual via screenshot."}`;
       } else {
         console.error("Microlink fallback also failed:", mlResponse.status);
         // Last resort: just use the URL with AI vision prompt
-        pageMarkdown = `Instagram URL: ${pageUrl}\n\nAnálise baseada apenas na URL. O scraping direto do Instagram não é suportado.`;
+        pageMarkdown = `Instagram URL: ${pageUrl}
+
+Análise baseada apenas na URL. O scraping direto do Instagram não é suportado.`;
         pageMetadata = { title: "Instagram Profile" };
       }
     } else {
@@ -204,9 +239,16 @@ SCHEMA DE RESPOSTA (JSON puro):
     ];
 
     if (pageScreenshot) {
+      const imageUrl =
+        pageScreenshot.startsWith("data:") ||
+        pageScreenshot.startsWith("http://") ||
+        pageScreenshot.startsWith("https://")
+          ? pageScreenshot
+          : `data:image/png;base64,${pageScreenshot}`;
+
       userContent.push({
         type: "image_url",
-        image_url: { url: pageScreenshot.startsWith("data:") ? pageScreenshot : `data:image/png;base64,${pageScreenshot}` },
+        image_url: { url: imageUrl },
       });
     }
 
