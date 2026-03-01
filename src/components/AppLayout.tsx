@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Search, Bell, Plus, User } from "lucide-react";
+import { Search, Bell, Plus, User, LogOut } from "lucide-react";
 import AppSidebar from "./AppSidebar";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
 
-      {/* Topbar */}
       <header
         className={cn(
           "fixed top-0 right-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/80 backdrop-blur-sm px-6 transition-all duration-300",
@@ -37,13 +38,23 @@ export default function AppLayout() {
           <button className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
             <Bell className="h-4 w-4" />
           </button>
-          <button className="rounded-full border border-border p-1.5 text-muted-foreground hover:bg-secondary transition-colors">
-            <User className="h-4 w-4" />
-          </button>
+
+          {/* User menu */}
+          <div className="flex items-center gap-2 ml-1">
+            <span className="text-xs text-muted-foreground max-w-[120px] truncate hidden sm:block">
+              {user?.email}
+            </span>
+            <button
+              onClick={signOut}
+              title="Sair"
+              className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Main content */}
       <main
         className={cn(
           "pt-14 min-h-screen transition-all duration-300",
