@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import SectionList from "@/components/pages/SectionList";
 import VariantInspector from "@/components/pages/VariantInspector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { cn } from "@/lib/utils";
 
 const pageTypeLabels: Record<string, string> = {
   sales: "Página de Vendas", landing: "Landing Page", vsl: "VSL", presell: "Presell",
@@ -150,38 +151,53 @@ export default function ProjectPages() {
     <div className="p-6 max-w-6xl">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Páginas</h1>
-          <p className="text-xs text-muted-foreground mt-1">Outline IA → Geração por seção → Assembly → Export JSON</p>
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-primary/20 to-cos-purple/10 p-2.5">
+            <FileText className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight font-mono-brand">Páginas</h1>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">Outline IA → Geração por seção → Assembly → Export</p>
+          </div>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <motion.button onClick={() => setShowCreate(true)}
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
           <Plus className="h-3.5 w-3.5" />Nova Página
-        </button>
+        </motion.button>
       </div>
 
       {/* Create form */}
       {showCreate && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-lg border border-primary/30 bg-card p-5 space-y-3">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-6 rounded-2xl border border-primary/20 bg-card/30 backdrop-blur-sm p-6 space-y-4">
+          <h3 className="text-sm font-semibold font-mono-brand flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-primary" />Criar Página (Outline IA)
           </h3>
-          <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome da página" className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-sm focus:border-primary focus:outline-none" />
-          <select value={newType} onChange={(e) => setNewType(e.target.value)} className="w-full rounded-md border border-border bg-secondary/50 px-3 py-2 text-xs focus:border-primary focus:outline-none">
+          <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome da página"
+            className="w-full rounded-xl border border-border/20 bg-background/40 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+          <select value={newType} onChange={(e) => setNewType(e.target.value)}
+            className="w-full rounded-xl border border-border/20 bg-background/40 px-4 py-2.5 text-xs text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all">
             {Object.entries(pageTypeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <div className="flex gap-2">
-            <button onClick={() => createPage.mutate()} disabled={createPage.isPending} className="rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground">
+            <motion.button onClick={() => createPage.mutate()} disabled={createPage.isPending}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              className="rounded-xl bg-primary px-5 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
               {createPage.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Criar com IA"}
+            </motion.button>
+            <button onClick={() => setShowCreate(false)}
+              className="rounded-xl border border-border/20 px-5 py-2.5 text-xs text-muted-foreground/60 hover:bg-card/30 hover:text-foreground transition-all">
+              Cancelar
             </button>
-            <button onClick={() => setShowCreate(false)} className="rounded-md border border-border px-4 py-2 text-xs text-muted-foreground hover:bg-secondary">Cancelar</button>
           </div>
         </motion.div>
       )}
 
-      {isLoading && <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
+      {isLoading && <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
 
       {/* Page list */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {pages?.map((page: any, i: number) => {
           const sections = (page.page_sections || []).sort((a: any, b: any) => a.sort_order - b.sort_order);
           const isExpanded = expandedPage === page.id;
@@ -191,65 +207,57 @@ export default function ProjectPages() {
           const allApproved = approvedCount === sections.length && sections.length > 0;
 
           return (
-            <motion.div key={page.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }} className="rounded-lg border border-border bg-card overflow-hidden">
+            <motion.div key={page.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              className="group rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden hover:border-primary/15 transition-all duration-300">
               {/* Page header */}
-              <div className="flex items-center justify-between p-4">
+              <div className="flex items-center justify-between p-5">
                 <button onClick={() => { setExpandedPage(isExpanded ? null : page.id); setSelectedSectionId(null); }} className="flex items-center gap-3 text-left flex-1">
-                  <Layout className="h-4 w-4 text-primary" />
+                  <div className="rounded-lg bg-primary/10 p-2">
+                    <Layout className="h-4 w-4 text-primary" />
+                  </div>
                   <div>
                     <p className="text-sm font-semibold">{page.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground/50 font-mono-brand mt-0.5">
                       {pageTypeLabels[page.page_type] || page.page_type} · {sections.length} seções · {totalVariants} variantes · {approvedCount}/{sections.length} aprovadas
                     </p>
                   </div>
-                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                  <ChevronRight className={cn("h-4 w-4 text-muted-foreground/30 transition-transform duration-200", isExpanded && "rotate-90")} />
                 </button>
                 <div className="flex items-center gap-2">
                   {allApproved && (
-                    <button
-                      onClick={() => exportPage(page.id)}
-                      className="flex items-center gap-1.5 rounded-md bg-green-600/10 px-3 py-1.5 text-[11px] font-medium text-green-600 hover:bg-green-600/20 transition-colors"
-                    >
+                    <button onClick={() => exportPage(page.id)}
+                      className="flex items-center gap-1.5 rounded-xl bg-cos-success/10 border border-cos-success/20 px-3 py-1.5 text-[11px] font-medium text-cos-success hover:bg-cos-success/20 transition-all">
                       <Download className="h-3 w-3" />Export JSON
                     </button>
                   )}
-                  <button
-                    onClick={() => assemblePage(page.id)}
-                    disabled={isAssembling}
-                    className="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-                  >
+                  <button onClick={() => assemblePage(page.id)} disabled={isAssembling}
+                    className="flex items-center gap-1.5 rounded-xl bg-primary/10 border border-primary/20 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-all disabled:opacity-50">
                     {isAssembling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
                     {isAssembling ? "Montando..." : "Assembler"}
                   </button>
                 </div>
               </div>
 
-              {/* Split view: sections + variant inspector */}
+              {/* Split view */}
               {isExpanded && (
-                <div className="border-t border-border" style={{ height: 420 }}>
+                <div className="border-t border-border/15" style={{ height: 420 }}>
                   <ResizablePanelGroup direction="horizontal">
                     <ResizablePanel defaultSize={35} minSize={25}>
                       <div className="h-full overflow-auto p-3">
-                        <SectionList
-                          sections={sections}
-                          selectedSectionId={selectedSectionId}
-                          onSelect={setSelectedSectionId}
-                          generatingSection={generatingSection}
-                          onGenerateSection={generateSection}
-                        />
+                        <SectionList sections={sections} selectedSectionId={selectedSectionId}
+                          onSelect={setSelectedSectionId} generatingSection={generatingSection} onGenerateSection={generateSection} />
                       </div>
                     </ResizablePanel>
                     <ResizableHandle withHandle />
                     <ResizablePanel defaultSize={65} minSize={40}>
                       {selectedSection ? (
-                        <VariantInspector
-                          section={selectedSection}
-                          onApprove={approveVariant}
-                        />
+                        <VariantInspector section={selectedSection} onApprove={approveVariant} />
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                          <FileText className="h-8 w-8 text-muted-foreground/20 mb-3" />
-                          <p className="text-xs text-muted-foreground">Selecione uma seção para inspecionar variantes</p>
+                          <div className="w-12 h-12 rounded-xl bg-card/30 flex items-center justify-center mb-3">
+                            <FileText className="h-6 w-6 text-muted-foreground/20" />
+                          </div>
+                          <p className="text-xs text-muted-foreground/50">Selecione uma seção para inspecionar variantes</p>
                         </div>
                       )}
                     </ResizablePanel>
@@ -260,10 +268,14 @@ export default function ProjectPages() {
           );
         })}
         {!isLoading && (!pages || pages.length === 0) && (
-          <div className="rounded-lg border border-border bg-card p-8 text-center">
-            <FileText className="mx-auto h-8 w-8 text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">Nenhuma página criada</p>
-          </div>
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="rounded-2xl border border-dashed border-border/20 bg-card/10 backdrop-blur-sm p-16 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/10 to-cos-purple/10 flex items-center justify-center mb-4 animate-float">
+              <FileText className="h-8 w-8 text-primary/30" />
+            </div>
+            <p className="text-sm font-medium text-muted-foreground/60">Nenhuma página criada</p>
+            <p className="text-xs text-muted-foreground/40 mt-1">Crie uma página e deixe a IA montar o outline</p>
+          </motion.div>
         )}
       </div>
     </div>
