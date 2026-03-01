@@ -34,11 +34,15 @@ export default function ChatThread() {
       .map((m) => ({ role: m.role, content: m.content }));
 
     try {
+      // Use user's session token so the edge function can verify identity & filter by project
+      const { data: { session } } = await (await import("@/integrations/supabase/client")).supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cos-chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: apiMessages, projectId: activeProjectId }),
       });

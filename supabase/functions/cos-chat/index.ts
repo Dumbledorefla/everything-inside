@@ -30,26 +30,58 @@ serve(async (req) => {
 
     const { messages, projectId } = await req.json();
 
-    // Fetch project DNA for context
+    // ── Full structured DNA injection (Background Prompting) ────
     let dnaContext = "";
     if (projectId) {
       const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: project } = await serviceClient.from("projects").select("name, niche, product, description").eq("id", projectId).single();
-      const { data: dna } = await serviceClient.from("project_dna").select("identity, audience, strategy").eq("project_id", projectId).order("version", { ascending: false }).limit(1).single();
+      
+      const { data: project } = await serviceClient
+        .from("projects")
+        .select("name, niche, product, description")
+        .eq("id", projectId)
+        .single();
+      
+      const { data: dna } = await serviceClient
+        .from("project_dna")
+        .select("identity, audience, strategy, visual, version")
+        .eq("project_id", projectId)
+        .order("version", { ascending: false })
+        .limit(1)
+        .single();
 
       if (project) {
-        dnaContext = `\n\nContexto do projeto "${project.name}":`;
+        dnaContext = `\n\n## CONTEXTO DO PROJETO "${project.name}" (injetado automaticamente)`;
         if (project.niche) dnaContext += `\nNicho: ${project.niche}`;
         if (project.product) dnaContext += `\nProduto: ${project.product}`;
         if (project.description) dnaContext += `\nDescrição: ${project.description}`;
       }
       if (dna) {
+        dnaContext += `\n[DNA v${dna.version}]`;
         const id = dna.identity as any;
         const aud = dna.audience as any;
         const str = dna.strategy as any;
-        if (id?.tom) dnaContext += `\nTom: ${id.tom}`;
-        if (aud?.dor_principal) dnaContext += `\nDor: ${aud.dor_principal}`;
-        if (str?.promessa) dnaContext += `\nPromessa: ${str.promessa}`;
+        const vis = dna.visual as any;
+        
+        if (id) {
+          if (id.tom) dnaContext += `\nTom de voz: ${id.tom}`;
+          if (id.personalidade) dnaContext += `\nPersonalidade: ${id.personalidade}`;
+          if (id.slogan) dnaContext += `\nSlogan: ${id.slogan}`;
+        }
+        if (aud) {
+          if (aud.publico_alvo) dnaContext += `\nPúblico-alvo: ${aud.publico_alvo}`;
+          if (aud.dor_principal) dnaContext += `\nDor principal: ${aud.dor_principal}`;
+          if (aud.desejo_principal) dnaContext += `\nDesejo principal: ${aud.desejo_principal}`;
+          if (aud.perfil) dnaContext += `\nPerfil da audiência: ${aud.perfil}`;
+        }
+        if (str) {
+          if (str.promessa) dnaContext += `\nPromessa (Big Idea): ${str.promessa}`;
+          if (str.diferencial) dnaContext += `\nDiferencial: ${str.diferencial}`;
+          if (str.mecanismo) dnaContext += `\nMecanismo: ${str.mecanismo}`;
+        }
+        if (vis) {
+          if (vis.estilo) dnaContext += `\nEstilo visual: ${vis.estilo}`;
+          if (vis.cores) dnaContext += `\nCores: ${vis.cores}`;
+        }
       }
     }
 
@@ -57,7 +89,8 @@ serve(async (req) => {
 Você ajuda o usuário a planejar, criar e refinar criativos de marketing (posts, banners, ads, stories, páginas de vendas).
 Seja direto, prático e focado em resultados. Use português brasileiro.
 Quando o usuário pedir para gerar conteúdo, oriente-o a usar a tela de Produção com os controles adequados.
-Quando pedir planejamento, sugira calendários e sprints.${dnaContext}`;
+Quando pedir planejamento, sugira calendários e sprints.
+Quando o usuário disser "Crie um post" ou similar, use o DNA do projeto abaixo para fundamentar sua resposta.${dnaContext}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
