@@ -208,59 +208,158 @@ export default function StarField() {
         ctx.rotate(b.rotation);
 
         if (b.type === "planet") {
-          // Planet with atmosphere ring
-          const grad = ctx.createRadialGradient(0, 0, b.size * 0.2, 0, 0, b.size);
-          grad.addColorStop(0, b.color1.replace("ALPHA", String(b.opacity * 1.5)));
-          grad.addColorStop(0.7, b.color2.replace("ALPHA", String(b.opacity)));
-          grad.addColorStop(1, "transparent");
-          ctx.fillStyle = grad;
+          // ── Solid planet with lit side, shadow, and atmosphere ──
+          const r = b.size;
+          const a = b.opacity;
+
+          // Shadow side (dark crescent)
           ctx.beginPath();
-          ctx.arc(0, 0, b.size, 0, Math.PI * 2);
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          const planetGrad = ctx.createLinearGradient(-r, -r, r, r);
+          planetGrad.addColorStop(0, b.color1.replace("ALPHA", String(a * 2.5)));
+          planetGrad.addColorStop(0.45, b.color2.replace("ALPHA", String(a * 2)));
+          planetGrad.addColorStop(0.55, b.color2.replace("ALPHA", String(a * 1.2)));
+          planetGrad.addColorStop(1, `rgba(0,0,0,${a * 2})`);
+          ctx.fillStyle = planetGrad;
           ctx.fill();
-          // Atmosphere glow
-          const atm = ctx.createRadialGradient(0, 0, b.size * 0.9, 0, 0, b.size * 1.6);
-          atm.addColorStop(0, "transparent");
-          atm.addColorStop(0.5, b.color1.replace("ALPHA", String(b.opacity * 0.3)));
+
+          // Surface highlight (specular)
+          const highlight = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, -r * 0.3, -r * 0.3, r * 0.7);
+          highlight.addColorStop(0, `rgba(255,255,255,${a * 0.6})`);
+          highlight.addColorStop(0.3, `rgba(255,255,255,${a * 0.1})`);
+          highlight.addColorStop(1, "transparent");
+          ctx.fillStyle = highlight;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Atmosphere rim glow
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+          ctx.strokeStyle = b.color1.replace("ALPHA", String(a * 0.8));
+          ctx.lineWidth = r * 0.08;
+          ctx.stroke();
+
+          // Outer atmosphere haze
+          const atm = ctx.createRadialGradient(0, 0, r, 0, 0, r * 1.5);
+          atm.addColorStop(0, b.color1.replace("ALPHA", String(a * 0.25)));
+          atm.addColorStop(0.5, b.color1.replace("ALPHA", String(a * 0.08)));
           atm.addColorStop(1, "transparent");
           ctx.fillStyle = atm;
           ctx.beginPath();
-          ctx.arc(0, 0, b.size * 1.6, 0, Math.PI * 2);
+          ctx.arc(0, 0, r * 1.5, 0, Math.PI * 2);
           ctx.fill();
+
+          // Saturn-like ring (50% chance for larger planets)
+          if (r > 40 && (b.rotationSpeed > 0)) {
+            ctx.save();
+            ctx.rotate(0.3); // tilt the ring
+            ctx.strokeStyle = b.color1.replace("ALPHA", String(a * 0.5));
+            ctx.lineWidth = r * 0.06;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 1.8, r * 0.25, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = b.color2.replace("ALPHA", String(a * 0.3));
+            ctx.lineWidth = r * 0.04;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, r * 2.1, r * 0.3, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+
         } else if (b.type === "blackhole") {
-          // Dark center + accretion disk glow
-          const bh = ctx.createRadialGradient(0, 0, 0, 0, 0, b.size);
-          bh.addColorStop(0, `rgba(0,0,0,${b.opacity * 3})`);
-          bh.addColorStop(0.4, `rgba(0,0,0,${b.opacity * 2})`);
-          bh.addColorStop(0.7, b.color2.replace("ALPHA", String(b.opacity * 0.8)));
-          bh.addColorStop(1, "transparent");
-          ctx.fillStyle = bh;
+          const r = b.size;
+          const a = b.opacity;
+
+          // Accretion disk (drawn first, behind the hole)
+          ctx.save();
+          ctx.rotate(b.rotation);
+          // Outer ring glow
+          for (let ring = 3; ring >= 0; ring--) {
+            const ringR = r * (1.6 + ring * 0.4);
+            const ringH = r * (0.2 + ring * 0.08);
+            const ringA = a * (0.8 - ring * 0.15);
+            const hue = 270 + ring * 15; // purple to pink
+            ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${ringA})`;
+            ctx.lineWidth = r * 0.06;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, ringR, ringH, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          // Hot inner disk
+          const diskGrad = ctx.createRadialGradient(0, 0, r * 0.8, 0, 0, r * 2.5);
+          diskGrad.addColorStop(0, `hsla(280, 90%, 70%, ${a * 0.4})`);
+          diskGrad.addColorStop(0.3, `hsla(300, 80%, 50%, ${a * 0.15})`);
+          diskGrad.addColorStop(1, "transparent");
+          ctx.fillStyle = diskGrad;
           ctx.beginPath();
-          ctx.arc(0, 0, b.size, 0, Math.PI * 2);
+          ctx.arc(0, 0, r * 2.5, 0, Math.PI * 2);
           ctx.fill();
-          // Accretion ring
-          ctx.strokeStyle = b.color2.replace("ALPHA", String(b.opacity * 0.6));
-          ctx.lineWidth = 1.5;
+          ctx.restore();
+
+          // Event horizon (dark void)
+          const bhGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+          bhGrad.addColorStop(0, `rgba(0,0,0,${a * 4})`);
+          bhGrad.addColorStop(0.6, `rgba(0,0,0,${a * 3})`);
+          bhGrad.addColorStop(0.85, `rgba(5,0,15,${a * 1.5})`);
+          bhGrad.addColorStop(1, "transparent");
+          ctx.fillStyle = bhGrad;
           ctx.beginPath();
-          ctx.ellipse(0, 0, b.size * 1.8, b.size * 0.5, b.rotation * 2, 0, Math.PI * 2);
-          ctx.stroke();
-          // Lensing glow
-          const lens = ctx.createRadialGradient(0, 0, b.size, 0, 0, b.size * 2.5);
-          lens.addColorStop(0, b.color2.replace("ALPHA", String(b.opacity * 0.15)));
-          lens.addColorStop(1, "transparent");
-          ctx.fillStyle = lens;
-          ctx.beginPath();
-          ctx.arc(0, 0, b.size * 2.5, 0, Math.PI * 2);
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
           ctx.fill();
+
+          // Gravitational lensing edge glow
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.95, 0, Math.PI * 2);
+          const lensGrad = ctx.createRadialGradient(0, 0, r * 0.75, 0, 0, r * 1.1);
+          lensGrad.addColorStop(0, "transparent");
+          lensGrad.addColorStop(0.7, `hsla(280, 100%, 70%, ${a * 1.2})`);
+          lensGrad.addColorStop(0.85, `hsla(200, 100%, 80%, ${a * 0.8})`);
+          lensGrad.addColorStop(1, "transparent");
+          ctx.fillStyle = lensGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2);
+          ctx.fill();
+
         } else {
-          // Nebula cloud — large soft gradient blob
-          const nc = ctx.createRadialGradient(0, 0, 0, 0, 0, b.size);
-          nc.addColorStop(0, b.color1.replace("ALPHA", String(b.opacity)));
-          nc.addColorStop(0.4, b.color2.replace("ALPHA", String(b.opacity * 0.6)));
-          nc.addColorStop(1, "transparent");
-          ctx.fillStyle = nc;
+          // ── Nebula cloud — multi-layered soft structure ──
+          const r = b.size;
+          const a = b.opacity;
+
+          // Core cloud
+          const nc1 = ctx.createRadialGradient(r * 0.1, -r * 0.1, 0, 0, 0, r);
+          nc1.addColorStop(0, b.color1.replace("ALPHA", String(a * 1.5)));
+          nc1.addColorStop(0.3, b.color1.replace("ALPHA", String(a * 0.8)));
+          nc1.addColorStop(0.6, b.color2.replace("ALPHA", String(a * 0.4)));
+          nc1.addColorStop(1, "transparent");
+          ctx.fillStyle = nc1;
           ctx.beginPath();
-          ctx.arc(0, 0, b.size, 0, Math.PI * 2);
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
           ctx.fill();
+
+          // Secondary lobe
+          const nc2 = ctx.createRadialGradient(-r * 0.4, r * 0.3, 0, -r * 0.3, r * 0.2, r * 0.7);
+          nc2.addColorStop(0, b.color2.replace("ALPHA", String(a * 1.2)));
+          nc2.addColorStop(0.5, b.color1.replace("ALPHA", String(a * 0.3)));
+          nc2.addColorStop(1, "transparent");
+          ctx.fillStyle = nc2;
+          ctx.beginPath();
+          ctx.arc(-r * 0.3, r * 0.2, r * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Bright star seeds inside nebula
+          for (let s = 0; s < 3; s++) {
+            const sx = (Math.sin(b.rotation * 3 + s * 2.1)) * r * 0.4;
+            const sy = (Math.cos(b.rotation * 2 + s * 1.7)) * r * 0.3;
+            const starGlow = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 0.12);
+            starGlow.addColorStop(0, `rgba(255,255,255,${a * 1.5})`);
+            starGlow.addColorStop(0.5, `rgba(200,220,255,${a * 0.4})`);
+            starGlow.addColorStop(1, "transparent");
+            ctx.fillStyle = starGlow;
+            ctx.beginPath();
+            ctx.arc(sx, sy, r * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
 
         ctx.restore();
@@ -365,7 +464,7 @@ export default function StarField() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.6 }}
+      style={{ opacity: 0.75 }}
     />
   );
 }
