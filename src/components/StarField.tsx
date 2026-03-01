@@ -119,9 +119,9 @@ export default function StarField() {
       const type = types[Math.floor(Math.random() * types.length)];
       const palettes = BODY_PALETTES[type];
       const pal = palettes[Math.floor(Math.random() * palettes.length)];
-      const baseSize = type === "planet" ? Math.random() * 30 + 15
-        : type === "blackhole" ? Math.random() * 25 + 20
-        : Math.random() * 80 + 40;
+      const baseSize = type === "planet" ? Math.random() * 50 + 30
+        : type === "blackhole" ? Math.random() * 40 + 30
+        : Math.random() * 120 + 60;
 
       bodiesRef.current.push({
         x: Math.random() * W * 0.8 + W * 0.1,
@@ -129,14 +129,14 @@ export default function StarField() {
         type,
         size: baseSize,
         opacity: 0,
-        targetOpacity: type === "nebula-cloud" ? 0.04 : 0.06,
+        targetOpacity: type === "nebula-cloud" ? 0.15 : 0.25,
         color1: pal[0],
         color2: pal[1],
         rotation: Math.random() * Math.PI * 2,
         rotationSpeed: (Math.random() - 0.5) * 0.003,
         life: 0,
         maxLife: Math.random() * 600 + 400, // 7-17 seconds at 60fps
-        depth: Math.random() * 0.3, // far away
+        depth: Math.random() * 0.5,
       });
     };
 
@@ -144,7 +144,7 @@ export default function StarField() {
     let cometTimer = 0;
     let bodyTimer = 0;
     const nextCometIn = () => Math.random() * 360 + 240; // 4-10s
-    const nextBodyIn = () => Math.random() * 600 + 300;  // 5-15s
+    const nextBodyIn = () => Math.random() * 300 + 150;  // 2.5-7.5s
     let nextComet = nextCometIn();
     let nextBody = nextBodyIn();
 
