@@ -69,7 +69,7 @@ export default function Production() {
   const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
   const { session } = useAuth();
   const queryClient = useQueryClient();
-  const { results, progress, generate, cancel } = useBatchGenerate();
+  const { results, progress, generate, cancel, setResults } = useBatchGenerate();
   const carousel = useCarouselGenerate();
   const [userPrompt, setUserPrompt] = useState("");
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
@@ -573,14 +573,13 @@ export default function Production() {
                     logoUrl={projectDna?.logoUrl}
                     brandColors={projectDna?.brandColors}
                     onAiRendered={(renderedUrl) => {
-                      // Replace the image in the selected result with the AI-rendered version
-                      const idx = results.findIndex((r) => r.id === selectedResultId);
-                      if (idx !== -1) {
-                        results[idx] = { ...results[idx], imageUrl: renderedUrl, status: "review" };
-                        // Force re-render by toggling selection
-                        setSelectedResultId(null);
-                        setTimeout(() => setSelectedResultId(results[idx].id), 50);
-                      }
+                      // Replace the image with the AI-rendered version using proper state update
+                      setResults(prev => prev.map(r => 
+                        r.id === selectedResultId 
+                          ? { ...r, imageUrl: renderedUrl, status: "review" } 
+                          : r
+                      ));
+                      toast.success("Imagem renderizada substituída com sucesso!");
                     }}
                   />
                 </div>
