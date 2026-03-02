@@ -21,7 +21,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projects = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -38,6 +38,8 @@ export default function Dashboard() {
       }));
     },
     enabled: !!user,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
   });
 
   const { data: assetCounts = {} } = useQuery({
@@ -68,6 +70,8 @@ export default function Dashboard() {
       return { drafts: draftCount || 0, official: officialCount || 0, recent: recentAssets || [] };
     },
     enabled: !!user,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
   });
 
   const folders = useMemo(() => {
@@ -191,6 +195,16 @@ export default function Dashboard() {
                   <div className="h-3 w-1/3 rounded-lg bg-muted/10 animate-pulse" />
                 </div>
               ))}
+            </div>
+          ) : isError ? (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 backdrop-blur-sm p-10 text-center">
+              <p className="text-sm text-destructive mb-3">Erro ao carregar projetos</p>
+              <button
+                onClick={() => refetch()}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : filtered.length === 0 ? (
             <motion.div
