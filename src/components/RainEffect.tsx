@@ -1,34 +1,31 @@
 import { useEffect, useRef } from "react";
 
 /**
- * RainEffect – "Rain on Glass" premium effect
- * Simulates raindrops hitting a frosted glass window:
- * - Large drops that stick and slowly drip down
- * - Small fast drops that streak across
- * - Condensation/fog layer that breathes
- * - Refraction-like distortion halos around drops
+ * RainEffect – Soft rain behind frosted glass
+ * The main content area acts as the glass panel.
+ * This canvas renders gentle rain drops falling in the background,
+ * visible through the translucent glass.
  */
 
-interface GlassDrop {
-  x: number;
-  y: number;
-  radius: number;
-  opacity: number;
-  speed: number;        // drip speed (0 = stuck)
-  life: number;         // frames alive
-  maxLife: number;
-  trail: number;        // trail length for dripping drops
-  stuck: boolean;       // stuck to glass vs actively dripping
-  wobble: number;       // horizontal wobble phase
-}
-
-interface Streak {
+interface Drop {
   x: number;
   y: number;
   len: number;
   speed: number;
   opacity: number;
   width: number;
+}
+
+interface GlassDrop {
+  x: number;
+  y: number;
+  radius: number;
+  opacity: number;
+  life: number;
+  maxLife: number;
+  dripping: boolean;
+  speed: number;
+  trail: number;
 }
 
 export default function RainEffect() {
@@ -42,173 +39,156 @@ export default function RainEffect() {
     if (!ctx) return;
 
     let W = 0, H = 0;
-    let drops: GlassDrop[] = [];
-    let streaks: Streak[] = [];
+    let drops: Drop[] = [];
+    let glassDrops: GlassDrop[] = [];
     let frame = 0;
 
     const resize = () => {
       W = canvas.width = window.innerWidth;
       H = canvas.height = window.innerHeight;
-      initDrops();
+      init();
     };
 
-    const initDrops = () => {
-      const dropCount = Math.floor((W * H) / 18000);
-      const streakCount = Math.floor((W * H) / 8000);
-      drops = Array.from({ length: dropCount }, () => makeGlassDrop());
-      streaks = Array.from({ length: streakCount }, () => makeStreak());
+    const init = () => {
+      // Background rain streaks
+      const dropCount = Math.floor((W * H) / 5000);
+      drops = Array.from({ length: dropCount }, () => makeDrop());
+      // Glass surface drops (stuck on the "window")
+      const glassCount = Math.floor((W * H) / 25000);
+      glassDrops = Array.from({ length: glassCount }, () => makeGlassDrop());
     };
 
-    const makeGlassDrop = (fromTop = false): GlassDrop => {
-      const stuck = Math.random() > 0.35;
-      const radius = stuck ? Math.random() * 4 + 2 : Math.random() * 3 + 1.5;
-      return {
-        x: Math.random() * (W || 1920),
-        y: fromTop ? -Math.random() * 60 : Math.random() * (H || 1080),
-        radius,
-        opacity: Math.random() * 0.4 + 0.2,
-        speed: stuck ? 0 : Math.random() * 0.8 + 0.2,
-        life: 0,
-        maxLife: stuck ? Math.floor(Math.random() * 600 + 200) : Math.floor(Math.random() * 300 + 100),
-        trail: 0,
-        stuck,
-        wobble: Math.random() * Math.PI * 2,
-      };
-    };
-
-    const makeStreak = (fromTop = false): Streak => ({
+    const makeDrop = (fromTop = false): Drop => ({
       x: Math.random() * (W || 1920),
-      y: fromTop ? -Math.random() * 30 : Math.random() * (H || 1080),
-      len: Math.random() * 14 + 6,
-      speed: Math.random() * 2.5 + 1.5,
-      opacity: Math.random() * 0.12 + 0.03,
-      width: Math.random() * 0.6 + 0.3,
+      y: fromTop ? -Math.random() * 40 : Math.random() * (H || 1080),
+      len: Math.random() * 20 + 8,
+      speed: Math.random() * 3 + 1.5,
+      opacity: Math.random() * 0.08 + 0.02,
+      width: Math.random() * 0.5 + 0.3,
     });
 
-    const drawGlassDrop = (d: GlassDrop) => {
-      // Refraction halo
-      const haloGrad = ctx.createRadialGradient(d.x, d.y, d.radius * 0.3, d.x, d.y, d.radius * 2.5);
-      haloGrad.addColorStop(0, `rgba(255, 255, 255, ${d.opacity * 0.15})`);
-      haloGrad.addColorStop(0.5, `rgba(200, 220, 240, ${d.opacity * 0.06})`);
-      haloGrad.addColorStop(1, "transparent");
-      ctx.fillStyle = haloGrad;
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.radius * 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Main drop body — slightly elongated when dripping
-      ctx.save();
-      ctx.translate(d.x, d.y);
-      if (!d.stuck && d.speed > 0.3) {
-        ctx.scale(0.85, 1.15);
-      }
-
-      // Drop gradient (glass-like refraction)
-      const dropGrad = ctx.createRadialGradient(-d.radius * 0.3, -d.radius * 0.3, 0, 0, 0, d.radius);
-      dropGrad.addColorStop(0, `rgba(255, 255, 255, ${d.opacity * 0.9})`);
-      dropGrad.addColorStop(0.4, `rgba(200, 215, 235, ${d.opacity * 0.6})`);
-      dropGrad.addColorStop(0.8, `rgba(160, 185, 210, ${d.opacity * 0.3})`);
-      dropGrad.addColorStop(1, `rgba(140, 170, 200, ${d.opacity * 0.1})`);
-      ctx.fillStyle = dropGrad;
-      ctx.beginPath();
-      ctx.arc(0, 0, d.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Specular highlight
-      ctx.fillStyle = `rgba(255, 255, 255, ${d.opacity * 0.7})`;
-      ctx.beginPath();
-      ctx.arc(-d.radius * 0.25, -d.radius * 0.25, d.radius * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-
-      // Drip trail
-      if (!d.stuck && d.trail > 2) {
-        const trailGrad = ctx.createLinearGradient(d.x, d.y - d.trail, d.x, d.y);
-        trailGrad.addColorStop(0, "transparent");
-        trailGrad.addColorStop(1, `rgba(180, 200, 225, ${d.opacity * 0.25})`);
-        ctx.strokeStyle = trailGrad;
-        ctx.lineWidth = d.radius * 0.6;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(d.x, d.y - d.trail);
-        ctx.lineTo(d.x, d.y);
-        ctx.stroke();
-      }
-    };
+    const makeGlassDrop = (): GlassDrop => ({
+      x: Math.random() * (W || 1920),
+      y: Math.random() * (H || 1080),
+      radius: Math.random() * 3 + 1.5,
+      opacity: Math.random() * 0.25 + 0.1,
+      life: 0,
+      maxLife: Math.floor(Math.random() * 800 + 300),
+      dripping: false,
+      speed: 0,
+      trail: 0,
+    });
 
     const animate = () => {
       frame++;
       ctx.clearRect(0, 0, W, H);
 
-      // ── Breathing condensation fog ──
-      const breathe = Math.sin(frame * 0.008) * 0.015 + 0.04;
-      const fogGrad = ctx.createRadialGradient(W * 0.5, H * 0.65, W * 0.1, W * 0.5, H * 0.5, W * 0.85);
-      fogGrad.addColorStop(0, `rgba(180, 200, 220, ${breathe + 0.02})`);
-      fogGrad.addColorStop(0.5, `rgba(160, 180, 200, ${breathe})`);
-      fogGrad.addColorStop(1, "transparent");
-      ctx.fillStyle = fogGrad;
+      // ── Soft ambient fog that breathes ──
+      const breathe = Math.sin(frame * 0.006) * 0.01 + 0.025;
+      const fog = ctx.createRadialGradient(W * 0.5, H * 0.6, W * 0.05, W * 0.5, H * 0.5, W * 0.9);
+      fog.addColorStop(0, `rgba(160, 180, 200, ${breathe + 0.015})`);
+      fog.addColorStop(0.6, `rgba(140, 165, 190, ${breathe})`);
+      fog.addColorStop(1, "transparent");
+      ctx.fillStyle = fog;
       ctx.fillRect(0, 0, W, H);
 
-      // ── Edge condensation (more fog at bottom/edges) ──
-      const edgeFog = ctx.createLinearGradient(0, H * 0.7, 0, H);
-      edgeFog.addColorStop(0, "transparent");
-      edgeFog.addColorStop(1, `rgba(170, 190, 215, ${breathe + 0.015})`);
-      ctx.fillStyle = edgeFog;
-      ctx.fillRect(0, H * 0.7, W, H * 0.3);
-
-      // ── Glass drops ──
+      // ── Background rain streaks ──
+      ctx.lineCap = "round";
       for (let i = 0; i < drops.length; i++) {
         const d = drops[i];
-        d.life++;
+        d.y += d.speed;
 
-        // Stuck drops may start dripping after a while
-        if (d.stuck && d.life > d.maxLife * 0.7 && Math.random() < 0.003) {
-          d.stuck = false;
-          d.speed = Math.random() * 0.6 + 0.15;
-        }
-
-        if (!d.stuck) {
-          // Wobble as it drips
-          d.wobble += 0.04;
-          d.x += Math.sin(d.wobble) * 0.15;
-          d.y += d.speed;
-          d.trail = Math.min(d.trail + d.speed * 0.8, 40);
-
-          // Gradually accelerate (gravity)
-          d.speed = Math.min(d.speed + 0.003, 2);
-        }
-
-        // Fade near end of life
-        if (d.life > d.maxLife * 0.85) {
-          d.opacity *= 0.985;
-        }
-
-        if (d.y > H + 20 || d.life > d.maxLife || d.opacity < 0.02) {
-          drops[i] = makeGlassDrop(true);
+        if (d.y > H + 20) {
+          drops[i] = makeDrop(true);
           continue;
         }
 
-        drawGlassDrop(d);
+        // Slight wind angle
+        const windX = 0.4;
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x + windX * d.len * 0.3, d.y + d.len);
+        ctx.strokeStyle = `rgba(150, 175, 200, ${d.opacity})`;
+        ctx.lineWidth = d.width;
+        ctx.stroke();
       }
 
-      // ── Fine rain streaks (background rain hitting glass) ──
-      ctx.lineCap = "round";
-      for (let i = 0; i < streaks.length; i++) {
-        const s = streaks[i];
-        s.y += s.speed;
+      // ── Glass surface drops ──
+      for (let i = 0; i < glassDrops.length; i++) {
+        const g = glassDrops[i];
+        g.life++;
 
-        if (s.y > H + 20) {
-          streaks[i] = makeStreak(true);
+        // Chance to start dripping
+        if (!g.dripping && g.life > g.maxLife * 0.6 && Math.random() < 0.002) {
+          g.dripping = true;
+          g.speed = Math.random() * 0.4 + 0.1;
+        }
+
+        if (g.dripping) {
+          g.y += g.speed;
+          g.speed = Math.min(g.speed + 0.002, 1.2);
+          g.trail = Math.min(g.trail + g.speed * 0.6, 30);
+          g.x += Math.sin(frame * 0.03 + i) * 0.08;
+        }
+
+        // Fade out near end
+        if (g.life > g.maxLife * 0.85) {
+          g.opacity *= 0.99;
+        }
+
+        if (g.y > H + 10 || g.life > g.maxLife || g.opacity < 0.02) {
+          glassDrops[i] = makeGlassDrop();
+          glassDrops[i].y = -Math.random() * 30;
           continue;
         }
 
+        // Refraction halo
+        const halo = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.radius * 2.2);
+        halo.addColorStop(0, `rgba(255, 255, 255, ${g.opacity * 0.12})`);
+        halo.addColorStop(0.6, `rgba(200, 218, 235, ${g.opacity * 0.05})`);
+        halo.addColorStop(1, "transparent");
+        ctx.fillStyle = halo;
         ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(s.x + 0.2, s.y + s.len);
-        ctx.strokeStyle = `rgba(170, 195, 220, ${s.opacity})`;
-        ctx.lineWidth = s.width;
-        ctx.stroke();
+        ctx.arc(g.x, g.y, g.radius * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Drop body
+        const dropGrad = ctx.createRadialGradient(
+          g.x - g.radius * 0.25, g.y - g.radius * 0.25, 0,
+          g.x, g.y, g.radius
+        );
+        dropGrad.addColorStop(0, `rgba(255, 255, 255, ${g.opacity * 0.8})`);
+        dropGrad.addColorStop(0.5, `rgba(190, 210, 230, ${g.opacity * 0.5})`);
+        dropGrad.addColorStop(1, `rgba(160, 185, 210, ${g.opacity * 0.15})`);
+        ctx.fillStyle = dropGrad;
+
+        ctx.save();
+        ctx.translate(g.x, g.y);
+        if (g.dripping && g.speed > 0.2) ctx.scale(0.9, 1.1);
+        ctx.beginPath();
+        ctx.arc(0, 0, g.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Specular
+        ctx.fillStyle = `rgba(255, 255, 255, ${g.opacity * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(-g.radius * 0.2, -g.radius * 0.2, g.radius * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Drip trail
+        if (g.dripping && g.trail > 3) {
+          const trailGrad = ctx.createLinearGradient(g.x, g.y - g.trail, g.x, g.y);
+          trailGrad.addColorStop(0, "transparent");
+          trailGrad.addColorStop(1, `rgba(170, 195, 220, ${g.opacity * 0.2})`);
+          ctx.strokeStyle = trailGrad;
+          ctx.lineWidth = g.radius * 0.5;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(g.x, g.y - g.trail);
+          ctx.lineTo(g.x, g.y);
+          ctx.stroke();
+        }
       }
 
       rafRef.current = requestAnimationFrame(animate);
@@ -227,7 +207,7 @@ export default function RainEffect() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ opacity: 0.85 }}
+      style={{ opacity: 0.9 }}
     />
   );
 }

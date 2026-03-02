@@ -109,7 +109,10 @@ export default function AppLayout() {
           collapsed ? "ml-[60px]" : "ml-56"
         )}
       >
-        <main className="flex-1 min-w-0 overflow-y-auto">
+        <main className={cn(
+          "flex-1 min-w-0 overflow-y-auto transition-all duration-500",
+          currentTheme === "rainy" && "rainy-glass-panel m-2 mt-0 rounded-2xl"
+        )}>
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>
               <Outlet />
