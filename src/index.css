@@ -228,42 +228,81 @@
     display: none;
   }
 
-  /* ── Rainy Mode: Glassmorphism Overrides ── */
+  /* ── Rainy Mode: Premium Glassmorphism ── */
 
-  /* Rainy: glassmorphism on cards & sidebar */
+  /* Rainy: enhanced glassmorphism on surfaces */
   .rainy .glass,
   .rainy .glass-intense {
-    backdrop-filter: blur(15px) saturate(1.8);
-    -webkit-backdrop-filter: blur(15px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.9);
+    -webkit-backdrop-filter: blur(20px) saturate(1.9);
+    box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.35),
+                inset 0 -1px 0 0 hsl(0 0% 0% / 0.04),
+                0 8px 32px -8px rgba(31, 38, 135, 0.08);
   }
 
-  /* Rainy: gradient background */
+  /* Rainy: frosted glass gradient background */
   :root.rainy {
-    background: linear-gradient(180deg, hsl(210 40% 96%) 0%, hsl(214 32% 91%) 100%) !important;
+    background: linear-gradient(
+      170deg, 
+      hsl(210 40% 96%) 0%, 
+      hsl(214 32% 92%) 30%,
+      hsl(216 28% 89%) 70%,
+      hsl(220 25% 86%) 100%
+    ) !important;
     background-attachment: fixed !important;
   }
 
-  /* Rainy: ultra-thin translucent scrollbars */
+  /* Rainy: cards get frosted glass effect */
+  .rainy [class*="bg-card"] {
+    backdrop-filter: blur(12px) saturate(1.6);
+    -webkit-backdrop-filter: blur(12px) saturate(1.6);
+    border-color: hsl(0 0% 100% / 0.35) !important;
+    box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.5),
+                0 4px 16px -4px rgba(31, 38, 135, 0.06);
+  }
+
+  /* Rainy: sidebar frosted panel */
+  .rainy [class*="sidebar"] {
+    backdrop-filter: blur(16px) saturate(1.7);
+    -webkit-backdrop-filter: blur(16px) saturate(1.7);
+  }
+
+  /* Rainy: elegant thin scrollbars */
   .rainy ::-webkit-scrollbar { width: 4px; height: 4px; }
   .rainy ::-webkit-scrollbar-track { background: transparent; }
   .rainy ::-webkit-scrollbar-thumb {
-    background: hsl(215 16% 47% / 0.2);
+    background: hsl(215 16% 47% / 0.18);
     border-radius: 999px;
   }
   .rainy ::-webkit-scrollbar-thumb:hover {
-    background: hsl(215 16% 47% / 0.45);
+    background: hsl(215 16% 47% / 0.35);
   }
 
   /* Rainy: wet-surface glow on interactive elements */
   .rainy button:hover,
   .rainy [role="button"]:hover {
-    box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.4),
-                0 0 12px -3px hsl(199 89% 58% / 0.15);
+    box-shadow: inset 0 1px 0 0 hsl(0 0% 100% / 0.45),
+                0 0 16px -4px hsl(199 89% 58% / 0.12);
+  }
+
+  /* Rainy: header bar gets wet glass treatment */
+  .rainy .bg-surface-0 {
+    background: hsl(0 0% 100% / 0.6) !important;
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    border-bottom-color: hsl(0 0% 100% / 0.4) !important;
+  }
+
+  /* Rainy: inputs get frosted inner glow */
+  .rainy input, .rainy textarea, .rainy select {
+    background: hsl(0 0% 100% / 0.5) !important;
+    border-color: hsl(0 0% 100% / 0.4) !important;
+    box-shadow: inset 0 1px 2px 0 hsl(0 0% 0% / 0.04);
   }
 
   /* Rainy: canvas focus vignette */
   .rainy .canvas-vignette {
-    box-shadow: inset 0 0 60px 20px hsl(214 32% 91% / 0.5);
+    box-shadow: inset 0 0 80px 30px hsl(214 32% 91% / 0.4);
   }
 
   /* Niche accent overrides */
