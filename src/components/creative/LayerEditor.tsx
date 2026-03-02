@@ -62,7 +62,7 @@ const FONT_OPTIONS = [
   "'Roboto', sans-serif",
 ];
 
-const SNAP_THRESHOLD = 2; // percentage units to snap
+const SNAP_THRESHOLD = 2;
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ function analyzeImageBrightness(imgSrc: string): Promise<number> {
   });
 }
 
-/** Analyze dominant light direction from image (returns angle in degrees, 0=top, 90=right) */
+/** Analyze dominant light direction from image (returns angle in degrees) */
 function analyzeLightDirection(imgSrc: string): Promise<number> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -116,7 +116,6 @@ function analyzeLightDirection(imgSrc: string): Promise<number> {
       if (!ctx) { resolve(135); return; }
       ctx.drawImage(img, 0, 0, size, size);
       const data = ctx.getImageData(0, 0, size, size).data;
-      // Compute weighted centroid of brightness
       let totalB = 0, wx = 0, wy = 0;
       for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
@@ -130,7 +129,6 @@ function analyzeLightDirection(imgSrc: string): Promise<number> {
       if (totalB === 0) { resolve(135); return; }
       const cx = wx / totalB;
       const cy = wy / totalB;
-      // Angle from center of image to brightness centroid (light source direction)
       const dx = cx - size / 2;
       const dy = cy - size / 2;
       const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
@@ -148,7 +146,7 @@ function createDefaultLayers(
   const pos = placementToPosition(copyPlacement);
   const layers: TextLayer[] = [];
   const textColor = isDarkBg ? style.palette.textLight : style.palette.textDark;
-  // Smart blend: multiply for dark-text-on-light, screen for light-text-on-dark
+  // INK FUSION: multiply for dark text absorbing into light/textured bg; screen for bright text on dark bg
   const blendMode = isDarkBg ? "screen" : "multiply";
 
   if (headline) {
@@ -184,50 +182,63 @@ function createDefaultLayers(
   return layers;
 }
 
-// ── Depth shadows (occlusion-style, NOT neon glow) ─────────────
+// ── Directional Occlusion Shadows (NOT neon glow) ──────────────
 
 function getDirectionalShadow(lightAngle: number, type: "headline" | "body" | "cta"): string {
+  // Shadow falls OPPOSITE to light source
   const shadowAngle = (lightAngle + 180) % 360;
   const rad = shadowAngle * Math.PI / 180;
-  
+
   if (type === "headline") {
-    // Heavy ambient-occlusion shadow: depth, not glow
     const ox = Math.round(Math.cos(rad) * 2);
     const oy = Math.round(Math.sin(rad) * 4);
-    return `${ox}px ${oy}px 8px rgba(0,0,0,0.35), 0px 0px 2px rgba(0,0,0,0.25), ${ox * 2}px ${oy * 2}px 20px rgba(0,0,0,0.15)`;
+    // Deep ambient occlusion: weight + depth, zero glow
+    return `${ox}px ${oy}px 8px rgba(0,0,0,0.35), 0px 0px 2px rgba(0,0,0,0.2), ${ox * 2}px ${oy * 2}px 20px rgba(0,0,0,0.12)`;
   }
   if (type === "body") {
     const ox = Math.round(Math.cos(rad) * 1);
     const oy = Math.round(Math.sin(rad) * 2);
-    return `${ox}px ${oy}px 4px rgba(0,0,0,0.3), 0px 0px 1px rgba(0,0,0,0.2)`;
+    return `${ox}px ${oy}px 4px rgba(0,0,0,0.3), 0px 0px 1px rgba(0,0,0,0.15)`;
   }
-  return "0 2px 6px rgba(0,0,0,0.3)";
+  // CTA uses drop-shadow on the button container instead
+  return "none";
 }
 
-function getLayerTextStyle(layer: TextLayer, lightAngle = 135, isDarkBg = true) {
-  const blendOpacity = layer.blendMode === "multiply" ? 0.88 : 1;
+/**
+ * Per-layer inline styles for HIGH-FIDELITY integration.
+ * - Editorial spacing (letter-spacing, line-height)
+ * - Occlusion shadows (directional, no glow)
+ * - Micro grain blur to match AI image texture
+ * - Opacity modulation for blend modes
+ */
+function getLayerTextStyle(layer: TextLayer, lightAngle = 135, _isDarkBg = true) {
+  const isMultiply = layer.blendMode === "multiply";
+  // Multiply ink absorbs into the surface → slightly transparent
+  const blendOpacity = isMultiply ? 0.88 : 1;
+
+  const base = {
+    textShadow: getDirectionalShadow(lightAngle, layer.type),
+    WebkitTextStroke: "none" as const,
+    // Grain integration: micro-blur + contrast to match AI image frequency.
+    // NO box/background — applied directly to text paint.
+    filter: "contrast(1.08) brightness(0.94) blur(0.25px)",
+    opacity: blendOpacity,
+  };
 
   if (layer.type === "headline") {
     return {
+      ...base,
       fontSize: "clamp(1rem, 3.5vw, 1.3rem)",
       lineHeight: 1.1,
       letterSpacing: "0.1em",
-      textShadow: getDirectionalShadow(lightAngle, "headline"),
-      WebkitTextStroke: "none",
-      // Grain integration: slight contrast boost + micro-blur to match AI image texture
-      filter: "contrast(1.1) brightness(0.92) blur(0.3px)",
-      opacity: blendOpacity,
     };
   }
   if (layer.type === "body") {
     return {
+      ...base,
       fontSize: "clamp(0.6rem, 1.8vw, 0.75rem)",
       lineHeight: 1.5,
       letterSpacing: "0.02em",
-      textShadow: getDirectionalShadow(lightAngle, "body"),
-      WebkitTextStroke: "none",
-      filter: "contrast(1.08) brightness(0.93) blur(0.25px)",
-      opacity: blendOpacity,
     };
   }
   return {};
@@ -254,19 +265,18 @@ export default function LayerEditor({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [showToolbar, setShowToolbar] = useState(false);
-
-  // Snap guides state
   const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({});
 
   const selectedLayer = layers.find((l) => l.id === selectedId);
 
+  // ── Sync niche style → force brand fonts ─────────────────────
   useEffect(() => {
     const s = resolveNicheStyle(niche);
     setStyle(s);
     preloadNicheFonts(s);
   }, [niche]);
 
-  // Analyze background brightness + light direction when image changes
+  // ── Analyze background brightness + light direction ──────────
   useEffect(() => {
     if (!imageUrl) { setIsDarkBackground(true); setLightAngle(135); return; }
     Promise.all([
@@ -277,7 +287,6 @@ export default function LayerEditor({
       setIsDarkBackground(dark);
       setLightAngle(angle);
       const blendMode = dark ? "screen" : "multiply";
-      // Auto-update text colors and blend modes on existing layers
       setLayers((prev) => prev.map((l) => {
         if (l.type === "cta") return { ...l, blendMode: "normal" };
         const autoColor = dark ? style.palette.textLight : style.palette.textDark;
@@ -286,7 +295,7 @@ export default function LayerEditor({
     });
   }, [imageUrl, style]);
 
-  // Sync layers when content changes externally
+  // ── Sync layers when content changes externally ──────────────
   useEffect(() => {
     if (textBakedInImage) return;
     setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement, isDarkBackground));
@@ -337,12 +346,9 @@ export default function LayerEditor({
       let dy = ((ev.clientY - startY) / rect.height) * 100;
       let newX = Math.max(0, Math.min(90, origX + dx));
       let newY = Math.max(0, Math.min(95, origY + dy));
-
-      // Snap to center guides
       const guides: { x?: number; y?: number } = {};
       if (Math.abs(newX - 50) < SNAP_THRESHOLD) { newX = 50; guides.x = 50; }
       if (Math.abs(newY - 50) < SNAP_THRESHOLD) { newY = 50; guides.y = 50; }
-      // Snap to thirds
       for (const third of [33.33, 66.66]) {
         if (Math.abs(newX - third) < SNAP_THRESHOLD) { newX = third; guides.x = third; }
         if (Math.abs(newY - third) < SNAP_THRESHOLD) { newY = third; guides.y = third; }
@@ -360,7 +366,7 @@ export default function LayerEditor({
     window.addEventListener("pointerup", onUp);
   }, [layers, updateLayer]);
 
-  // ── Export ────────────────────────────────────────────────────
+  // ── Export PNG ────────────────────────────────────────────────
   const exportPNG = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -412,7 +418,6 @@ export default function LayerEditor({
       } catch { /* skip */ }
     }
 
-    // Directional shadow for export
     const shadowRad = ((lightAngle + 180) % 360) * Math.PI / 180;
 
     for (const layer of layers) {
@@ -426,16 +431,20 @@ export default function LayerEditor({
       ctx.fillStyle = layer.color;
       ctx.textAlign = layer.textAlign;
 
-      // Apply blend mode via globalCompositeOperation
+      // Canvas blend via globalCompositeOperation
       if (layer.blendMode === "screen") ctx.globalCompositeOperation = "screen";
       else if (layer.blendMode === "multiply") ctx.globalCompositeOperation = "multiply";
+      else if (layer.blendMode === "overlay") ctx.globalCompositeOperation = "overlay";
       else ctx.globalCompositeOperation = "source-over";
+
+      // Multiply opacity simulation
+      if (layer.blendMode === "multiply") ctx.globalAlpha = 0.88;
+      else ctx.globalAlpha = 1;
 
       const alignX = layer.textAlign === "center" ? px + maxW / 2
         : layer.textAlign === "right" ? px + maxW : px;
 
       if (layer.type === "headline") {
-        // Depth shadow (ambient occlusion style)
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = 8;
         ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 2);
@@ -448,7 +457,8 @@ export default function LayerEditor({
       }
 
       if (layer.type === "cta") {
-        ctx.globalCompositeOperation = "source-over"; // CTA always normal
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1;
         const metrics = ctx.measureText(layer.content);
         const padX = scaledSize * 1.2;
         const padY = scaledSize * 0.5;
@@ -474,6 +484,7 @@ export default function LayerEditor({
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
       ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
     }
 
     const dataUrl = canvas.toDataURL("image/png");
@@ -499,20 +510,6 @@ export default function LayerEditor({
           <div className="absolute inset-0 bg-card" />
         )}
 
-        {/* SVG noise overlay filter — matches AI image grain frequency */}
-        <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
-          <defs>
-            <filter id="texture-grain" x="0%" y="0%" width="100%" height="100%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch" result="noise" />
-              <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise" />
-              <feBlend in="SourceGraphic" in2="grayNoise" mode="overlay" result="blended" />
-              <feComponentTransfer in="blended">
-                <feFuncA type="linear" slope="0.95" intercept="0" />
-              </feComponentTransfer>
-            </filter>
-          </defs>
-        </svg>
-
         {/* Overlay gradient */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `linear-gradient(to top, ${style.palette.overlay}, ${style.palette.overlay.replace(/[\d.]+\)$/, "0.2)")}, transparent)`,
@@ -531,7 +528,6 @@ export default function LayerEditor({
                 style={{ top: `${snapGuides.y}%`, height: 1, background: "rgba(99,182,255,0.6)" }}
               />
             )}
-            {/* Persistent center crosshair (faint) */}
             <div className="absolute top-0 bottom-0 pointer-events-none z-40" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.08)" }} />
             <div className="absolute left-0 right-0 pointer-events-none z-40" style={{ top: "50%", height: 1, background: "rgba(255,255,255,0.08)" }} />
           </>
@@ -543,11 +539,12 @@ export default function LayerEditor({
           {logoUrl && <img src={logoUrl} alt="Logo" className="h-5 object-contain opacity-90" draggable={false} />}
         </div>
 
-        {/* Text layers (interactive) */}
+        {/* ── Text layers (HIGH-FIDELITY rendering) ──────────── */}
         {layers.filter((l) => l.visible).map((layer) => {
           const hierarchyStyle = getLayerTextStyle(layer, lightAngle, isDarkBackground);
           const isEditing = editingId === layer.id;
           const effectiveBlend = layer.blendMode || "normal";
+
           return (
             <div
               key={layer.id}
@@ -562,7 +559,8 @@ export default function LayerEditor({
                 top: `${layer.y}%`,
                 maxWidth: `${layer.maxWidthPercent}%`,
                 zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
-                mixBlendMode: (effectiveBlend) as any,
+                // Blend mode applied directly on the wrapper — NO background, NO box
+                mixBlendMode: effectiveBlend as any,
               }}
               onPointerDown={(e) => handlePointerDown(e, layer.id)}
               onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
@@ -580,7 +578,8 @@ export default function LayerEditor({
                     backgroundColor: ctaColor,
                     borderRadius: style.cta.borderRadius,
                     textShadow: "none",
-                    filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
+                    // CTA: drop-shadow for depth, NOT text-shadow
+                    filter: "drop-shadow(2px 4px 6px rgba(0,0,0,0.5))",
                     mixBlendMode: "normal",
                   }}
                 >
@@ -605,10 +604,12 @@ export default function LayerEditor({
                     fontStyle: layer.fontStyle,
                     color: layer.color,
                     textAlign: layer.textAlign,
+                    // Merge hierarchy style (shadow, spacing, filter, opacity)
                     ...hierarchyStyle,
                     paintOrder: "stroke fill",
-                    // Apply noise filter only when not editing (grain + contrast + blur from hierarchyStyle)
-                    ...(imageUrl && !isEditing ? { filter: `url(#texture-grain) ${hierarchyStyle.filter || ""}` } : {}),
+                    // NO url(#texture-grain) filter — removed the SVG box noise.
+                    // Grain is now ONLY via the CSS filter property in hierarchyStyle
+                    // which applies contrast+brightness+blur directly to text paint.
                   }}
                 >
                   {isEditing ? (
@@ -618,8 +619,16 @@ export default function LayerEditor({
                       onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
                       onBlur={() => setEditingId(null)}
                       rows={layer.type === "headline" ? 3 : 4}
-                      className="bg-black/20 backdrop-blur-sm rounded outline-none w-full resize-none p-1"
-                      style={{ color: layer.color, fontFamily: layer.fontFamily, fontSize: "inherit", fontWeight: layer.fontWeight }}
+                      className="bg-transparent backdrop-blur-none rounded outline-none w-full resize-none p-1"
+                      style={{
+                        color: layer.color,
+                        fontFamily: layer.fontFamily,
+                        fontSize: "inherit",
+                        fontWeight: layer.fontWeight,
+                        // Remove ALL background from editing textarea — no gray box
+                        background: "none",
+                        caretColor: layer.color,
+                      }}
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : layer.content}
@@ -655,7 +664,7 @@ export default function LayerEditor({
           <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
         </div>
 
-        {/* Contrast + blend indicator */}
+        {/* Blend indicator */}
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/60 pointer-events-none">
           {isDarkBackground ? "☀ Screen" : "● Multiply"}
           <span className="opacity-40">·</span>
@@ -756,6 +765,7 @@ export default function LayerEditor({
               <option value="multiply">Multiply</option>
               <option value="overlay">Overlay</option>
               <option value="soft-light">Soft Light</option>
+              <option value="color-dodge">Color Dodge</option>
             </select>
           </div>
         </motion.div>
