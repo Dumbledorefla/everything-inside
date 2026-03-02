@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import CreateProjectWizard from "@/components/CreateProjectWizard";
+import ConnectionStatus from "@/components/dashboard/ConnectionStatus";
 import GlobalContextSearch from "@/components/dashboard/GlobalContextSearch";
 import WorkspaceFolderManager from "@/components/dashboard/WorkspaceFolderManager";
 import DashboardFilters, { type FilterState } from "@/components/dashboard/DashboardFilters";
@@ -166,7 +167,10 @@ export default function Dashboard() {
               </svg>
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight font-mono-brand">Mission Control</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-bold tracking-tight font-mono-brand">Mission Control</h1>
+                <ConnectionStatus />
+              </div>
               <p className="text-[11px] text-muted-foreground/70 font-mono-brand tracking-widest uppercase">
                 Centro de comando · {projects.length} projetos
               </p>
