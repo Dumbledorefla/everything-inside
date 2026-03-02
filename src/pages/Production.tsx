@@ -54,6 +54,17 @@ const MODE_LABELS: Record<OperationMode, string> = {
   foundation: "Fundação", social: "Social", performance: "Performance",
 };
 
+const TEXT_PROVIDER_OPTIONS = [
+  { value: "google/gemini-3-flash-preview", label: "Gemini Flash" },
+  { value: "google/gemini-2.5-pro", label: "Gemini Pro" },
+  { value: "google/gemini-2.5-flash-lite", label: "Gemini Lite" },
+];
+
+const IMAGE_PROVIDER_OPTIONS = [
+  { value: "google/gemini-2.5-flash-image", label: "Nano Banana" },
+  { value: "google/gemini-3-pro-image-preview", label: "Nano Banana Pro" },
+];
+
 export default function Production() {
   const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
   const { session } = useAuth();
@@ -108,6 +119,22 @@ export default function Production() {
   const availablePieceTypes = MODE_PIECE_TYPES[operationMode];
   const availableRatios = MODE_RATIOS[operationMode];
   const isCarousel = spec.pieceType === "carousel";
+
+  const providerOptions = spec.output === "text"
+    ? TEXT_PROVIDER_OPTIONS
+    : spec.output === "image"
+      ? IMAGE_PROVIDER_OPTIONS
+      : [];
+
+  useEffect(() => {
+    const invalidForCurrentOutput =
+      (spec.output === "both" && spec.provider !== "Auto") ||
+      ((spec.output === "image" || spec.output === "both") && TEXT_PROVIDER_OPTIONS.some((p) => p.value === spec.provider));
+
+    if (invalidForCurrentOutput) {
+      setSpec({ provider: "Auto" });
+    }
+  }, [spec.output, spec.provider, setSpec]);
 
   useEffect(() => {
     if (!availableRatios.includes(spec.ratio)) {
@@ -402,13 +429,15 @@ export default function Production() {
 
               {/* Provider */}
               <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Provedor</label>
+                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">
+                  Provedor {spec.output === "image" ? "(imagem)" : spec.output === "text" ? "(texto)" : "(automático)"}
+                </label>
                 <select value={spec.provider} onChange={(e) => setSpec({ provider: e.target.value })}
                   className="w-full rounded-xl border border-border/15 bg-background/30 px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
                   <option value="Auto">Auto (Fallback)</option>
-                  <option value="google/gemini-3-flash-preview">Gemini Flash</option>
-                  <option value="google/gemini-2.5-pro">Gemini Pro</option>
-                  <option value="google/gemini-2.5-flash-lite">Gemini Lite</option>
+                  {providerOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </div>
 
