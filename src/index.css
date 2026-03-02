@@ -232,13 +232,13 @@
 
   /* Rainy: main content area = frosted glass panel */
   .rainy-glass-panel {
-    background: hsl(210 20% 96% / 0.28);
-    border: 1px solid hsl(0 0% 100% / 0.25);
+    background: hsl(210 20% 96% / 0.3);
+    border: 1px solid hsl(0 0% 100% / 0.28);
     box-shadow:
       inset 0 1px 0 0 hsl(0 0% 100% / 0.3),
       0 8px 48px -8px rgba(20, 40, 70, 0.2);
-    backdrop-filter: blur(2px) saturate(1.2);
-    -webkit-backdrop-filter: blur(2px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
   }
 
   /* Rainy: enhanced glassmorphism on surfaces */
@@ -264,8 +264,8 @@
 
   /* Rainy: sidebar = translucent panel */
   .rainy [class*="bg-sidebar"] {
-    backdrop-filter: blur(3px) saturate(1.2);
-    -webkit-backdrop-filter: blur(3px) saturate(1.2);
+    backdrop-filter: blur(10px) saturate(1.3);
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
     box-shadow: inset -1px 0 0 0 hsl(0 0% 100% / 0.15);
   }
 
@@ -289,9 +289,9 @@
 
   /* Rainy: header = thin glass strip */
   .rainy .bg-surface-0 {
-    background: hsl(210 18% 90% / 0.25) !important;
-    backdrop-filter: blur(3px) saturate(1.2);
-    -webkit-backdrop-filter: blur(3px) saturate(1.2);
+    background: hsl(210 18% 90% / 0.28) !important;
+    backdrop-filter: blur(10px) saturate(1.3);
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
     border-bottom-color: hsl(0 0% 100% / 0.15) !important;
   }
 
