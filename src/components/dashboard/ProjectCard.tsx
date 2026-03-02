@@ -59,10 +59,9 @@ export default function ProjectCard({ project, index }: Props) {
       onClick={() => navigate(`/project/${project.id}/home`)}
       whileHover={{ y: -2 }}
       className={cn(
-        "group cursor-pointer rounded-2xl border border-border/10 p-5 transition-all duration-300",
-        "bg-card/20 backdrop-blur-md",
-        "hover:border-primary/15 hover:bg-card/35 hover:shadow-lg hover:shadow-primary/5",
-        "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+        "group cursor-pointer rounded-2xl border border-border p-5 transition-all duration-300",
+        "bg-card",
+        "hover:border-primary/30 hover:shadow-md",
         getNicheClass(project.niche)
       )}
     >

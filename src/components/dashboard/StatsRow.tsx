@@ -10,10 +10,10 @@ interface Props {
 
 export default function StatsRow({ projectCount, drafts, official, pinned }: Props) {
   const stats = [
-    { label: "Projetos Ativos", value: projectCount, glyph: "◎", color: "text-primary", bg: "bg-surface-1 border-primary/10", iconBg: "bg-primary/10" },
-    { label: "Fixados", value: pinned, glyph: "◆", color: "text-primary", bg: "bg-surface-1 border-primary/8", iconBg: "bg-primary/8" },
-    { label: "Em Rascunho", value: drafts, glyph: "⚡", color: "text-cos-warning", bg: "bg-surface-1 border-cos-warning/10", iconBg: "bg-cos-warning/10" },
-    { label: "Oficiais", value: official, glyph: "★", color: "text-cos-success", bg: "bg-surface-1 border-cos-success/10", iconBg: "bg-cos-success/10" },
+    { label: "Projetos Ativos", value: projectCount, glyph: "◎", color: "text-primary", bg: "bg-card border-border", iconBg: "bg-primary/10" },
+    { label: "Fixados", value: pinned, glyph: "◆", color: "text-primary", bg: "bg-card border-border", iconBg: "bg-primary/10" },
+    { label: "Em Rascunho", value: drafts, glyph: "⚡", color: "text-cos-warning", bg: "bg-card border-border", iconBg: "bg-cos-warning/10" },
+    { label: "Oficiais", value: official, glyph: "★", color: "text-cos-success", bg: "bg-card border-border", iconBg: "bg-cos-success/10" },
   ];
 
   return (
@@ -25,8 +25,7 @@ export default function StatsRow({ projectCount, drafts, official, pinned }: Pro
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.05, duration: 0.35 }}
           className={cn(
-            "rounded-2xl border p-5 backdrop-blur-sm transition-all hover:scale-[1.01]",
-            "shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]",
+            "rounded-2xl border p-5 transition-all hover:scale-[1.01] shadow-sm",
             s.bg
           )}
         >

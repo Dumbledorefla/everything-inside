@@ -43,11 +43,11 @@ export default function AppLayout() {
               const e = new KeyboardEvent("keydown", { key: "k", metaKey: true });
               document.dispatchEvent(e);
             }}
-            className="flex items-center gap-2 rounded-xl border border-border/20 bg-card/20 px-3.5 py-1.5 text-xs text-muted-foreground/60 hover:bg-card/40 hover:text-muted-foreground hover:border-border/30 transition-all flex-1 group"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-all flex-1 group"
           >
             <Search className="h-3.5 w-3.5 group-hover:text-primary transition-colors" />
             <span className="flex-1 text-left">Buscar...</span>
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-border/20 bg-background/30 px-1.5 py-0.5 text-[9px] font-mono-brand text-muted-foreground/50">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[9px] font-mono-brand text-muted-foreground">
               <Command className="h-2.5 w-2.5" />K
             </kbd>
           </button>
@@ -62,8 +62,8 @@ export default function AppLayout() {
               dockOpen
                 ? "bg-primary/15 text-primary border border-primary/20"
                 : agentMode === "global"
-                ? "bg-muted/10 text-muted-foreground/80 border border-border/15 hover:bg-muted/20"
-                : "bg-muted/10 text-muted-foreground/80 border border-border/15 hover:bg-muted/20"
+                ? "bg-muted text-muted-foreground border border-border hover:bg-accent"
+                : "bg-muted text-muted-foreground border border-border hover:bg-accent"
             )}
           >
             <BlackHoleShader
@@ -77,25 +77,25 @@ export default function AppLayout() {
             <span className="h-1.5 w-1.5 rounded-full bg-cos-success animate-pulse" />
           </button>
 
-          <button className="flex items-center gap-1.5 rounded-xl bg-primary/10 border border-primary/15 px-3 py-1.5 text-xs font-medium text-primary/80 hover:bg-primary/20 hover:text-primary transition-all">
+          <button className="flex items-center gap-1.5 rounded-xl bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-all">
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Criar</span>
           </button>
 
           <ThemeToggle />
 
-          <button className="rounded-xl p-2 text-muted-foreground/50 hover:bg-card/30 hover:text-muted-foreground transition-colors">
+          <button className="rounded-xl p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
             <Bell className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center gap-1 ml-1 pl-2 border-l border-border/10">
-            <span className="text-[10px] text-muted-foreground/60 max-w-[90px] truncate hidden sm:block font-mono-brand">
+          <div className="flex items-center gap-1 ml-1 pl-2 border-l border-border">
+            <span className="text-[10px] text-muted-foreground max-w-[90px] truncate hidden sm:block font-mono-brand">
               {user?.email}
             </span>
             <button
               onClick={signOut}
               title="Sair"
-              className="rounded-xl p-2 text-muted-foreground/50 hover:bg-destructive/10 hover:text-destructive transition-colors"
+              className="rounded-xl p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
