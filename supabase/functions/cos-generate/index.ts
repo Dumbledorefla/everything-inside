@@ -611,6 +611,7 @@ ${qualityImageFinishing}
 Gere a imagem final como uma peça única e coesa.`;
 
       try {
+        console.log(`Tentando gerar imagem com modelo: ${model}`);
         const resp = await fetch(AI_GATEWAY, {
           method: "POST",
           headers: {
@@ -626,7 +627,8 @@ Gere a imagem final como uma peça única e coesa.`;
 
         if (!resp.ok) {
           if (resp.status === 429 || resp.status === 402) throw new Error(`${resp.status}`);
-          const event = `Imagem: ${model} falhou (HTTP ${resp.status}), tentando fallback`;
+          const respText = await resp.text();
+          const event = `Imagem: ${model} falhou (HTTP ${resp.status}): ${respText.slice(0, 200)}`;
           console.error(event);
           fallbackEvents.push(event);
           fallbackLog.push(event);
@@ -635,18 +637,59 @@ Gere a imagem final como uma peça única e coesa.`;
         }
 
         const data = await resp.json();
-        const images = data.choices?.[0]?.message?.images;
-        if (images?.[0]?.image_url?.url) {
-          imageUrl = images[0].image_url.url;
+        console.log(`Resposta do modelo ${model} - keys:`, Object.keys(data));
+        
+        // Try multiple response formats
+        const choice = data.choices?.[0]?.message;
+        let extractedUrl: string | null = null;
+        
+        // Format 1: images array with image_url.url
+        if (choice?.images?.[0]?.image_url?.url) {
+          extractedUrl = choice.images[0].image_url.url;
+        }
+        // Format 2: images array with inline base64
+        else if (choice?.images?.[0]?.inline_data) {
+          const img = choice.images[0].inline_data;
+          extractedUrl = `data:${img.mime_type || 'image/png'};base64,${img.data}`;
+        }
+        // Format 3: content array with image parts
+        else if (Array.isArray(choice?.content)) {
+          const imgPart = choice.content.find((p: any) => p.type === "image_url" || p.type === "image");
+          if (imgPart?.image_url?.url) {
+            extractedUrl = imgPart.image_url.url;
+          } else if (imgPart?.inline_data) {
+            extractedUrl = `data:${imgPart.inline_data.mime_type || 'image/png'};base64,${imgPart.inline_data.data}`;
+          }
+        }
+        // Format 4: direct base64 in data field
+        else if (data.data?.[0]?.b64_json) {
+          extractedUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+        }
+        // Format 5: direct url in data field
+        else if (data.data?.[0]?.url) {
+          extractedUrl = data.data[0].url;
+        }
+
+        if (extractedUrl) {
+          imageUrl = extractedUrl;
           imageModel = model;
           if (!providerUsed) providerUsed = model;
           else providerUsed += ` + ${model}`;
+          console.log(`Imagem gerada com sucesso via ${model}`);
           if (usedFallback) {
             const event = `Imagem: rebaixado para ${model} por erro no provedor primário`;
             fallbackEvents.push(event);
             fallbackLog.push(event);
           }
           break;
+        } else {
+          const debugInfo = JSON.stringify(data).slice(0, 500);
+          const event = `Imagem: ${model} retornou formato inesperado: ${debugInfo}`;
+          console.error(event);
+          fallbackEvents.push(event);
+          fallbackLog.push(event);
+          usedFallback = true;
+          continue;
         }
       } catch (e: any) {
         if (e.message === "429" || e.message === "402") throw e;
