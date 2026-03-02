@@ -7,11 +7,13 @@ import AssistantDock from "./assistant/AssistantDock";
 import ImmersiveDirector from "./assistant/ImmersiveDirector";
 import CommandPalette from "./CommandPalette";
 import StarField from "./StarField";
+import RainEffect from "./RainEffect";
 import PageTransition from "./PageTransition";
 import BlackHoleShader from "./BlackHoleShader";
 import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistant } from "@/contexts/AssistantContext";
+import { useCurrentTheme } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout() {
@@ -20,10 +22,11 @@ export default function AppLayout() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isInProject, dockOpen, toggleDock, openDock, agentMode } = useAssistant();
+  const currentTheme = useCurrentTheme();
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden noise-overlay">
-      <StarField />
+      {currentTheme === "rainy" ? <RainEffect /> : <StarField />}
       <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
 
       <header
