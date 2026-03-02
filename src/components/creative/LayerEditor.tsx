@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Download, Layers, Type, Move, Palette, Bold, Italic,
+  Download, Layers, Type, Move, Palette, Bold, Italic, Lock,
   AlignLeft, AlignCenter, AlignRight, ChevronDown, Copy, Plus,
   Sparkles, Loader2,
 } from "lucide-react";
@@ -195,15 +195,13 @@ function getDirectionalShadow(lightAngle: number, type: "headline" | "body" | "c
   if (type === "headline") {
     const ox = Math.round(Math.cos(rad) * 2);
     const oy = Math.round(Math.sin(rad) * 4);
-    // Deep ambient occlusion: weight + depth, zero glow
-    return `${ox}px ${oy}px 8px rgba(0,0,0,0.35), 0px 0px 2px rgba(0,0,0,0.2), ${ox * 2}px ${oy * 2}px 20px rgba(0,0,0,0.12)`;
+    return `${ox}px ${oy}px 12px rgba(0,0,0,0.45), 0px 1px 2px rgba(0,0,0,0.3), ${ox * 0.5}px ${oy * 0.5}px 5px rgba(0,0,0,0.2)`;
   }
   if (type === "body") {
     const ox = Math.round(Math.cos(rad) * 1);
     const oy = Math.round(Math.sin(rad) * 2);
-    return `${ox}px ${oy}px 4px rgba(0,0,0,0.3), 0px 0px 1px rgba(0,0,0,0.15)`;
+    return `${ox}px ${oy}px 6px rgba(0,0,0,0.35), 0px 1px 1px rgba(0,0,0,0.2), ${ox * 0.5}px ${oy * 0.5}px 3px rgba(0,0,0,0.15)`;
   }
-  // CTA uses drop-shadow on the button container instead
   return "none";
 }
 
@@ -224,7 +222,7 @@ function getLayerTextStyle(layer: TextLayer, lightAngle = 135, _isDarkBg = true)
     WebkitTextStroke: "none" as const,
     // Grain integration: micro-blur + contrast to match AI image frequency.
     // NO box/background — applied directly to text paint.
-    filter: "contrast(1.08) brightness(0.94) blur(0.25px)",
+    filter: "contrast(1.02) brightness(0.98) blur(0.3px)",
     opacity: blendOpacity,
   };
 
@@ -273,11 +271,18 @@ export default function LayerEditor({
 
   const selectedLayer = layers.find((l) => l.id === selectedId);
 
-  // ── Sync niche style → force brand fonts ─────────────────────
+  // ── Sync niche style → force brand fonts on all layers ────────
   useEffect(() => {
     const s = resolveNicheStyle(niche);
     setStyle(s);
     preloadNicheFonts(s);
+    // Force DNA fonts onto existing layers
+    setLayers((prev) => prev.map((l) => ({
+      ...l,
+      fontFamily: l.type === "headline" ? s.fonts.headline
+        : l.type === "body" ? s.fonts.body
+        : s.fonts.cta,
+    })));
   }, [niche]);
 
   // ── Analyze background brightness + light direction ──────────
@@ -782,15 +787,20 @@ export default function LayerEditor({
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-wrap items-center gap-2 rounded-xl border border-border/20 bg-card/60 backdrop-blur-sm p-3"
         >
-          <select
-            value={selectedLayer.fontFamily}
-            onChange={(e) => updateLayer(selectedLayer.id, { fontFamily: e.target.value })}
-            className="rounded-lg border border-border/20 bg-background/40 px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
-          >
-            {FONT_OPTIONS.map((f) => (
-              <option key={f} value={f} style={{ fontFamily: f }}>{cleanFontFamily(f)}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-1">
+            <select
+              value={selectedLayer.fontFamily}
+              onChange={(e) => updateLayer(selectedLayer.id, { fontFamily: e.target.value })}
+              className="rounded-lg border border-border/20 bg-background/40 px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+            >
+              {FONT_OPTIONS.map((f) => (
+                <option key={f} value={f} style={{ fontFamily: f }}>{cleanFontFamily(f)}</option>
+              ))}
+            </select>
+            {selectedLayer.fontFamily === (selectedLayer.type === "headline" ? style.fonts.headline : selectedLayer.type === "body" ? style.fonts.body : style.fonts.cta) && (
+              <span title="Fonte alinhada com o DNA da marca"><Lock className="h-3 w-3 text-primary/70" /></span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1">
             <Type className="h-3 w-3 text-muted-foreground/50" />
