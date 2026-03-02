@@ -11,8 +11,8 @@ const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 interface TextLayerMeta {
   type: "headline" | "body" | "cta";
   content: string;
-  x: number; // percentage 0-100
-  y: number; // percentage 0-100
+  x: number;
+  y: number;
   fontSize: number;
   fontFamily: string;
   fontWeight: number;
@@ -29,56 +29,59 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { imageUrl, layers, niche, ratio } = await req.json() as {
+    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl } = await req.json() as {
       imageUrl: string;
       layers: TextLayerMeta[];
       niche?: string;
       ratio?: string;
+      lightAngle?: number;
+      isDarkBackground?: boolean;
+      maskDataUrl?: string;
     };
 
     if (!imageUrl) throw new Error("imageUrl is required");
     if (!layers || layers.length === 0) throw new Error("At least one text layer is required");
 
-    // Build text placement description for the AI
+    // Build text placement description
     const textDescription = layers.map((l) => {
       const position = describePosition(l.x, l.y);
       const fontDesc = l.fontFamily.replace(/'/g, "").split(",")[0].trim();
       return `- ${l.type.toUpperCase()}: "${l.content}" | Position: ${position} | Font: ${fontDesc} ${l.fontWeight >= 700 ? "Bold" : "Regular"} | Color: ${l.color} | Size: ${l.fontSize}pt | Align: ${l.textAlign}`;
     }).join("\n");
 
-    const nicheContext = niche ? `The visual style is "${niche}" (e.g., mystical/tarot uses gold serif typography, tech uses clean sans-serif).` : "";
-    const ratioContext = ratio ? `The image aspect ratio is ${ratio}.` : "";
+    // Build scene context from physical data
+    const angle = lightAngle ?? 315;
+    const dark = isDarkBackground ?? false;
+    const sceneContext = `A iluminação principal vem de um ângulo de ${angle}°. O fundo é predominantemente ${dark ? "escuro" : "claro"}.`;
 
-    const prompt = `You are a professional graphic designer. Take this existing image and render the following text elements DIRECTLY INTO the image as if they were part of the original design. The text must look organically integrated — NOT like a sticker or overlay.
+    const nicheContext = niche ? ` O estilo visual é "${niche}".` : "";
+    const ratioContext = ratio ? ` O aspect ratio da imagem é ${ratio}.` : "";
 
-CRITICAL RULES:
-1. PRESERVE the entire original image composition — do NOT alter the background scene, subjects, objects, or any visual elements
-2. The text must appear as if it was PAINTED or PRINTED onto the scene — matching the lighting, shadows, grain, and texture of the image
-3. Apply realistic depth: text should cast subtle shadows consistent with the image's light direction
-4. If the background has texture (parchment, fabric, stone), the text should appear to be ON that surface
-5. Match the grain and noise level of the AI-generated image so text doesn't look artificially clean
-6. Use the exact fonts, colors, sizes, and positions specified below
-7. Do NOT add any extra text, watermarks, borders, or design elements not specified
+    // In-painting prompt with semantic masking
+    const prompt = `Usando a imagem principal fornecida${maskDataUrl ? ", e usando a imagem de máscara para saber a área exata de edição," : ","} integre permanentemente os seguintes elementos de texto na cena. O texto NÃO deve parecer um adesivo. Ele precisa respeitar a física da imagem original.
 
-${nicheContext}
-${ratioContext}
+Contexto da Cena: ${sceneContext}${nicheContext}${ratioContext}
 
-TEXT ELEMENTS TO RENDER:
-${textDescription}
+REGRAS CRÍTICAS DE INTEGRAÇÃO:
+1.  **Fidelidade à Máscara**: ${maskDataUrl ? "Altere APENAS as áreas brancas da imagem de máscara. O resto da imagem deve permanecer 100% intacto." : "Preserve toda a composição original da imagem — NÃO altere o cenário, sujeitos ou objetos."}
+2.  **Integração Física**: O texto deve herdar a textura, o grão e a iluminação da superfície onde está sendo aplicado. Se estiver sobre um pergaminho, deve parecer tinta absorvida; se sobre metal, deve ter reflexos.
+3.  **Sombras Realistas**: O texto deve projetar sombras sutis e realistas, opostas à direção da luz principal (${angle}°).
+4.  **Tipografia Exata**: Use as fontes e pesos exatos especificados para cada camada de texto.
+5.  **Sem Extras**: NÃO adicione texto, watermarks, bordas ou elementos visuais que não foram especificados.
 
-POSITION GUIDE:
-- X and Y are percentages (0-100) from top-left corner
-- Maintain the relative spacing between elements
-- Text should flow naturally within the composition
+ELEMENTOS DE TEXTO PARA RENDERIZAR:
+${textDescription}`;
 
-STYLE:
-- Headlines: Strong presence, editorial magazine quality, letter-spacing 0.1em
-- Body text: Readable but integrated, slightly smaller
-- CTA buttons: If present, render as a styled button element with the background color specified
+    console.log("Sending render request to AI gateway with model google/gemini-3-pro-image-preview...");
 
-Render this as a single cohesive, professional marketing image where text and image are ONE unified design.`;
-
-    console.log("Sending render request to AI gateway...");
+    // Build content array: prompt + original image + optional mask
+    const contentParts: any[] = [
+      { type: "text", text: prompt },
+      { type: "image_url", image_url: { url: imageUrl } },
+    ];
+    if (maskDataUrl) {
+      contentParts.push({ type: "image_url", image_url: { url: maskDataUrl } });
+    }
 
     const response = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -87,14 +90,11 @@ Render this as a single cohesive, professional marketing image where text and im
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           {
             role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: imageUrl } },
-            ],
+            content: contentParts,
           },
         ],
         modalities: ["image", "text"],
