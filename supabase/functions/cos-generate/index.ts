@@ -563,9 +563,17 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
   if (output === "image" || output === "both") {
     // Always use dedicated image models — text-only models can't generate images
     const IMAGE_CAPABLE = new Set(Object.values(IMAGE_MODELS).flat());
-    const models = (provider !== "Auto" && IMAGE_CAPABLE.has(provider))
+    let models = (provider !== "Auto" && IMAGE_CAPABLE.has(provider))
       ? [provider]
       : IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
+
+    // Priorizar modelo de alta qualidade quando há texto para integrar
+    const hasTextToIntegrate = !!(headline || userPrompt);
+    if (hasTextToIntegrate && !models.includes("google/gemini-3-pro-image-preview")) {
+      models = ["google/gemini-3-pro-image-preview", ...models];
+    } else if (hasTextToIntegrate && models[0] !== "google/gemini-3-pro-image-preview") {
+      models = ["google/gemini-3-pro-image-preview", ...models.filter(m => m !== "google/gemini-3-pro-image-preview")];
+    }
 
     const qualityImageFinishing = profile === "quality" ? QUALITY_FINISHING_IMAGE : "";
 
@@ -573,22 +581,34 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
     for (const model of models) {
       attempts++;
 
-      const imagePrompt = `Create a professional marketing image for a ${pieceType}.
+      const imagePrompt = `Você é um Diretor de Arte e Designer Gráfico de elite. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada.
 
+**DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
 
-Visual direction: Use the project's niche, brand colors, and visual style described above as the PRIMARY creative guide for this image.
-Aspect ratio: ${ratio}.
-Subject/Context: ${headline || userPrompt || pieceType}.
-${intensity === "Agressivo" ? "Bold colors, strong contrast, high energy." : intensity === "Suave" ? "Soft, warm tones, elegant and calm." : "Balanced, professional look."}
+**TEXTO A SER INTEGRADO NA IMAGEM:**
+- Headline: "${headline || userPrompt || pieceType}"
+- Body: "${body || ''}"
+- CTA: "${cta || ''}"
+
+**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO:**
+
+1.  **Renderização Direta do Texto**: O texto DEVE ser renderizado diretamente na imagem. Ele precisa parecer parte da cena, não um adesivo.
+
+2.  **Respeito ao DNA Visual**: A tipografia (família, peso, estilo) e as cores devem seguir ESTRITAMENTE o que está definido no DNA do projeto. Para o nicho de Tarot, use fontes serifadas e elegantes; para Tech, fontes limpas e modernas.
+
+3.  **Integração Orgânica**: O texto deve respeitar a iluminação, perspectiva, textura e profundidade de campo da cena. Se a imagem tiver uma parede de tijolos, o texto deve se deformar sutilmente sobre ela. Se a luz vier da esquerda, o texto deve projetar uma sombra suave para a direita.
+
+4.  **Hierarquia e Legibilidade**: Organize o texto de forma profissional. A headline deve ter mais impacto, o corpo deve ser legível e o CTA deve ser claro. Use o espaço negativo da composição de forma inteligente.
+
+5.  **Qualidade Fotográfica**: A imagem final deve ter qualidade de estúdio (cinematic lighting, high detail, 8k resolution).
+
+**REQUERIMENTOS TÉCNICOS:**
+- Aspect Ratio: ${ratio}
+- Estilo de Intensidade: ${intensity === "Agressivo" ? "Cores ousadas, alto contraste." : intensity === "Suave" ? "Tons suaves, calmos e elegantes." : "Visual equilibrado e profissional."}
 ${qualityImageFinishing}
 
-CRITICAL RULES:
-- DO NOT render any text, letters, words, numbers, watermarks, or typographic elements directly in the image.
-- The image must be a CLEAN visual base — all text will be added as editable overlays later.
-- Leave generous negative space / breathing room in the composition for text overlay placement.
-- Focus 100% on visual storytelling: lighting, color, texture, composition, and mood.
-- The image MUST reflect the project's niche and visual identity described above. Do NOT create generic marketing images.`;
+Gere a imagem final como uma peça única e coesa.`;
 
       try {
         const resp = await fetch(AI_GATEWAY, {
