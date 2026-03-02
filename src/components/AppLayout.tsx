@@ -9,6 +9,7 @@ import CommandPalette from "./CommandPalette";
 import StarField from "./StarField";
 import PageTransition from "./PageTransition";
 import BlackHoleShader from "./BlackHoleShader";
+import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,8 @@ export default function AppLayout() {
             <Plus className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Criar</span>
           </button>
+
+          <ThemeToggle />
 
           <button className="rounded-xl p-2 text-muted-foreground/50 hover:bg-card/30 hover:text-muted-foreground transition-colors">
             <Bell className="h-4 w-4" />
