@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.reference-analyze]
 verify_jwt = false
+
+[functions.render-ai-finalize]
+verify_jwt = false

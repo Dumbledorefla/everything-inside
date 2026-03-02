@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import {
   Download, Layers, Type, Move, Palette, Bold, Italic,
   AlignLeft, AlignCenter, AlignRight, ChevronDown, Copy, Plus,
+  Sparkles, Loader2,
 } from "lucide-react";
 import { resolveNicheStyle, preloadNicheFonts, type NicheStyle } from "@/lib/nicheStyles";
 import { cleanFontFamily } from "@/lib/canvasFont";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -39,6 +41,7 @@ export interface LayerEditorProps {
   copyPlacement?: string;
   onLayersChange?: (layers: TextLayer[]) => void;
   onApplyToAll?: (layers: TextLayer[]) => void;
+  onAiRendered?: (renderedImageUrl: string) => void;
   showApplyToAll?: boolean;
   textBakedInImage?: boolean;
   className?: string;
@@ -249,12 +252,13 @@ function getLayerTextStyle(layer: TextLayer, lightAngle = 135, _isDarkBg = true)
 export default function LayerEditor({
   imageUrl, headline, body, cta, ratio = "1:1",
   niche, logoUrl, brandColors, copyPlacement,
-  onLayersChange, onApplyToAll, showApplyToAll, textBakedInImage, className,
+  onLayersChange, onApplyToAll, onAiRendered, showApplyToAll, textBakedInImage, className,
 }: LayerEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dims = RATIO_DIMS[ratio] || RATIO_DIMS["1:1"];
   const [style, setStyle] = useState<NicheStyle>(() => resolveNicheStyle(niche));
+  const [isAiRendering, setIsAiRendering] = useState(false);
 
   const [isDarkBackground, setIsDarkBackground] = useState(true);
   const [lightAngle, setLightAngle] = useState(135);
@@ -365,6 +369,66 @@ export default function LayerEditor({
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   }, [layers, updateLayer]);
+
+  // ── AI Render Pipeline ─────────────────────────────────────────
+  const handleAiRender = useCallback(async () => {
+    if (!imageUrl || layers.length === 0) {
+      toast.error("Adicione texto e uma imagem antes de renderizar.");
+      return;
+    }
+    setIsAiRendering(true);
+    toast.info("Renderizando com IA... Isso pode levar alguns segundos.");
+
+    try {
+      const layerMeta = layers.filter(l => l.visible && l.content).map(l => ({
+        type: l.type,
+        content: l.content,
+        x: l.x,
+        y: l.y,
+        fontSize: l.fontSize,
+        fontFamily: l.fontFamily,
+        fontWeight: l.fontWeight,
+        color: l.color,
+        textAlign: l.textAlign,
+      }));
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-ai-finalize`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            imageUrl,
+            layers: layerMeta,
+            niche: niche || undefined,
+            ratio,
+          }),
+        }
+      );
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
+        throw new Error(err.error || `Erro ${resp.status}`);
+      }
+
+      const data = await resp.json();
+
+      if (data.renderedImageUrl) {
+        toast.success("✨ Imagem renderizada com sucesso!");
+        onAiRendered?.(data.renderedImageUrl);
+      } else {
+        throw new Error("A IA não retornou uma imagem.");
+      }
+    } catch (e: any) {
+      console.error("AI render error:", e);
+      toast.error(e.message || "Falha na renderização com IA.");
+    } finally {
+      setIsAiRendering(false);
+    }
+  }, [imageUrl, layers, niche, ratio, onAiRendered]);
 
   // ── Export PNG ────────────────────────────────────────────────
   const exportPNG = useCallback(async () => {
@@ -774,10 +838,28 @@ export default function LayerEditor({
       {/* Action buttons */}
       <div className="flex gap-2">
         <button onClick={exportPNG}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border/20 bg-secondary px-4 py-2.5 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors"
+          className="flex items-center justify-center gap-2 rounded-xl border border-border/20 bg-secondary px-4 py-2.5 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors"
         >
           <Download className="h-3.5 w-3.5" />
           Exportar ({dims.w}×{dims.h})
+        </button>
+
+        <button
+          onClick={handleAiRender}
+          disabled={isAiRendering || !imageUrl || layers.length === 0}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-medium transition-all",
+            isAiRendering
+              ? "border-primary/20 bg-primary/5 text-primary/60 cursor-wait"
+              : "border-primary/40 bg-gradient-to-r from-primary/15 to-accent/15 text-primary hover:from-primary/25 hover:to-accent/25"
+          )}
+        >
+          {isAiRendering ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {isAiRendering ? "Renderizando..." : "Renderizar com IA"}
         </button>
 
         {showApplyToAll && onApplyToAll && (
