@@ -78,6 +78,7 @@ export default function Production() {
   const [activeEditorSlide, setActiveEditorSlide] = useState<number | null>(null);
   const [carouselLayerStyles, setCarouselLayerStyles] = useState<Record<number, TextLayer[]>>({});
   const [refining, setRefining] = useState(false);
+  const [isEditorMode, setIsEditorMode] = useState(false);
 
   const [operationMode, setOperationModeLocal] = useState<OperationMode>("social");
 
@@ -564,28 +565,50 @@ export default function Production() {
                 <div className="max-w-[600px] mx-auto">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/40">
-                      <Layers className="inline h-3 w-3 mr-1" />Smart Canvas
+                      <Layers className="inline h-3 w-3 mr-1" />{isEditorMode ? "Smart Canvas" : "Resultado Final"}
                     </p>
+                    {selectedResult.imageUrl && (
+                      <button
+                        onClick={() => setIsEditorMode(!isEditorMode)}
+                        className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-border/20 bg-card/30 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
+                      >
+                        {isEditorMode ? "← Ver Resultado" : "Editar Camadas"}
+                      </button>
+                    )}
                   </div>
-                  <LayerEditor
-                    imageUrl={selectedResult.imageUrl}
-                    headline={selectedResult.headline}
-                    body={selectedResult.body}
-                    cta={selectedResult.cta}
-                    ratio={spec.ratio}
-                    niche={projectDna?.niche}
-                    logoUrl={projectDna?.logoUrl}
-                    brandColors={projectDna?.brandColors}
-                    onAiRendered={(renderedUrl) => {
-                      // Replace the image with the AI-rendered version using proper state update
-                      setResults(prev => prev.map(r => 
-                        r.id === selectedResultId 
-                          ? { ...r, imageUrl: renderedUrl, status: "review" } 
-                          : r
-                      ));
-                      toast.success("Imagem renderizada substituída com sucesso!");
-                    }}
-                  />
+                  {isEditorMode ? (
+                    <LayerEditor
+                      imageUrl={selectedResult.imageUrl}
+                      headline={selectedResult.headline}
+                      body={selectedResult.body}
+                      cta={selectedResult.cta}
+                      ratio={spec.ratio}
+                      niche={projectDna?.niche}
+                      logoUrl={projectDna?.logoUrl}
+                      brandColors={projectDna?.brandColors}
+                      onAiRendered={(renderedUrl) => {
+                        setResults(prev => prev.map(r => 
+                          r.id === selectedResultId 
+                            ? { ...r, imageUrl: renderedUrl, status: "review" } 
+                            : r
+                        ));
+                        setIsEditorMode(false);
+                        toast.success("Imagem renderizada substituída com sucesso!");
+                      }}
+                    />
+                  ) : selectedResult.imageUrl ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="relative rounded-2xl overflow-hidden border border-border/10 bg-black/20"
+                    >
+                      <img
+                        src={selectedResult.imageUrl}
+                        alt={selectedResult.headline || "Resultado gerado"}
+                        className="w-full h-auto object-contain"
+                      />
+                    </motion.div>
+                  ) : null}
                 </div>
               ) : (
                 <CanvasOverlay
