@@ -624,6 +624,14 @@ export default function Production() {
               const r = results.find((x) => x.id === id);
               if (r) selectAsset({ id: r.id, title: r.headline, type: spec.pieceType, status: r.status, profile: profileLabels[r.profile] || r.profile, provider: r.provider });
             }}
+            onDelete={(id) => {
+              setResults(prev => prev.filter(r => r.id !== id));
+              if (selectedResultId === id) setSelectedResultId(null);
+            }}
+            onClearAll={() => {
+              setResults([]);
+              setSelectedResultId(null);
+            }}
             profileLabels={profileLabels}
           />
         </div>
