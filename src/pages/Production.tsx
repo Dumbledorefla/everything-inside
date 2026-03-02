@@ -281,7 +281,7 @@ export default function Production() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* ═══════ LEFT PANEL — Config (20%) ═══════ */}
-      <div className="w-[260px] shrink-0 border-r border-border/15 bg-card/10 backdrop-blur-sm overflow-y-auto">
+      <div className="w-[260px] shrink-0 border-r border-border bg-card overflow-y-auto">
         <div className="p-4 space-y-4">
           {/* Mode selector */}
           <OperationModeSelector mode={operationMode} onChange={setOperationMode} />

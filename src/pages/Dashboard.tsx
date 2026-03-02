@@ -236,15 +236,15 @@ export default function Dashboard() {
           {isLoading && projects.length === 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="rounded-2xl border border-border/10 bg-card/20 backdrop-blur-sm p-5 space-y-3">
-                  <div className="h-4 w-3/4 rounded-lg bg-muted/10 animate-pulse" />
-                  <div className="h-3 w-1/2 rounded-lg bg-muted/10 animate-pulse" />
-                  <div className="h-3 w-1/3 rounded-lg bg-muted/10 animate-pulse" />
+                <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                  <div className="h-4 w-3/4 rounded-lg bg-muted animate-pulse" />
+                  <div className="h-3 w-1/2 rounded-lg bg-muted animate-pulse" />
+                  <div className="h-3 w-1/3 rounded-lg bg-muted animate-pulse" />
                 </div>
               ))}
             </div>
           ) : (isError || isRefetchError) && projects.length === 0 ? (
-            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 backdrop-blur-sm p-10 text-center">
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-10 text-center">
               <p className="text-sm text-destructive mb-3">Erro ao carregar projetos</p>
               <button
                 onClick={() => refetch()}
@@ -257,7 +257,7 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="rounded-2xl border border-dashed border-border/20 bg-card/10 backdrop-blur-sm p-14 text-center relative overflow-hidden"
+              className="rounded-2xl border border-dashed border-border bg-card p-14 text-center relative overflow-hidden"
             >
               <div className="mx-auto mb-6 relative">
                 <motion.div

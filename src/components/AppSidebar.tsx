@@ -40,7 +40,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
       {/* Brand header */}
       <div className="flex h-14 items-center justify-between px-3">
         <div className={cn("flex items-center gap-2.5 transition-all", collapsed && "justify-center w-full")}>
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-cos-purple flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shrink-0">
             <span className="text-xs font-bold text-primary-foreground font-mono-brand">C</span>
           </div>
           {!collapsed && (
@@ -55,7 +55,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
       {/* Toggle button — elegant pill at sidebar edge */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-[22px] z-50 flex h-6 w-6 items-center justify-center rounded-full border border-border/40 bg-card/80 backdrop-blur-sm text-muted-foreground/60 hover:text-foreground hover:bg-card hover:border-primary/30 transition-all shadow-sm"
+        className="absolute -right-3 top-[22px] z-50 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all shadow-sm"
       >
         {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </button>
@@ -79,7 +79,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
                     "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-all duration-200 relative group",
                     isActive
                       ? "bg-primary/10 text-primary font-medium"
-                      : "text-sidebar-foreground/80 hover:bg-card/40 hover:text-foreground",
+                      : "text-sidebar-foreground hover:bg-accent hover:text-foreground",
                     collapsed && "justify-center px-0"
                   )}
                 >
@@ -99,7 +99,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
                 </NavLink>
               );
             })}
-            <div className="my-3 mx-3 border-t border-border/10" />
+            <div className="my-3 mx-3 border-t border-border" />
             {!collapsed && (
               <div className="mb-2 px-3">
                 <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Global</span>
@@ -116,7 +116,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
               "flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] transition-all duration-200 relative group",
               isActive && !isInProject
                 ? "bg-primary/10 text-primary font-medium"
-                : "text-sidebar-foreground/80 hover:bg-card/40 hover:text-foreground",
+                : "text-sidebar-foreground hover:bg-accent hover:text-foreground",
               collapsed && "justify-center px-0"
             )}
           >
@@ -139,7 +139,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
 
       {/* Bottom */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-border/10">
+        <div className="px-4 py-3 border-t border-border">
           <p className="text-[8px] text-muted-foreground/40 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
         </div>
       )}
