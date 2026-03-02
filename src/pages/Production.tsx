@@ -73,7 +73,6 @@ export default function Production() {
   const carousel = useCarouselGenerate();
   const [userPrompt, setUserPrompt] = useState("");
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
   const [carouselTopic, setCarouselTopic] = useState("");
   const [carouselSlideCount, setCarouselSlideCount] = useState(5);
   const [activeEditorSlide, setActiveEditorSlide] = useState<number | null>(null);
@@ -557,13 +556,12 @@ export default function Production() {
             <>
               {progress.running ? (
                 <ShimmerCanvas ratio={spec.ratio} progress={{ completed: progress.completed, total: progress.total }} />
-              ) : showEditor && selectedResult ? (
+              ) : selectedResult ? (
                 <div className="max-w-[600px] mx-auto">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/40">Editor de Camadas</p>
-                    <button onClick={() => setShowEditor(false)} className="text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors">
-                      Fechar editor
-                    </button>
+                    <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/40">
+                      <Layers className="inline h-3 w-3 mr-1" />Smart Canvas
+                    </p>
                   </div>
                   <LayerEditor
                     imageUrl={selectedResult.imageUrl}
@@ -574,51 +572,32 @@ export default function Production() {
                     niche={projectDna?.niche}
                     logoUrl={projectDna?.logoUrl}
                     brandColors={projectDna?.brandColors}
-                    textBakedInImage={spec.output === "image"}
                   />
                 </div>
               ) : (
                 <CanvasOverlay
-                  imageUrl={selectedResult?.imageUrl || null}
-                  headline={selectedResult?.headline}
-                  body={selectedResult?.body}
-                  cta={selectedResult?.cta}
+                  imageUrl={null}
                   ratio={spec.ratio}
-                  onEditText={() => setShowEditor(true)}
+                  onEditText={() => {}}
                   onVary={handleGenerate}
                   onExport={() => {}}
                 />
               )}
 
-              {/* Selected result text below canvas */}
-              {selectedResult && !showEditor && (
+              {/* Text-only output: show text below */}
+              {selectedResult && spec.output === "text" && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="max-w-[600px] mx-auto mt-4 rounded-2xl border border-border/15 bg-card/20 p-4 space-y-2"
                 >
-                  {/* Only show text when output is text-only (image output has text baked in) */}
-                  {spec.output === "text" && (
-                    <>
-                      <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
-                      <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
-                      {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
-                    </>
-                  )}
-                  {spec.output !== "text" && selectedResult.imageUrl && (
-                    <p className="text-[10px] text-muted-foreground/40 text-center">Texto integrado à imagem · Clique em "Editar Texto" para sobrepor camadas</p>
-                  )}
-                  {spec.output === "both" && (
-                    <>
-                      <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
-                      <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
-                      {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
-                    </>
-                  )}
-                  {selectedResult.fallbackEvents && selectedResult.fallbackEvents.length > 0 && (
-                    <p className="text-[10px] text-cos-warning">⚠ Fallback: {selectedResult.fallbackEvents[0]}</p>
-                  )}
+                  <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
+                  <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
+                  {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
                 </motion.div>
+              )}
+              {selectedResult?.fallbackEvents && selectedResult.fallbackEvents.length > 0 && (
+                <p className="text-[10px] text-cos-warning text-center mt-2">⚠ Fallback: {selectedResult.fallbackEvents[0]}</p>
               )}
             </>
           )}
@@ -633,7 +612,6 @@ export default function Production() {
             selectedId={selectedResultId}
             onSelect={(id) => {
               setSelectedResultId(id);
-              setShowEditor(false);
               const r = results.find((x) => x.id === id);
               if (r) selectAsset({ id: r.id, title: r.headline, type: spec.pieceType, status: r.status, profile: profileLabels[r.profile] || r.profile, provider: r.provider });
             }}
