@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Download, Layers, Type, Move, Palette, Bold, Italic,
-  AlignLeft, AlignCenter, AlignRight, ChevronDown, Copy,
+  AlignLeft, AlignCenter, AlignRight, ChevronDown, Copy, Plus,
 } from "lucide-react";
 import { resolveNicheStyle, preloadNicheFonts, type NicheStyle } from "@/lib/nicheStyles";
 import { cleanFontFamily } from "@/lib/canvasFont";
@@ -14,9 +14,9 @@ export interface TextLayer {
   id: string;
   type: "headline" | "body" | "cta";
   content: string;
-  x: number; // percentage 0-100
-  y: number; // percentage 0-100
-  fontSize: number; // px relative to canvas
+  x: number;
+  y: number;
+  fontSize: number;
   fontFamily: string;
   fontWeight: number;
   fontStyle: "normal" | "italic";
@@ -39,7 +39,6 @@ export interface LayerEditorProps {
   onLayersChange?: (layers: TextLayer[]) => void;
   onApplyToAll?: (layers: TextLayer[]) => void;
   showApplyToAll?: boolean;
-  /** When true, starts with empty text layers (image already has text baked in) */
   textBakedInImage?: boolean;
   className?: string;
 }
@@ -62,6 +61,8 @@ const FONT_OPTIONS = [
   "'Roboto', sans-serif",
 ];
 
+const SNAP_THRESHOLD = 2; // percentage units to snap
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 function placementToPosition(placement?: string): { x: number; y: number } {
@@ -75,68 +76,91 @@ function placementToPosition(placement?: string): { x: number; y: number } {
   return { x, y };
 }
 
+/** Analyze average brightness of an image (0=black, 255=white) */
+function analyzeImageBrightness(imgSrc: string): Promise<number> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 64; // downsample for speed
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(80); return; }
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        sum += data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      }
+      resolve(sum / (size * size));
+    };
+    img.onerror = () => resolve(80);
+    img.src = imgSrc;
+  });
+}
+
 function createDefaultLayers(
   headline: string, body: string | undefined, cta: string | undefined,
-  style: NicheStyle, copyPlacement?: string
+  style: NicheStyle, copyPlacement?: string, isDarkBg = true
 ): TextLayer[] {
   const pos = placementToPosition(copyPlacement);
   const layers: TextLayer[] = [];
+  const textColor = isDarkBg ? style.palette.textLight : style.palette.textDark;
 
   if (headline) {
     layers.push({
-      id: "headline",
-      type: "headline",
-      content: headline,
-      x: pos.x,
-      y: pos.y,
-      fontSize: 48,
-      fontFamily: style.fonts.headline,
-      fontWeight: 800,
-      fontStyle: "normal",
-      color: style.palette.textLight,
-      textAlign: "left",
-      maxWidthPercent: 80,
-      visible: true,
+      id: "headline", type: "headline", content: headline,
+      x: pos.x, y: pos.y, fontSize: 52,
+      fontFamily: style.fonts.headline, fontWeight: 800, fontStyle: "normal",
+      color: textColor, textAlign: "left", maxWidthPercent: 80, visible: true,
     });
   }
 
   if (body) {
     layers.push({
-      id: "body",
-      type: "body",
-      content: body,
-      x: pos.x,
-      y: pos.y + 16,
-      fontSize: 24,
-      fontFamily: style.fonts.body,
-      fontWeight: 400,
-      fontStyle: "normal",
-      color: style.palette.textLight,
-      textAlign: "left",
-      maxWidthPercent: 75,
-      visible: true,
+      id: "body", type: "body", content: body,
+      x: pos.x, y: pos.y + 16, fontSize: 22,
+      fontFamily: style.fonts.body, fontWeight: 400, fontStyle: "normal",
+      color: textColor, textAlign: "left", maxWidthPercent: 75, visible: true,
     });
   }
 
   if (cta) {
     layers.push({
-      id: "cta",
-      type: "cta",
-      content: cta,
-      x: pos.x,
-      y: Math.min(pos.y + 28, 85),
-      fontSize: 28,
-      fontFamily: style.fonts.cta,
-      fontWeight: 700,
-      fontStyle: "normal",
-      color: style.palette.textLight,
-      textAlign: "left",
-      maxWidthPercent: 60,
-      visible: true,
+      id: "cta", type: "cta", content: cta,
+      x: pos.x, y: Math.min(pos.y + 28, 85), fontSize: 28,
+      fontFamily: style.fonts.cta, fontWeight: 700, fontStyle: "normal",
+      color: isDarkBg ? "#FFFFFF" : "#FFFFFF", textAlign: "left", maxWidthPercent: 60, visible: true,
     });
   }
 
   return layers;
+}
+
+// ── Hierarchy style presets ─────────────────────────────────────
+
+function getLayerTextStyle(layer: TextLayer) {
+  if (layer.type === "headline") {
+    return {
+      fontSize: "clamp(1rem, 3.5vw, 1.3rem)",
+      lineHeight: 1.15,
+      letterSpacing: "-0.02em",
+      textShadow: "0 2px 4px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.2)",
+      WebkitTextStroke: "0.3px rgba(0,0,0,0.15)",
+    };
+  }
+  if (layer.type === "body") {
+    return {
+      fontSize: "clamp(0.6rem, 1.8vw, 0.75rem)",
+      lineHeight: 1.55,
+      letterSpacing: "0.01em",
+      textShadow: "0 1px 3px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.2)",
+      WebkitTextStroke: "none",
+    };
+  }
+  return {};
 }
 
 // ── Component ───────────────────────────────────────────────────
@@ -151,13 +175,17 @@ export default function LayerEditor({
   const dims = RATIO_DIMS[ratio] || RATIO_DIMS["1:1"];
   const [style, setStyle] = useState<NicheStyle>(() => resolveNicheStyle(niche));
 
+  const [isDarkBackground, setIsDarkBackground] = useState(true);
   const [layers, setLayers] = useState<TextLayer[]>(() =>
-    createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
+    textBakedInImage ? [] : createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [showToolbar, setShowToolbar] = useState(false);
+
+  // Snap guides state
+  const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({});
 
   const selectedLayer = layers.find((l) => l.id === selectedId);
 
@@ -167,9 +195,25 @@ export default function LayerEditor({
     preloadNicheFonts(s);
   }, [niche]);
 
+  // Analyze background brightness when image changes
+  useEffect(() => {
+    if (!imageUrl) { setIsDarkBackground(true); return; }
+    analyzeImageBrightness(imageUrl).then((brightness) => {
+      const dark = brightness < 140;
+      setIsDarkBackground(dark);
+      // Auto-update text colors on existing layers
+      setLayers((prev) => prev.map((l) => {
+        if (l.type === "cta") return l; // CTA keeps white on colored bg
+        const autoColor = dark ? style.palette.textLight : style.palette.textDark;
+        return { ...l, color: autoColor };
+      }));
+    });
+  }, [imageUrl, style]);
+
   // Sync layers when content changes externally
   useEffect(() => {
-    setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement));
+    if (textBakedInImage) return;
+    setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement, isDarkBackground));
   }, [headline, body, cta]);
 
   const updateLayer = useCallback((id: string, updates: Partial<TextLayer>) => {
@@ -180,6 +224,12 @@ export default function LayerEditor({
     });
   }, [onLayersChange]);
 
+  const addManualLayers = useCallback(() => {
+    const newLayers = createDefaultLayers(headline, body, cta, style, copyPlacement, isDarkBackground);
+    setLayers(newLayers);
+    onLayersChange?.(newLayers);
+  }, [headline, body, cta, style, copyPlacement, isDarkBackground, onLayersChange]);
+
   const ctaColor = brandColors?.primary || style.palette.primary;
 
   const aspectClass = ratio === "1:1" ? "aspect-square"
@@ -187,7 +237,7 @@ export default function LayerEditor({
     : ratio === "9:16" ? "aspect-[9/16]"
     : "aspect-video";
 
-  // ── Drag logic ────────────────────────────────────────────────
+  // ── Drag logic with snap ──────────────────────────────────────
   const handlePointerDown = useCallback((e: React.PointerEvent, layerId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -207,15 +257,26 @@ export default function LayerEditor({
     const origY = layer.y;
 
     const onMove = (ev: PointerEvent) => {
-      const dx = ((ev.clientX - startX) / rect.width) * 100;
-      const dy = ((ev.clientY - startY) / rect.height) * 100;
-      updateLayer(layerId, {
-        x: Math.max(0, Math.min(90, origX + dx)),
-        y: Math.max(0, Math.min(95, origY + dy)),
-      });
+      let dx = ((ev.clientX - startX) / rect.width) * 100;
+      let dy = ((ev.clientY - startY) / rect.height) * 100;
+      let newX = Math.max(0, Math.min(90, origX + dx));
+      let newY = Math.max(0, Math.min(95, origY + dy));
+
+      // Snap to center guides
+      const guides: { x?: number; y?: number } = {};
+      if (Math.abs(newX - 50) < SNAP_THRESHOLD) { newX = 50; guides.x = 50; }
+      if (Math.abs(newY - 50) < SNAP_THRESHOLD) { newY = 50; guides.y = 50; }
+      // Snap to thirds
+      for (const third of [33.33, 66.66]) {
+        if (Math.abs(newX - third) < SNAP_THRESHOLD) { newX = third; guides.x = third; }
+        if (Math.abs(newY - third) < SNAP_THRESHOLD) { newY = third; guides.y = third; }
+      }
+      setSnapGuides(guides);
+      updateLayer(layerId, { x: newX, y: newY });
     };
     const onUp = () => {
       setDraggingId(null);
+      setSnapGuides({});
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
@@ -234,7 +295,6 @@ export default function LayerEditor({
     canvas.height = dims.h;
     await document.fonts.ready;
 
-    // Layer 0: Background
     if (imageUrl) {
       try {
         const img = new window.Image();
@@ -253,7 +313,6 @@ export default function LayerEditor({
       ctx.fillRect(0, 0, dims.w, dims.h);
     }
 
-    // Overlay gradient
     const gradient = ctx.createLinearGradient(0, dims.h * 0.3, 0, dims.h);
     gradient.addColorStop(0, "rgba(0,0,0,0)");
     gradient.addColorStop(0.5, style.palette.overlay.replace(/[\d.]+\)$/, "0.3)"));
@@ -261,7 +320,6 @@ export default function LayerEditor({
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, dims.w, dims.h);
 
-    // Brand elements
     const mx = dims.w * 0.08;
     const my = dims.h * 0.06;
     ctx.fillStyle = ctaColor;
@@ -278,10 +336,8 @@ export default function LayerEditor({
       } catch { /* skip */ }
     }
 
-    // Text layers
     for (const layer of layers) {
       if (!layer.visible || !layer.content) continue;
-
       const px = (layer.x / 100) * dims.w;
       const py = (layer.y / 100) * dims.h;
       const scaledSize = Math.round((layer.fontSize / 48) * dims.w * 0.05);
@@ -292,25 +348,40 @@ export default function LayerEditor({
       ctx.textAlign = layer.textAlign;
 
       const alignX = layer.textAlign === "center" ? px + maxW / 2
-        : layer.textAlign === "right" ? px + maxW
-        : px;
+        : layer.textAlign === "right" ? px + maxW : px;
 
-      // CTA button background
+      if (layer.type === "headline") {
+        ctx.shadowColor = "rgba(0,0,0,0.7)";
+        ctx.shadowBlur = 16;
+        ctx.shadowOffsetY = 4;
+      } else if (layer.type === "body") {
+        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
+      }
+
       if (layer.type === "cta") {
         const metrics = ctx.measureText(layer.content);
         const padX = scaledSize * 1.2;
         const padY = scaledSize * 0.5;
         const btnW = metrics.width + padX * 2;
         const btnH = scaledSize + padY * 2;
+        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowBlur = 12;
         ctx.fillStyle = ctaColor;
         roundRect(ctx, px, py - padY, btnW, btnH, style.cta.borderRadius);
         ctx.fill();
+        ctx.shadowColor = "transparent";
         ctx.fillStyle = layer.color;
         ctx.textAlign = "left";
         ctx.fillText(layer.content, px + padX, py + scaledSize * 0.75);
       } else {
         wrapText(ctx, layer.content, alignX, py + scaledSize, maxW, scaledSize * 1.2);
       }
+
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
     }
 
     const dataUrl = canvas.toDataURL("image/png");
@@ -329,17 +400,36 @@ export default function LayerEditor({
         className={cn("relative w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-border/30 bg-card cursor-crosshair select-none", aspectClass)}
         onClick={() => { setSelectedId(null); setEditingId(null); setShowToolbar(false); }}
       >
-        {/* Layer 0: Background */}
+        {/* Background */}
         {imageUrl ? (
           <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
         ) : (
-          <div className="absolute inset-0" style={{ backgroundColor: style.palette.textDark }} />
+          <div className="absolute inset-0 bg-card" />
         )}
 
         {/* Overlay gradient */}
         <div className="absolute inset-0 pointer-events-none" style={{
           background: `linear-gradient(to top, ${style.palette.overlay}, ${style.palette.overlay.replace(/[\d.]+\)$/, "0.2)")}, transparent)`,
         }} />
+
+        {/* Snap alignment guides */}
+        {draggingId && (
+          <>
+            {snapGuides.x !== undefined && (
+              <div className="absolute top-0 bottom-0 pointer-events-none z-50"
+                style={{ left: `${snapGuides.x}%`, width: 1, background: "rgba(99,182,255,0.6)" }}
+              />
+            )}
+            {snapGuides.y !== undefined && (
+              <div className="absolute left-0 right-0 pointer-events-none z-50"
+                style={{ top: `${snapGuides.y}%`, height: 1, background: "rgba(99,182,255,0.6)" }}
+              />
+            )}
+            {/* Persistent center crosshair (faint) */}
+            <div className="absolute top-0 bottom-0 pointer-events-none z-40" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div className="absolute left-0 right-0 pointer-events-none z-40" style={{ top: "50%", height: 1, background: "rgba(255,255,255,0.08)" }} />
+          </>
+        )}
 
         {/* Brand elements */}
         <div className="absolute top-0 left-0 right-0 p-[6%] pointer-events-none">
@@ -348,101 +438,114 @@ export default function LayerEditor({
         </div>
 
         {/* Text layers (interactive) */}
-        {layers.filter((l) => l.visible).map((layer) => (
-          <div
-            key={layer.id}
-            className={cn(
-              "absolute group transition-shadow duration-150",
-              selectedId === layer.id && "ring-2 ring-primary/60 rounded",
-              draggingId === layer.id && "cursor-grabbing",
-              draggingId !== layer.id && "cursor-grab"
-            )}
-            style={{
-              left: `${layer.x}%`,
-              top: `${layer.y}%`,
-              maxWidth: `${layer.maxWidthPercent}%`,
-              zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
-            }}
-            onPointerDown={(e) => handlePointerDown(e, layer.id)}
-            onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
-            onDoubleClick={(e) => { e.stopPropagation(); setEditingId(layer.id); }}
-          >
-            {layer.type === "cta" ? (
-              <span
-                className="inline-block px-4 py-1.5 text-xs font-bold"
-                style={{
-                  fontFamily: layer.fontFamily,
-                  fontWeight: layer.fontWeight,
-                  fontStyle: layer.fontStyle,
-                  color: layer.color,
-                  textAlign: layer.textAlign,
-                  backgroundColor: ctaColor,
-                  borderRadius: style.cta.borderRadius,
-                  filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))",
-                }}
-              >
-                {editingId === layer.id ? (
-                  <input
-                    autoFocus
-                    value={layer.content}
-                    onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
-                    onBlur={() => setEditingId(null)}
-                    onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
-                    className="bg-transparent outline-none w-full min-w-[60px]"
-                    style={{ color: layer.color, fontFamily: layer.fontFamily }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : layer.content}
-              </span>
-            ) : (
-              <div
-                style={{
-                  fontFamily: layer.fontFamily,
-                  fontWeight: layer.fontWeight,
-                  fontStyle: layer.fontStyle,
-                  color: layer.color,
-                  textAlign: layer.textAlign,
-                  fontSize: layer.type === "headline" ? "1.1rem" : "0.7rem",
-                  lineHeight: layer.type === "headline" ? 1.2 : 1.5,
-                  textShadow: layer.type === "headline"
-                    ? "0 1px 3px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.3)"
-                    : "0 1px 4px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.2)",
-                  mixBlendMode: "normal",
-                  WebkitBackgroundClip: "text",
-                  paintOrder: "stroke fill",
-                  WebkitTextStroke: layer.type === "headline" ? "0.3px rgba(0,0,0,0.15)" : "none",
-                }}
-              >
-                {editingId === layer.id ? (
-                  <textarea
-                    autoFocus
-                    value={layer.content}
-                    onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
-                    onBlur={() => setEditingId(null)}
-                    rows={layer.type === "headline" ? 3 : 4}
-                    className="bg-black/20 backdrop-blur-sm rounded outline-none w-full resize-none p-1"
-                    style={{ color: layer.color, fontFamily: layer.fontFamily, fontSize: "inherit", fontWeight: layer.fontWeight }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : layer.content}
-              </div>
-            )}
+        {layers.filter((l) => l.visible).map((layer) => {
+          const hierarchyStyle = getLayerTextStyle(layer);
+          return (
+            <div
+              key={layer.id}
+              className={cn(
+                "absolute group transition-shadow duration-150",
+                selectedId === layer.id && "ring-2 ring-primary/60 rounded",
+                draggingId === layer.id && "cursor-grabbing",
+                draggingId !== layer.id && "cursor-grab"
+              )}
+              style={{
+                left: `${layer.x}%`,
+                top: `${layer.y}%`,
+                maxWidth: `${layer.maxWidthPercent}%`,
+                zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
+              }}
+              onPointerDown={(e) => handlePointerDown(e, layer.id)}
+              onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
+              onDoubleClick={(e) => { e.stopPropagation(); setEditingId(layer.id); }}
+            >
+              {layer.type === "cta" ? (
+                <span
+                  className="inline-block px-4 py-1.5 text-xs font-bold"
+                  style={{
+                    fontFamily: layer.fontFamily,
+                    fontWeight: layer.fontWeight,
+                    fontStyle: layer.fontStyle,
+                    color: layer.color,
+                    textAlign: layer.textAlign,
+                    backgroundColor: ctaColor,
+                    borderRadius: style.cta.borderRadius,
+                    filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))",
+                  }}
+                >
+                  {editingId === layer.id ? (
+                    <input
+                      autoFocus
+                      value={layer.content}
+                      onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
+                      onBlur={() => setEditingId(null)}
+                      onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
+                      className="bg-transparent outline-none w-full min-w-[60px]"
+                      style={{ color: layer.color, fontFamily: layer.fontFamily }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : layer.content}
+                </span>
+              ) : (
+                <div
+                  style={{
+                    fontFamily: layer.fontFamily,
+                    fontWeight: layer.fontWeight,
+                    fontStyle: layer.fontStyle,
+                    color: layer.color,
+                    textAlign: layer.textAlign,
+                    ...hierarchyStyle,
+                    paintOrder: "stroke fill",
+                  }}
+                >
+                  {editingId === layer.id ? (
+                    <textarea
+                      autoFocus
+                      value={layer.content}
+                      onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
+                      onBlur={() => setEditingId(null)}
+                      rows={layer.type === "headline" ? 3 : 4}
+                      className="bg-black/20 backdrop-blur-sm rounded outline-none w-full resize-none p-1"
+                      style={{ color: layer.color, fontFamily: layer.fontFamily, fontSize: "inherit", fontWeight: layer.fontWeight }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : layer.content}
+                </div>
+              )}
 
-            {/* Drag handle indicator */}
-            {selectedId === layer.id && !editingId && (
-              <div className="absolute -top-5 left-0 flex items-center gap-1 rounded bg-primary/90 px-1.5 py-0.5 text-[9px] text-primary-foreground font-mono">
-                <Move className="h-2.5 w-2.5" />
-                {layer.type === "headline" ? "Título" : layer.type === "cta" ? "CTA" : "Corpo"}
-              </div>
-            )}
+              {/* Drag handle */}
+              {selectedId === layer.id && !editingId && (
+                <div className="absolute -top-5 left-0 flex items-center gap-1 rounded bg-primary/90 px-1.5 py-0.5 text-[9px] text-primary-foreground font-mono">
+                  <Move className="h-2.5 w-2.5" />
+                  {layer.type === "headline" ? "Título" : layer.type === "cta" ? "CTA" : "Corpo"}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Empty state for baked-in images */}
+        {textBakedInImage && layers.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center z-30">
+            <button
+              onClick={(e) => { e.stopPropagation(); addManualLayers(); }}
+              className="flex items-center gap-2 rounded-xl border border-border/30 bg-black/50 backdrop-blur-sm px-4 py-2.5 text-xs text-white/80 hover:bg-black/70 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Adicionar camadas de texto
+            </button>
           </div>
-        ))}
+        )}
 
         {/* Layer badge */}
         <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/70 pointer-events-none">
           <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
         </div>
 
+        {/* Contrast indicator */}
+        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/60 pointer-events-none">
+          {isDarkBackground ? "☀ Texto claro" : "● Texto escuro"}
+        </div>
       </div>
 
       {/* ── Toolbar ──────────────────────────────────────────── */}
@@ -452,7 +555,6 @@ export default function LayerEditor({
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-wrap items-center gap-2 rounded-xl border border-border/20 bg-card/60 backdrop-blur-sm p-3"
         >
-          {/* Font selector */}
           <select
             value={selectedLayer.fontFamily}
             onChange={(e) => updateLayer(selectedLayer.id, { fontFamily: e.target.value })}
@@ -463,7 +565,6 @@ export default function LayerEditor({
             ))}
           </select>
 
-          {/* Font size */}
           <div className="flex items-center gap-1">
             <Type className="h-3 w-3 text-muted-foreground/50" />
             <input
@@ -475,7 +576,6 @@ export default function LayerEditor({
             />
           </div>
 
-          {/* Bold */}
           <button
             onClick={() => updateLayer(selectedLayer.id, { fontWeight: selectedLayer.fontWeight >= 700 ? 400 : 800 })}
             className={cn("rounded-lg border p-1.5 transition-all",
@@ -485,7 +585,6 @@ export default function LayerEditor({
             <Bold className="h-3 w-3" />
           </button>
 
-          {/* Italic */}
           <button
             onClick={() => updateLayer(selectedLayer.id, { fontStyle: selectedLayer.fontStyle === "italic" ? "normal" : "italic" })}
             className={cn("rounded-lg border p-1.5 transition-all",
@@ -495,7 +594,6 @@ export default function LayerEditor({
             <Italic className="h-3 w-3" />
           </button>
 
-          {/* Alignment */}
           {(["left", "center", "right"] as const).map((a) => {
             const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
             return (
@@ -510,7 +608,6 @@ export default function LayerEditor({
             );
           })}
 
-          {/* Color picker */}
           <div className="flex items-center gap-1">
             <Palette className="h-3 w-3 text-muted-foreground/50" />
             <input
@@ -521,7 +618,6 @@ export default function LayerEditor({
             />
           </div>
 
-          {/* Quick colors */}
           <div className="flex gap-1">
             {["#FFFFFF", "#000000", ctaColor, style.palette.primary, style.palette.accent].map((c, i) => (
               <button key={i}
@@ -553,7 +649,6 @@ export default function LayerEditor({
         )}
       </div>
 
-      {/* Hidden export canvas */}
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );
