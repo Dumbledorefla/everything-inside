@@ -574,6 +574,7 @@ export default function Production() {
                     niche={projectDna?.niche}
                     logoUrl={projectDna?.logoUrl}
                     brandColors={projectDna?.brandColors}
+                    textBakedInImage={spec.output === "image"}
                   />
                 </div>
               ) : (
@@ -596,9 +597,24 @@ export default function Production() {
                   animate={{ opacity: 1, y: 0 }}
                   className="max-w-[600px] mx-auto mt-4 rounded-2xl border border-border/15 bg-card/20 p-4 space-y-2"
                 >
-                  <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
-                  <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
-                  {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
+                  {/* Only show text when output is text-only (image output has text baked in) */}
+                  {spec.output === "text" && (
+                    <>
+                      <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
+                      <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
+                      {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
+                    </>
+                  )}
+                  {spec.output !== "text" && selectedResult.imageUrl && (
+                    <p className="text-[10px] text-muted-foreground/40 text-center">Texto integrado à imagem · Clique em "Editar Texto" para sobrepor camadas</p>
+                  )}
+                  {spec.output === "both" && (
+                    <>
+                      <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
+                      <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
+                      {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
+                    </>
+                  )}
                   {selectedResult.fallbackEvents && selectedResult.fallbackEvents.length > 0 && (
                     <p className="text-[10px] text-cos-warning">⚠ Fallback: {selectedResult.fallbackEvents[0]}</p>
                   )}

@@ -39,6 +39,8 @@ export interface LayerEditorProps {
   onLayersChange?: (layers: TextLayer[]) => void;
   onApplyToAll?: (layers: TextLayer[]) => void;
   showApplyToAll?: boolean;
+  /** When true, starts with empty text layers (image already has text baked in) */
+  textBakedInImage?: boolean;
   className?: string;
 }
 
@@ -142,7 +144,7 @@ function createDefaultLayers(
 export default function LayerEditor({
   imageUrl, headline, body, cta, ratio = "1:1",
   niche, logoUrl, brandColors, copyPlacement,
-  onLayersChange, onApplyToAll, showApplyToAll, className,
+  onLayersChange, onApplyToAll, showApplyToAll, textBakedInImage, className,
 }: LayerEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -150,7 +152,7 @@ export default function LayerEditor({
   const [style, setStyle] = useState<NicheStyle>(() => resolveNicheStyle(niche));
 
   const [layers, setLayers] = useState<TextLayer[]>(() =>
-    createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
+    textBakedInImage ? [] : createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -165,10 +167,12 @@ export default function LayerEditor({
     preloadNicheFonts(s);
   }, [niche]);
 
-  // Sync layers when content changes externally
+  // Sync layers when content changes externally (only if not baked-in mode)
   useEffect(() => {
-    setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement));
-  }, [headline, body, cta]);
+    if (!textBakedInImage) {
+      setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement));
+    }
+  }, [headline, body, cta, textBakedInImage]);
 
   const updateLayer = useCallback((id: string, updates: Partial<TextLayer>) => {
     setLayers((prev) => {
@@ -433,6 +437,26 @@ export default function LayerEditor({
         <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/70 pointer-events-none">
           <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
         </div>
+
+        {/* Empty state for baked-in mode */}
+        {textBakedInImage && layers.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="text-center bg-black/40 backdrop-blur-sm rounded-xl px-4 py-3 pointer-events-auto">
+              <p className="text-[10px] text-white/70 mb-2">Texto já integrado à imagem</p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newLayers = createDefaultLayers(headline, body, cta, style, copyPlacement);
+                  setLayers(newLayers);
+                  onLayersChange?.(newLayers);
+                }}
+                className="text-[10px] text-primary bg-primary/10 border border-primary/30 rounded-lg px-3 py-1.5 hover:bg-primary/20 transition-colors"
+              >
+                + Adicionar camadas de texto
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Toolbar ──────────────────────────────────────────── */}
