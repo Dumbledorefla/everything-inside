@@ -163,20 +163,27 @@ REGRAS DE PERSUASÃO:
 - Indique onde o texto deve ficar para NÃO poluir o design (topo, centro, rodapé, lateral)
 - Os roles devem seguir: "hook" para gancho, "problem" para problema, "agitation" para agitação, "solution" para solução, "benefit" para benefício, "content" para conteúdo, "recap" para recapitulação, "conflict" para conflito, "epiphany" para epifania, "proof" para prova, "cta" para chamada de ação
 
-Retorne APENAS JSON (sem markdown):
+REGRAS DE COPY (OBRIGATÓRIO — NÃO OMITIR NENHUM CAMPO):
+- CADA slide DEVE ter um "headline" forte e persuasivo (máximo 10 palavras)
+- CADA slide DEVE ter um "body" com texto de apoio (1-3 frases curtas que complementam o headline)
+- O campo "body" NUNCA pode ser vazio, null, "" ou omitido — é OBRIGATÓRIO para TODOS os slides sem exceção
+- O headline captura atenção, o body expande com detalhes práticos ou emocionais
+- Para slides de CTA, o body deve conter a instrução específica (ex: "Clique no link da bio e comece agora")
+
+Retorne APENAS JSON válido (sem markdown, sem backticks):
 {
   "formula": "${effectiveFormula}",
   "storyline": [
     {
       "slideNumber": 1,
       "role": "hook",
-      "headline": "...",
-      "body": "...",
+      "headline": "Título impactante e curto",
+      "body": "Texto de apoio obrigatório com 1-3 frases. Nunca deixe vazio.",
       "visualDirection": "Descrição detalhada da cena visual para este slide",
       "copyPlacement": "topo-esquerdo"
     }
   ],
-  "styleAnchor": "Descrição do estilo visual unificado que deve ser mantido em TODOS os slides (luz, cor, textura, cenário, personagem)"
+  "styleAnchor": "Descrição do estilo visual unificado que deve ser mantido em TODOS os slides"
 }`,
             },
             { role: "user", content: topic || `Crie um carrossel estratégico para o nicho ${project?.niche || "geral"}.` },
