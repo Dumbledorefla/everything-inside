@@ -370,6 +370,38 @@ export default function LayerEditor({
     window.addEventListener("pointerup", onUp);
   }, [layers, updateLayer]);
 
+  // ── Generate In-paint Mask ──────────────────────────────────────
+  const generateInpaintMask = useCallback((
+    imgW: number, imgH: number, visibleLayers: TextLayer[]
+  ): string => {
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = imgW;
+    maskCanvas.height = imgH;
+    const ctx = maskCanvas.getContext("2d");
+    if (!ctx) return "";
+
+    // Black background = preserve area
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, imgW, imgH);
+
+    // White rectangles = edit area (where text goes)
+    ctx.fillStyle = "#FFFFFF";
+    for (const layer of visibleLayers) {
+      const lx = (layer.x / 100) * imgW;
+      const ly = (layer.y / 100) * imgH;
+      const maxW = (layer.maxWidthPercent / 100) * imgW;
+      // Estimate text height based on fontSize scaled to image dimensions
+      const scaledFontSize = (layer.fontSize / 52) * imgH * 0.06;
+      const lines = Math.ceil(layer.content.length / (maxW / (scaledFontSize * 0.6)));
+      const blockH = scaledFontSize * 1.4 * Math.max(lines, 1);
+      // Add generous padding around text area
+      const pad = scaledFontSize * 0.5;
+      ctx.fillRect(lx - pad, ly - pad, maxW + pad * 2, blockH + pad * 2);
+    }
+
+    return maskCanvas.toDataURL("image/png");
+  }, []);
+
   // ── AI Render Pipeline ─────────────────────────────────────────
   const handleAiRender = useCallback(async () => {
     if (!imageUrl || layers.length === 0) {
@@ -380,7 +412,8 @@ export default function LayerEditor({
     toast.info("Renderizando com IA... Isso pode levar alguns segundos.");
 
     try {
-      const layerMeta = layers.filter(l => l.visible && l.content).map(l => ({
+      const visibleLayers = layers.filter(l => l.visible && l.content);
+      const layerMeta = visibleLayers.map(l => ({
         type: l.type,
         content: l.content,
         x: l.x,
@@ -391,6 +424,9 @@ export default function LayerEditor({
         color: l.color,
         textAlign: l.textAlign,
       }));
+
+      // Generate in-paint mask from visible layers
+      const maskDataUrl = generateInpaintMask(dims.w, dims.h, visibleLayers);
 
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-ai-finalize`,
@@ -405,6 +441,9 @@ export default function LayerEditor({
             layers: layerMeta,
             niche: niche || undefined,
             ratio,
+            lightAngle,
+            isDarkBackground,
+            maskDataUrl: maskDataUrl || undefined,
           }),
         }
       );
@@ -428,7 +467,7 @@ export default function LayerEditor({
     } finally {
       setIsAiRendering(false);
     }
-  }, [imageUrl, layers, niche, ratio, onAiRendered]);
+  }, [imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, dims, generateInpaintMask, onAiRendered]);
 
   // ── Export PNG ────────────────────────────────────────────────
   const exportPNG = useCallback(async () => {
