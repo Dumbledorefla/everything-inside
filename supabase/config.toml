@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.render-ai-finalize]
 verify_jwt = false
+
+[functions.carousel-generate]
+verify_jwt = false
+
+[functions.reference-url-analyze]
+verify_jwt = false
