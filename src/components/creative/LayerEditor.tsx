@@ -24,6 +24,7 @@ export interface TextLayer {
   textAlign: "left" | "center" | "right";
   maxWidthPercent: number;
   visible: boolean;
+  blendMode?: string;
 }
 
 export interface LayerEditorProps {
@@ -83,7 +84,7 @@ function analyzeImageBrightness(imgSrc: string): Promise<number> {
     img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const size = 64; // downsample for speed
+      const size = 64;
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext("2d");
@@ -101,6 +102,45 @@ function analyzeImageBrightness(imgSrc: string): Promise<number> {
   });
 }
 
+/** Analyze dominant light direction from image (returns angle in degrees, 0=top, 90=right) */
+function analyzeLightDirection(imgSrc: string): Promise<number> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 32;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(135); return; }
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      // Compute weighted centroid of brightness
+      let totalB = 0, wx = 0, wy = 0;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const i = (y * size + x) * 4;
+          const b = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+          totalB += b;
+          wx += b * x;
+          wy += b * y;
+        }
+      }
+      if (totalB === 0) { resolve(135); return; }
+      const cx = wx / totalB;
+      const cy = wy / totalB;
+      // Angle from center of image to brightness centroid (light source direction)
+      const dx = cx - size / 2;
+      const dy = cy - size / 2;
+      const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      resolve(angle);
+    };
+    img.onerror = () => resolve(135);
+    img.src = imgSrc;
+  });
+}
+
 function createDefaultLayers(
   headline: string, body: string | undefined, cta: string | undefined,
   style: NicheStyle, copyPlacement?: string, isDarkBg = true
@@ -108,6 +148,7 @@ function createDefaultLayers(
   const pos = placementToPosition(copyPlacement);
   const layers: TextLayer[] = [];
   const textColor = isDarkBg ? style.palette.textLight : style.palette.textDark;
+  const blendMode = isDarkBg ? "screen" : "multiply";
 
   if (headline) {
     layers.push({
@@ -115,6 +156,7 @@ function createDefaultLayers(
       x: pos.x, y: pos.y, fontSize: 52,
       fontFamily: style.fonts.headline, fontWeight: 800, fontStyle: "normal",
       color: textColor, textAlign: "left", maxWidthPercent: 80, visible: true,
+      blendMode,
     });
   }
 
@@ -124,6 +166,7 @@ function createDefaultLayers(
       x: pos.x, y: pos.y + 16, fontSize: 22,
       fontFamily: style.fonts.body, fontWeight: 400, fontStyle: "normal",
       color: textColor, textAlign: "left", maxWidthPercent: 75, visible: true,
+      blendMode,
     });
   }
 
@@ -133,22 +176,46 @@ function createDefaultLayers(
       x: pos.x, y: Math.min(pos.y + 28, 85), fontSize: 28,
       fontFamily: style.fonts.cta, fontWeight: 700, fontStyle: "normal",
       color: isDarkBg ? "#FFFFFF" : "#FFFFFF", textAlign: "left", maxWidthPercent: 60, visible: true,
+      blendMode: "normal",
     });
   }
 
   return layers;
 }
 
-// ── Hierarchy style presets ─────────────────────────────────────
+// ── Hierarchy style presets with directional shadow ─────────────
 
-function getLayerTextStyle(layer: TextLayer) {
+function getDirectionalShadow(lightAngle: number, type: "headline" | "body" | "cta"): string {
+  // Shadow goes opposite to where the light comes from
+  const shadowAngle = (lightAngle + 180) % 360;
+  const rad = shadowAngle * Math.PI / 180;
+  
+  if (type === "headline") {
+    const ox1 = Math.round(Math.cos(rad) * 3);
+    const oy1 = Math.round(Math.sin(rad) * 3);
+    const ox2 = Math.round(Math.cos(rad) * 6);
+    const oy2 = Math.round(Math.sin(rad) * 6);
+    const ox3 = Math.round(Math.cos(rad) * 10);
+    const oy3 = Math.round(Math.sin(rad) * 10);
+    return `${ox1}px ${oy1}px 6px rgba(0,0,0,0.8), ${ox2}px ${oy2}px 18px rgba(0,0,0,0.45), ${ox3}px ${oy3}px 36px rgba(0,0,0,0.2)`;
+  }
+  if (type === "body") {
+    const ox = Math.round(Math.cos(rad) * 2);
+    const oy = Math.round(Math.sin(rad) * 2);
+    return `${ox}px ${oy}px 4px rgba(0,0,0,0.6), ${ox * 2}px ${oy * 2}px 10px rgba(0,0,0,0.25)`;
+  }
+  return "0 2px 8px rgba(0,0,0,0.4)";
+}
+
+function getLayerTextStyle(layer: TextLayer, lightAngle = 135) {
   if (layer.type === "headline") {
     return {
       fontSize: "clamp(1rem, 3.5vw, 1.3rem)",
       lineHeight: 1.15,
       letterSpacing: "-0.02em",
-      textShadow: "0 2px 4px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.2)",
-      WebkitTextStroke: "0.3px rgba(0,0,0,0.15)",
+      textShadow: getDirectionalShadow(lightAngle, "headline"),
+      WebkitTextStroke: "0.3px rgba(0,0,0,0.12)",
+      filter: "blur(0.3px)",  // subtle grain integration
     };
   }
   if (layer.type === "body") {
@@ -156,8 +223,9 @@ function getLayerTextStyle(layer: TextLayer) {
       fontSize: "clamp(0.6rem, 1.8vw, 0.75rem)",
       lineHeight: 1.55,
       letterSpacing: "0.01em",
-      textShadow: "0 1px 3px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.2)",
+      textShadow: getDirectionalShadow(lightAngle, "body"),
       WebkitTextStroke: "none",
+      filter: "blur(0.2px)",
     };
   }
   return {};
@@ -176,6 +244,7 @@ export default function LayerEditor({
   const [style, setStyle] = useState<NicheStyle>(() => resolveNicheStyle(niche));
 
   const [isDarkBackground, setIsDarkBackground] = useState(true);
+  const [lightAngle, setLightAngle] = useState(135);
   const [layers, setLayers] = useState<TextLayer[]>(() =>
     textBakedInImage ? [] : createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
   );
@@ -195,17 +264,22 @@ export default function LayerEditor({
     preloadNicheFonts(s);
   }, [niche]);
 
-  // Analyze background brightness when image changes
+  // Analyze background brightness + light direction when image changes
   useEffect(() => {
-    if (!imageUrl) { setIsDarkBackground(true); return; }
-    analyzeImageBrightness(imageUrl).then((brightness) => {
+    if (!imageUrl) { setIsDarkBackground(true); setLightAngle(135); return; }
+    Promise.all([
+      analyzeImageBrightness(imageUrl),
+      analyzeLightDirection(imageUrl),
+    ]).then(([brightness, angle]) => {
       const dark = brightness < 140;
       setIsDarkBackground(dark);
-      // Auto-update text colors on existing layers
+      setLightAngle(angle);
+      const blendMode = dark ? "screen" : "multiply";
+      // Auto-update text colors and blend modes on existing layers
       setLayers((prev) => prev.map((l) => {
-        if (l.type === "cta") return l; // CTA keeps white on colored bg
+        if (l.type === "cta") return { ...l, blendMode: "normal" };
         const autoColor = dark ? style.palette.textLight : style.palette.textDark;
-        return { ...l, color: autoColor };
+        return { ...l, color: autoColor, blendMode };
       }));
     });
   }, [imageUrl, style]);
@@ -336,6 +410,9 @@ export default function LayerEditor({
       } catch { /* skip */ }
     }
 
+    // Directional shadow for export
+    const shadowRad = ((lightAngle + 180) % 360) * Math.PI / 180;
+
     for (const layer of layers) {
       if (!layer.visible || !layer.content) continue;
       const px = (layer.x / 100) * dims.w;
@@ -347,20 +424,28 @@ export default function LayerEditor({
       ctx.fillStyle = layer.color;
       ctx.textAlign = layer.textAlign;
 
+      // Apply blend mode via globalCompositeOperation
+      if (layer.blendMode === "screen") ctx.globalCompositeOperation = "screen";
+      else if (layer.blendMode === "multiply") ctx.globalCompositeOperation = "multiply";
+      else ctx.globalCompositeOperation = "source-over";
+
       const alignX = layer.textAlign === "center" ? px + maxW / 2
         : layer.textAlign === "right" ? px + maxW : px;
 
       if (layer.type === "headline") {
-        ctx.shadowColor = "rgba(0,0,0,0.7)";
-        ctx.shadowBlur = 16;
-        ctx.shadowOffsetY = 4;
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 5);
+        ctx.shadowOffsetY = Math.round(Math.sin(shadowRad) * 5);
       } else if (layer.type === "body") {
-        ctx.shadowColor = "rgba(0,0,0,0.4)";
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 2;
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 3);
+        ctx.shadowOffsetY = Math.round(Math.sin(shadowRad) * 3);
       }
 
       if (layer.type === "cta") {
+        ctx.globalCompositeOperation = "source-over"; // CTA always normal
         const metrics = ctx.measureText(layer.content);
         const padX = scaledSize * 1.2;
         const padY = scaledSize * 0.5;
@@ -368,6 +453,8 @@ export default function LayerEditor({
         const btnH = scaledSize + padY * 2;
         ctx.shadowColor = "rgba(0,0,0,0.4)";
         ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
         ctx.fillStyle = ctaColor;
         roundRect(ctx, px, py - padY, btnW, btnH, style.cta.borderRadius);
         ctx.fill();
@@ -381,7 +468,9 @@ export default function LayerEditor({
 
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
+      ctx.globalCompositeOperation = "source-over";
     }
 
     const dataUrl = canvas.toDataURL("image/png");
@@ -389,7 +478,7 @@ export default function LayerEditor({
     link.download = `creative-${ratio}-${Date.now()}.png`;
     link.href = dataUrl;
     link.click();
-  }, [imageUrl, layers, dims, ratio, style, ctaColor, logoUrl]);
+  }, [imageUrl, layers, dims, ratio, style, ctaColor, logoUrl, lightAngle]);
 
   // ── Render ────────────────────────────────────────────────────
   return (
@@ -406,6 +495,20 @@ export default function LayerEditor({
         ) : (
           <div className="absolute inset-0 bg-card" />
         )}
+
+        {/* SVG noise filter for text texture integration */}
+        <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
+          <defs>
+            <filter id="texture-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise" />
+              <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise" />
+              <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" result="blended" />
+              <feComponentTransfer in="blended">
+                <feFuncA type="linear" slope="0.92" />
+              </feComponentTransfer>
+            </filter>
+          </defs>
+        </svg>
 
         {/* Overlay gradient */}
         <div className="absolute inset-0 pointer-events-none" style={{
@@ -439,7 +542,8 @@ export default function LayerEditor({
 
         {/* Text layers (interactive) */}
         {layers.filter((l) => l.visible).map((layer) => {
-          const hierarchyStyle = getLayerTextStyle(layer);
+          const hierarchyStyle = getLayerTextStyle(layer, lightAngle);
+          const isEditing = editingId === layer.id;
           return (
             <div
               key={layer.id}
@@ -454,6 +558,7 @@ export default function LayerEditor({
                 top: `${layer.y}%`,
                 maxWidth: `${layer.maxWidthPercent}%`,
                 zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
+                mixBlendMode: (layer.blendMode || "normal") as any,
               }}
               onPointerDown={(e) => handlePointerDown(e, layer.id)}
               onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
@@ -471,9 +576,10 @@ export default function LayerEditor({
                     backgroundColor: ctaColor,
                     borderRadius: style.cta.borderRadius,
                     filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))",
+                    mixBlendMode: "normal", // CTA always normal
                   }}
                 >
-                  {editingId === layer.id ? (
+                  {isEditing ? (
                     <input
                       autoFocus
                       value={layer.content}
@@ -496,9 +602,11 @@ export default function LayerEditor({
                     textAlign: layer.textAlign,
                     ...hierarchyStyle,
                     paintOrder: "stroke fill",
+                    // Apply SVG noise filter for texture integration (skip during editing for readability)
+                    ...(imageUrl && !isEditing ? { filter: `url(#texture-grain) ${hierarchyStyle.filter || ""}` } : {}),
                   }}
                 >
-                  {editingId === layer.id ? (
+                  {isEditing ? (
                     <textarea
                       autoFocus
                       value={layer.content}
@@ -542,9 +650,11 @@ export default function LayerEditor({
           <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
         </div>
 
-        {/* Contrast indicator */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/60 pointer-events-none">
-          {isDarkBackground ? "☀ Texto claro" : "● Texto escuro"}
+        {/* Contrast + blend indicator */}
+        <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/60 pointer-events-none">
+          {isDarkBackground ? "☀ Screen" : "● Multiply"}
+          <span className="opacity-40">·</span>
+          <span className="opacity-50">L{Math.round(lightAngle)}°</span>
         </div>
       </div>
 
@@ -626,6 +736,22 @@ export default function LayerEditor({
                 style={{ backgroundColor: c }}
               />
             ))}
+          </div>
+
+          {/* Blend mode selector */}
+          <div className="flex items-center gap-1 border-l border-border/20 pl-2 ml-1">
+            <span className="text-[9px] text-muted-foreground/50">Blend</span>
+            <select
+              value={selectedLayer.blendMode || "normal"}
+              onChange={(e) => updateLayer(selectedLayer.id, { blendMode: e.target.value })}
+              className="rounded-lg border border-border/20 bg-background/40 px-1.5 py-1 text-[10px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+            >
+              <option value="normal">Normal</option>
+              <option value="screen">Screen</option>
+              <option value="multiply">Multiply</option>
+              <option value="overlay">Overlay</option>
+              <option value="soft-light">Soft Light</option>
+            </select>
           </div>
         </motion.div>
       )}
