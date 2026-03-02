@@ -216,13 +216,18 @@ ${styleAnchor}
 THIS SLIDE:
 Role: ${getRoleDescription(slide.role)}
 Visual Direction: ${slide.visualDirection}
-Headline: ${slide.headline}
-Copy Placement Zone: ${slide.copyPlacement} (leave this area clean for text overlay)
+Copy Placement Zone: ${slide.copyPlacement} (leave this area completely clean and empty for text overlay)
 
 ${dnaContext}
 
 Aspect ratio: ${ratio || "1:1"}
-CRITICAL: Maintain EXACT SAME lighting, color palette, style, and visual mood as all other slides in this carousel. The only thing that changes is the scene/action, NOT the visual identity.`;
+
+CRITICAL RULES:
+- DO NOT render any text, letters, words, numbers, or typographic elements in the image.
+- The image must be a CLEAN visual base — all text (headline, body, CTA) will be added as editable overlays later.
+- Leave generous negative space in the "${slide.copyPlacement}" zone for text placement.
+- Maintain EXACT SAME lighting, color palette, style, and visual mood as all other slides in this carousel.
+- Focus 100% on visual storytelling: lighting, color, texture, composition, and mood.`;
 
         try {
           const imgResp = await fetch(AI_GATEWAY, {

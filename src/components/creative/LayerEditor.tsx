@@ -152,7 +152,7 @@ export default function LayerEditor({
   const [style, setStyle] = useState<NicheStyle>(() => resolveNicheStyle(niche));
 
   const [layers, setLayers] = useState<TextLayer[]>(() =>
-    textBakedInImage ? [] : createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
+    createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -167,12 +167,10 @@ export default function LayerEditor({
     preloadNicheFonts(s);
   }, [niche]);
 
-  // Sync layers when content changes externally (only if not baked-in mode)
+  // Sync layers when content changes externally
   useEffect(() => {
-    if (!textBakedInImage) {
-      setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement));
-    }
-  }, [headline, body, cta, textBakedInImage]);
+    setLayers(createDefaultLayers(headline, body, cta, style, copyPlacement));
+  }, [headline, body, cta]);
 
   const updateLayer = useCallback((id: string, updates: Partial<TextLayer>) => {
     setLayers((prev) => {
@@ -380,6 +378,7 @@ export default function LayerEditor({
                   textAlign: layer.textAlign,
                   backgroundColor: ctaColor,
                   borderRadius: style.cta.borderRadius,
+                  filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.35))",
                 }}
               >
                 {editingId === layer.id ? (
@@ -405,7 +404,13 @@ export default function LayerEditor({
                   textAlign: layer.textAlign,
                   fontSize: layer.type === "headline" ? "1.1rem" : "0.7rem",
                   lineHeight: layer.type === "headline" ? 1.2 : 1.5,
-                  textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                  textShadow: layer.type === "headline"
+                    ? "0 1px 3px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.3)"
+                    : "0 1px 4px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.2)",
+                  mixBlendMode: "normal",
+                  WebkitBackgroundClip: "text",
+                  paintOrder: "stroke fill",
+                  WebkitTextStroke: layer.type === "headline" ? "0.3px rgba(0,0,0,0.15)" : "none",
                 }}
               >
                 {editingId === layer.id ? (
@@ -438,25 +443,6 @@ export default function LayerEditor({
           <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
         </div>
 
-        {/* Empty state for baked-in mode */}
-        {textBakedInImage && layers.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center bg-black/40 backdrop-blur-sm rounded-xl px-4 py-3 pointer-events-auto">
-              <p className="text-[10px] text-white/70 mb-2">Texto já integrado à imagem</p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const newLayers = createDefaultLayers(headline, body, cta, style, copyPlacement);
-                  setLayers(newLayers);
-                  onLayersChange?.(newLayers);
-                }}
-                className="text-[10px] text-primary bg-primary/10 border border-primary/30 rounded-lg px-3 py-1.5 hover:bg-primary/20 transition-colors"
-              >
-                + Adicionar camadas de texto
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Toolbar ──────────────────────────────────────────── */}

@@ -582,7 +582,13 @@ Aspect ratio: ${ratio}.
 Subject/Context: ${headline || userPrompt || pieceType}.
 ${intensity === "Agressivo" ? "Bold colors, strong contrast, high energy." : intensity === "Suave" ? "Soft, warm tones, elegant and calm." : "Balanced, professional look."}
 ${qualityImageFinishing}
-IMPORTANT: The image MUST reflect the project's niche and visual identity described above. Do NOT create generic marketing images.`;
+
+CRITICAL RULES:
+- DO NOT render any text, letters, words, numbers, watermarks, or typographic elements directly in the image.
+- The image must be a CLEAN visual base — all text will be added as editable overlays later.
+- Leave generous negative space / breathing room in the composition for text overlay placement.
+- Focus 100% on visual storytelling: lighting, color, texture, composition, and mood.
+- The image MUST reflect the project's niche and visual identity described above. Do NOT create generic marketing images.`;
 
       try {
         const resp = await fetch(AI_GATEWAY, {
