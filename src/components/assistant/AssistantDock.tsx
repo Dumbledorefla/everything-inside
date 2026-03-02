@@ -6,6 +6,7 @@ import QuickActions from "./QuickActions";
 import AdaptiveMemoryObserver from "./AdaptiveMemoryObserver";
 import BlackHoleShader from "../BlackHoleShader";
 import { getNicheClass } from "@/lib/nicheAccent";
+import { useCurrentTheme } from "../ThemeToggle";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +38,8 @@ export default function AssistantDock() {
   const nicheClass = project?.niche ? getNicheClass(project.niche) : "";
   const isGlobal = agentMode === "global";
   const accentVar = isGlobal ? "var(--cos-purple, 180 60% 60%)" : "var(--primary)";
+  const currentTheme = useCurrentTheme();
+  const isRainy = currentTheme === "rainy";
 
   if (!dockOpen) {
     return (
@@ -51,8 +54,12 @@ export default function AssistantDock() {
           whileTap={{ scale: 0.95 }}
           className="rounded-full p-1 backdrop-blur-xl"
           style={{
-            background: "radial-gradient(circle, hsl(0 0% 5% / 0.9) 40%, transparent 100%)",
-            boxShadow: `0 0 40px -10px hsl(${isGlobal ? "25 90% 50%" : "30 95% 50%"} / 0.5)`,
+            background: isRainy
+              ? "radial-gradient(circle, hsl(0 0% 100% / 0.85) 40%, transparent 100%)"
+              : "radial-gradient(circle, hsl(0 0% 5% / 0.9) 40%, transparent 100%)",
+            boxShadow: isRainy
+              ? `0 0 30px -10px hsl(199 89% 58% / 0.3)`
+              : `0 0 40px -10px hsl(${isGlobal ? "25 90% 50%" : "30 95% 50%"} / 0.5)`,
           }}
         >
           <BlackHoleShader
@@ -79,18 +86,24 @@ export default function AssistantDock() {
           style={{
             minWidth: 340,
             maxWidth: 520,
-            background: "linear-gradient(180deg, hsl(0 0% 3% / 0.95) 0%, hsl(0 0% 2% / 0.98) 100%)",
-            backdropFilter: "blur(40px) saturate(1.2)",
-            borderLeft: "1px solid hsl(0 0% 100% / 0.04)",
+            background: isRainy
+              ? "linear-gradient(180deg, hsl(0 0% 100% / 0.72) 0%, hsl(0 0% 100% / 0.65) 100%)"
+              : "linear-gradient(180deg, hsl(0 0% 3% / 0.95) 0%, hsl(0 0% 2% / 0.98) 100%)",
+            backdropFilter: isRainy ? "blur(20px) saturate(1.8)" : "blur(40px) saturate(1.2)",
+            borderLeft: isRainy
+              ? "1px solid hsl(0 0% 100% / 0.3)"
+              : "1px solid hsl(0 0% 100% / 0.04)",
             boxShadow: dockFocused
-              ? `inset 1px 0 0 hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.08), -20px 0 80px -20px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.06)`
-              : "none",
+              ? isRainy
+                ? `0 0 40px -10px hsl(199 89% 58% / 0.1)`
+                : `inset 1px 0 0 hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.08), -20px 0 80px -20px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.06)`
+              : isRainy ? "0 8px 32px 0 rgba(31, 38, 135, 0.07)" : "none",
           }}
         >
           {/* Header — pure custom */}
           <div
             className="flex items-center justify-between px-4 py-3"
-            style={{ borderBottom: "1px solid hsl(0 0% 100% / 0.04)" }}
+            style={{ borderBottom: isRainy ? "1px solid hsl(215 25% 70% / 0.2)" : "1px solid hsl(0 0% 100% / 0.04)" }}
           >
             <div className="flex items-center gap-2.5">
               <BlackHoleShader
@@ -101,8 +114,12 @@ export default function AssistantDock() {
               <span
                 className="font-mono text-[10px] uppercase tracking-[0.25em]"
                 style={{
-                  color: `hsl(${isGlobal ? "270 70% 70%" : "190 80% 70%"})`,
-                  textShadow: `0 0 12px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.4)`,
+                  color: isRainy
+                    ? `hsl(${isGlobal ? "270 70% 40%" : "199 89% 40%"})`
+                    : `hsl(${isGlobal ? "270 70% 70%" : "190 80% 70%"})`,
+                  textShadow: isRainy
+                    ? "none"
+                    : `0 0 12px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.4)`,
                 }}
               >
                 {isGlobal ? "GLOBAL" : (project?.name?.slice(0, 12).toUpperCase() || "PROJETO")}
@@ -121,11 +138,15 @@ export default function AssistantDock() {
                     className="relative px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all duration-300"
                     style={{
                       color: isActive
-                        ? `hsl(${isGlobal ? "270 70% 80%" : "190 80% 80%"})`
-                        : "hsl(0 0% 40%)",
-                      background: isActive ? "hsl(0 0% 100% / 0.03)" : "transparent",
+                        ? isRainy
+                          ? `hsl(${isGlobal ? "270 70% 40%" : "199 89% 35%"})`
+                          : `hsl(${isGlobal ? "270 70% 80%" : "190 80% 80%"})`
+                        : isRainy ? "hsl(215 16% 47%)" : "hsl(0 0% 40%)",
+                      background: isActive
+                        ? isRainy ? "hsl(199 89% 58% / 0.08)" : "hsl(0 0% 100% / 0.03)"
+                        : "transparent",
                       borderRadius: 6,
-                      textShadow: isActive
+                      textShadow: isActive && !isRainy
                         ? `0 0 8px hsl(${isGlobal ? "270 70% 50%" : "190 80% 50%"} / 0.5)`
                         : "none",
                     }}
@@ -136,7 +157,9 @@ export default function AssistantDock() {
                       <span
                         className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-px"
                         style={{
-                          background: `linear-gradient(90deg, transparent, hsl(${isGlobal ? "270 70% 60%" : "190 80% 60%"}), transparent)`,
+                          background: isRainy
+                            ? `linear-gradient(90deg, transparent, hsl(199 89% 48%), transparent)`
+                            : `linear-gradient(90deg, transparent, hsl(${isGlobal ? "270 70% 60%" : "190 80% 60%"}), transparent)`,
                         }}
                       />
                     )}
@@ -150,15 +173,15 @@ export default function AssistantDock() {
               onClick={closeDock}
               className="w-7 h-7 flex items-center justify-center transition-all duration-200"
               style={{
-                color: "hsl(0 0% 35%)",
+                color: isRainy ? "hsl(215 16% 57%)" : "hsl(0 0% 35%)",
                 borderRadius: 6,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = "hsl(0 0% 70%)";
-                e.currentTarget.style.background = "hsl(0 0% 100% / 0.04)";
+                e.currentTarget.style.color = isRainy ? "hsl(215 25% 27%)" : "hsl(0 0% 70%)";
+                e.currentTarget.style.background = isRainy ? "hsl(215 25% 17% / 0.06)" : "hsl(0 0% 100% / 0.04)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = "hsl(0 0% 35%)";
+                e.currentTarget.style.color = isRainy ? "hsl(215 16% 57%)" : "hsl(0 0% 35%)";
                 e.currentTarget.style.background = "transparent";
               }}
             >
