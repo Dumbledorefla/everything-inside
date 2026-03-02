@@ -123,12 +123,16 @@ export default function Production() {
     ? TEXT_PROVIDER_OPTIONS
     : spec.output === "image"
       ? IMAGE_PROVIDER_OPTIONS
-      : [];
+      : [...TEXT_PROVIDER_OPTIONS, ...IMAGE_PROVIDER_OPTIONS];
 
   useEffect(() => {
+    // Reset to Auto only if current provider is incompatible with selected output
+    const isTextProvider = TEXT_PROVIDER_OPTIONS.some((p) => p.value === spec.provider);
+    const isImageProvider = IMAGE_PROVIDER_OPTIONS.some((p) => p.value === spec.provider);
+
     const invalidForCurrentOutput =
-      (spec.output === "both" && spec.provider !== "Auto") ||
-      ((spec.output === "image" || spec.output === "both") && TEXT_PROVIDER_OPTIONS.some((p) => p.value === spec.provider));
+      (spec.output === "image" && isTextProvider) ||
+      (spec.output === "text" && isImageProvider);
 
     if (invalidForCurrentOutput) {
       setSpec({ provider: "Auto" });
