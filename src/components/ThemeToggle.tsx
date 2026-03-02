@@ -17,6 +17,17 @@ function applyTheme(theme: AppTheme) {
     root.classList.remove("rainy");
   }
   localStorage.setItem("cos-theme", theme);
+  window.dispatchEvent(new CustomEvent("cos-theme-change", { detail: theme }));
+}
+
+export function useCurrentTheme(): AppTheme {
+  const [theme, setTheme] = useState<AppTheme>(getStoredTheme);
+  useEffect(() => {
+    const handler = (e: Event) => setTheme((e as CustomEvent).detail);
+    window.addEventListener("cos-theme-change", handler);
+    return () => window.removeEventListener("cos-theme-change", handler);
+  }, []);
+  return theme;
 }
 
 export default function ThemeToggle() {
