@@ -572,6 +572,16 @@ export default function Production() {
                     niche={projectDna?.niche}
                     logoUrl={projectDna?.logoUrl}
                     brandColors={projectDna?.brandColors}
+                    onAiRendered={(renderedUrl) => {
+                      // Replace the image in the selected result with the AI-rendered version
+                      const idx = results.findIndex((r) => r.id === selectedResultId);
+                      if (idx !== -1) {
+                        results[idx] = { ...results[idx], imageUrl: renderedUrl, status: "review" };
+                        // Force re-render by toggling selection
+                        setSelectedResultId(null);
+                        setTimeout(() => setSelectedResultId(results[idx].id), 50);
+                      }
+                    }}
                   />
                 </div>
               ) : (
