@@ -7,7 +7,7 @@ import AssistantDock from "./assistant/AssistantDock";
 import ImmersiveDirector from "./assistant/ImmersiveDirector";
 import CommandPalette from "./CommandPalette";
 import StarField from "./StarField";
-import RainEffect from "./RainEffect";
+
 import PageTransition from "./PageTransition";
 import BlackHoleShader from "./BlackHoleShader";
 import ThemeToggle from "./ThemeToggle";
@@ -26,7 +26,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden noise-overlay">
-      {currentTheme === "rainy" ? <RainEffect /> : <StarField />}
+      {currentTheme !== "rainy" && <StarField />}
       <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
 
       <header

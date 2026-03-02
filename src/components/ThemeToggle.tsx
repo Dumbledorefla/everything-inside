@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CloudRain, Moon } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AppTheme = "obsidian" | "rainy";
@@ -53,12 +53,12 @@ export default function ThemeToggle() {
         "hover:bg-accent/60 text-muted-foreground hover:text-foreground",
         isRainy && "text-primary hover:text-primary"
       )}
-      title={isRainy ? "Modo Obsidian" : "Modo Chuva"}
+      title={isRainy ? "Modo Escuro" : "Modo Claro"}
     >
       {isRainy ? (
         <Moon className="h-4 w-4" />
       ) : (
-        <CloudRain className="h-4 w-4" />
+        <Sun className="h-4 w-4" />
       )}
       {isRainy && (
         <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
