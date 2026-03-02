@@ -13,6 +13,31 @@ import ProjectCard from "@/components/dashboard/ProjectCard";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import { cn } from "@/lib/utils";
 
+const PROJECTS_CACHE_KEY = "dashboard:projects-cache:v1";
+
+const readProjectsCache = () => {
+  if (typeof window === "undefined") return [] as any[];
+  try {
+    const raw = localStorage.getItem(PROJECTS_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as any[]) : [];
+  } catch {
+    return [] as any[];
+  }
+};
+
+const withTimeout = <T,>(promise: Promise<T>, ms = 12000): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error("request_timeout")), ms);
+    promise
+      .then((value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      })
+      .catch((error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
 export default function Dashboard() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -20,26 +45,44 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const cachedProjects = useMemo(() => readProjectsCache(), []);
 
-  const { data: projects = [], isLoading, isError, refetch } = useQuery({
+  const { data: projects = [], isLoading, isError, isRefetchError, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*, sprints(status)")
-        .order("updated_at", { ascending: false });
+      const { data, error } = await withTimeout(
+        (async () => {
+          return await supabase
+            .from("projects")
+            .select("*, sprints(status)")
+            .order("updated_at", { ascending: false });
+        })()
+      );
+
       if (error) throw error;
-      return (data || []).map((p: any) => ({
+
+      const normalized = (data || []).map((p: any) => ({
         ...p,
         is_pinned: p.is_pinned ?? false,
         workspace_folder: p.workspace_folder ?? null,
         performance_rating: p.performance_rating ?? null,
         sprint_status: p.sprints?.find((s: any) => s.status === "active") ? "active" : null,
       }));
+
+      if (normalized.length > 0) {
+        try {
+          localStorage.setItem(PROJECTS_CACHE_KEY, JSON.stringify(normalized));
+        } catch {
+          // ignore cache write failures
+        }
+      }
+
+      return normalized;
     },
     enabled: !!user,
-    retry: 3,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+    initialData: cachedProjects,
+    retry: 1,
+    retryDelay: 1500,
   });
 
   const { data: assetCounts = {} } = useQuery({
@@ -186,7 +229,7 @@ export default function Dashboard() {
             </span>
           </div>
 
-          {isLoading ? (
+          {isLoading && projects.length === 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="rounded-2xl border border-border/10 bg-card/20 backdrop-blur-sm p-5 space-y-3">
@@ -196,7 +239,7 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-          ) : isError ? (
+          ) : (isError || isRefetchError) && projects.length === 0 ? (
             <div className="rounded-2xl border border-destructive/20 bg-destructive/5 backdrop-blur-sm p-10 text-center">
               <p className="text-sm text-destructive mb-3">Erro ao carregar projetos</p>
               <button
