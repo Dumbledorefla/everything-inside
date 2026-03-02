@@ -148,6 +148,7 @@ function createDefaultLayers(
   const pos = placementToPosition(copyPlacement);
   const layers: TextLayer[] = [];
   const textColor = isDarkBg ? style.palette.textLight : style.palette.textDark;
+  // Smart blend: multiply for dark-text-on-light, screen for light-text-on-dark
   const blendMode = isDarkBg ? "screen" : "multiply";
 
   if (headline) {
@@ -175,7 +176,7 @@ function createDefaultLayers(
       id: "cta", type: "cta", content: cta,
       x: pos.x, y: Math.min(pos.y + 28, 85), fontSize: 28,
       fontFamily: style.fonts.cta, fontWeight: 700, fontStyle: "normal",
-      color: isDarkBg ? "#FFFFFF" : "#FFFFFF", textAlign: "left", maxWidthPercent: 60, visible: true,
+      color: "#FFFFFF", textAlign: "left", maxWidthPercent: 60, visible: true,
       blendMode: "normal",
     });
   }
@@ -183,49 +184,50 @@ function createDefaultLayers(
   return layers;
 }
 
-// ── Hierarchy style presets with directional shadow ─────────────
+// ── Depth shadows (occlusion-style, NOT neon glow) ─────────────
 
 function getDirectionalShadow(lightAngle: number, type: "headline" | "body" | "cta"): string {
-  // Shadow goes opposite to where the light comes from
   const shadowAngle = (lightAngle + 180) % 360;
   const rad = shadowAngle * Math.PI / 180;
   
   if (type === "headline") {
-    const ox1 = Math.round(Math.cos(rad) * 3);
-    const oy1 = Math.round(Math.sin(rad) * 3);
-    const ox2 = Math.round(Math.cos(rad) * 6);
-    const oy2 = Math.round(Math.sin(rad) * 6);
-    const ox3 = Math.round(Math.cos(rad) * 10);
-    const oy3 = Math.round(Math.sin(rad) * 10);
-    return `${ox1}px ${oy1}px 6px rgba(0,0,0,0.8), ${ox2}px ${oy2}px 18px rgba(0,0,0,0.45), ${ox3}px ${oy3}px 36px rgba(0,0,0,0.2)`;
+    // Heavy ambient-occlusion shadow: depth, not glow
+    const ox = Math.round(Math.cos(rad) * 2);
+    const oy = Math.round(Math.sin(rad) * 4);
+    return `${ox}px ${oy}px 8px rgba(0,0,0,0.35), 0px 0px 2px rgba(0,0,0,0.25), ${ox * 2}px ${oy * 2}px 20px rgba(0,0,0,0.15)`;
   }
   if (type === "body") {
-    const ox = Math.round(Math.cos(rad) * 2);
+    const ox = Math.round(Math.cos(rad) * 1);
     const oy = Math.round(Math.sin(rad) * 2);
-    return `${ox}px ${oy}px 4px rgba(0,0,0,0.6), ${ox * 2}px ${oy * 2}px 10px rgba(0,0,0,0.25)`;
+    return `${ox}px ${oy}px 4px rgba(0,0,0,0.3), 0px 0px 1px rgba(0,0,0,0.2)`;
   }
-  return "0 2px 8px rgba(0,0,0,0.4)";
+  return "0 2px 6px rgba(0,0,0,0.3)";
 }
 
-function getLayerTextStyle(layer: TextLayer, lightAngle = 135) {
+function getLayerTextStyle(layer: TextLayer, lightAngle = 135, isDarkBg = true) {
+  const blendOpacity = layer.blendMode === "multiply" ? 0.88 : 1;
+
   if (layer.type === "headline") {
     return {
       fontSize: "clamp(1rem, 3.5vw, 1.3rem)",
-      lineHeight: 1.15,
-      letterSpacing: "-0.02em",
+      lineHeight: 1.1,
+      letterSpacing: "0.1em",
       textShadow: getDirectionalShadow(lightAngle, "headline"),
-      WebkitTextStroke: "0.3px rgba(0,0,0,0.12)",
-      filter: "blur(0.3px)",  // subtle grain integration
+      WebkitTextStroke: "none",
+      // Grain integration: slight contrast boost + micro-blur to match AI image texture
+      filter: "contrast(1.1) brightness(0.92) blur(0.3px)",
+      opacity: blendOpacity,
     };
   }
   if (layer.type === "body") {
     return {
       fontSize: "clamp(0.6rem, 1.8vw, 0.75rem)",
-      lineHeight: 1.55,
-      letterSpacing: "0.01em",
+      lineHeight: 1.5,
+      letterSpacing: "0.02em",
       textShadow: getDirectionalShadow(lightAngle, "body"),
       WebkitTextStroke: "none",
-      filter: "blur(0.2px)",
+      filter: "contrast(1.08) brightness(0.93) blur(0.25px)",
+      opacity: blendOpacity,
     };
   }
   return {};
@@ -433,15 +435,16 @@ export default function LayerEditor({
         : layer.textAlign === "right" ? px + maxW : px;
 
       if (layer.type === "headline") {
-        ctx.shadowColor = "rgba(0,0,0,0.8)";
-        ctx.shadowBlur = 18;
-        ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 5);
-        ctx.shadowOffsetY = Math.round(Math.sin(shadowRad) * 5);
+        // Depth shadow (ambient occlusion style)
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 2);
+        ctx.shadowOffsetY = Math.round(Math.sin(shadowRad) * 4);
       } else if (layer.type === "body") {
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 3);
-        ctx.shadowOffsetY = Math.round(Math.sin(shadowRad) * 3);
+        ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = Math.round(Math.cos(shadowRad) * 1);
+        ctx.shadowOffsetY = Math.round(Math.sin(shadowRad) * 2);
       }
 
       if (layer.type === "cta") {
@@ -496,15 +499,15 @@ export default function LayerEditor({
           <div className="absolute inset-0 bg-card" />
         )}
 
-        {/* SVG noise filter for text texture integration */}
+        {/* SVG noise overlay filter — matches AI image grain frequency */}
         <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
           <defs>
-            <filter id="texture-grain">
-              <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" result="noise" />
+            <filter id="texture-grain" x="0%" y="0%" width="100%" height="100%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch" result="noise" />
               <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise" />
-              <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" result="blended" />
+              <feBlend in="SourceGraphic" in2="grayNoise" mode="overlay" result="blended" />
               <feComponentTransfer in="blended">
-                <feFuncA type="linear" slope="0.92" />
+                <feFuncA type="linear" slope="0.95" intercept="0" />
               </feComponentTransfer>
             </filter>
           </defs>
@@ -542,8 +545,9 @@ export default function LayerEditor({
 
         {/* Text layers (interactive) */}
         {layers.filter((l) => l.visible).map((layer) => {
-          const hierarchyStyle = getLayerTextStyle(layer, lightAngle);
+          const hierarchyStyle = getLayerTextStyle(layer, lightAngle, isDarkBackground);
           const isEditing = editingId === layer.id;
+          const effectiveBlend = layer.blendMode || "normal";
           return (
             <div
               key={layer.id}
@@ -558,7 +562,7 @@ export default function LayerEditor({
                 top: `${layer.y}%`,
                 maxWidth: `${layer.maxWidthPercent}%`,
                 zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
-                mixBlendMode: (layer.blendMode || "normal") as any,
+                mixBlendMode: (effectiveBlend) as any,
               }}
               onPointerDown={(e) => handlePointerDown(e, layer.id)}
               onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
@@ -575,8 +579,9 @@ export default function LayerEditor({
                     textAlign: layer.textAlign,
                     backgroundColor: ctaColor,
                     borderRadius: style.cta.borderRadius,
-                    filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))",
-                    mixBlendMode: "normal", // CTA always normal
+                    textShadow: "none",
+                    filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
+                    mixBlendMode: "normal",
                   }}
                 >
                   {isEditing ? (
@@ -602,7 +607,7 @@ export default function LayerEditor({
                     textAlign: layer.textAlign,
                     ...hierarchyStyle,
                     paintOrder: "stroke fill",
-                    // Apply SVG noise filter for texture integration (skip during editing for readability)
+                    // Apply noise filter only when not editing (grain + contrast + blur from hierarchyStyle)
                     ...(imageUrl && !isEditing ? { filter: `url(#texture-grain) ${hierarchyStyle.filter || ""}` } : {}),
                   }}
                 >
