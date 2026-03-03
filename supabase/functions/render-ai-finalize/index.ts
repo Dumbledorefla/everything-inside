@@ -57,7 +57,6 @@ serve(async (req) => {
     const nicheContext = niche ? ` O estilo visual é "${niche}".` : "";
     const ratioContext = ratio ? ` O aspect ratio da imagem é ${ratio}.` : "";
 
-    // In-painting prompt with semantic masking
     const prompt = `Usando a imagem principal fornecida${maskDataUrl ? ", e usando a imagem de máscara para saber a área exata de edição," : ","} integre permanentemente os seguintes elementos de texto na cena. O texto NÃO deve parecer um adesivo. Ele precisa respeitar a física da imagem original.
 
 Contexto da Cena: ${sceneContext}${nicheContext}${ratioContext}
@@ -67,7 +66,6 @@ REGRAS CRÍTICAS DE INTEGRAÇÃO:
 2.  **Integração Física**: O texto deve herdar a textura, o grão e a iluminação da superfície onde está sendo aplicado. Se estiver sobre um pergaminho, deve parecer tinta absorvida; se sobre metal, deve ter reflexos.
 3.  **Sombras Realistas**: O texto deve projetar sombras sutis e realistas, opostas à direção da luz principal (${angle}°).
 4.  **Tipografia Exata**: Use as fontes e pesos exatos especificados para cada camada de texto.
-5.  **Sem Extras**: NÃO adicione texto, watermarks, bordas ou elementos visuais que não foram especificados.
 
 ELEMENTOS DE TEXTO PARA RENDERIZAR:
 ${textDescription}`;
