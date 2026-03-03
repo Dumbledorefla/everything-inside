@@ -45,6 +45,14 @@ const IMAGE_MODELS: Record<string, string> = {
   quality: "google/gemini-3-pro-image-preview",
 };
 
+const CREDIT_COSTS: Record<string, number> = {
+  "google/gemini-2.5-flash-lite": 1,
+  "google/gemini-3-flash-preview": 3,
+  "google/gemini-2.5-pro": 8,
+  "google/gemini-2.5-flash-image": 3,
+  "google/gemini-3-pro-image-preview": 10,
+};
+
 // ── FORMULA DEFINITIONS ────────────────────────────────────────
 const FORMULA_PROMPTS: Record<Formula, (slideCount: number) => string> = {
   pas: (n) => `Use a Fórmula PAS (Problema → Agitação → Solução). Estrutura OBRIGATÓRIA:
@@ -136,6 +144,7 @@ ${ref.generated_prompt ? `Direção Visual: ${ref.generated_prompt}` : ""}`;
     // ── MODE: STORYLINE ─────────────────────────────────────────
     if (mode === "storyline") {
       const formulaPrompt = FORMULA_PROMPTS[effectiveFormula](slideCount);
+      const textModel = TEXT_MODELS[profile] || TEXT_MODELS.standard;
 
       const resp = await fetch(AI_GATEWAY, {
         method: "POST",
@@ -144,7 +153,7 @@ ${ref.generated_prompt ? `Direção Visual: ${ref.generated_prompt}` : ""}`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: TEXT_MODELS[profile] || TEXT_MODELS.standard,
+          model: textModel,
           messages: [
             {
               role: "system",
@@ -202,6 +211,34 @@ Retorne APENAS JSON válido (sem markdown, sem backticks):
       const cleaned = raw.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       const storyline = jsonMatch ? JSON.parse(jsonMatch[0]) : { storyline: [], styleAnchor: "", formula: effectiveFormula };
+
+      const storylineCreditCost = CREDIT_COSTS[textModel] || 0;
+      await supabase.from("cos_ledger").insert({
+        project_id: projectId,
+        user_id: user.id,
+        operation_type: "CAROUSEL_STORYLINE",
+        provider_used: textModel,
+        credits_cost: storylineCreditCost,
+        estimated_usd: storylineCreditCost * 0.01,
+        metadata: {
+          mode: "storyline",
+          formula: effectiveFormula,
+          slide_count: slideCount,
+          has_reference: !!referenceId,
+        },
+      }).then(() => {}).catch((err: any) => console.error("carousel storyline ledger error:", err));
+
+      await supabase.from("activity_log").insert({
+        project_id: projectId,
+        user_id: user.id,
+        action: `Carousel storyline (${effectiveFormula})`,
+        entity_type: "carousel_storyline",
+        metadata: {
+          slide_count: slideCount,
+          formula: effectiveFormula,
+          has_reference: !!referenceId,
+        },
+      }).then(() => {}).catch((err: any) => console.error("carousel storyline activity error:", err));
 
       return new Response(JSON.stringify({ ...storyline, formula: effectiveFormula }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -314,6 +351,37 @@ CRITICAL RULES:
           });
         }
       }
+
+      const generatedSlides = results.filter((r) => !!r.id).length;
+      const totalCreditCost = generatedSlides * (CREDIT_COSTS[imageModel] || 0);
+
+      await supabase.from("cos_ledger").insert({
+        project_id: projectId,
+        user_id: user.id,
+        operation_type: "CAROUSEL_GENERATE",
+        provider_used: imageModel,
+        credits_cost: totalCreditCost,
+        estimated_usd: totalCreditCost * 0.01,
+        metadata: {
+          mode: "generate",
+          formula: effectiveFormula,
+          slide_count: approvedStoryline.length,
+          generated_slides: generatedSlides,
+          has_reference: !!referenceId,
+        },
+      }).then(() => {}).catch((err: any) => console.error("carousel generate ledger error:", err));
+
+      await supabase.from("activity_log").insert({
+        project_id: projectId,
+        user_id: user.id,
+        action: `Carousel gerado (${generatedSlides}/${approvedStoryline.length} slides)`,
+        entity_type: "carousel",
+        metadata: {
+          formula: effectiveFormula,
+          generated_slides: generatedSlides,
+          total_slides: approvedStoryline.length,
+        },
+      }).then(() => {}).catch((err: any) => console.error("carousel generate activity error:", err));
 
       return new Response(JSON.stringify({ slides: results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

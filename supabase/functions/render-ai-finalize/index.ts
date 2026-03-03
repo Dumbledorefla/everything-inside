@@ -38,7 +38,13 @@ serve(async (req) => {
     const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await supabaseUser.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.text();
@@ -71,6 +77,7 @@ serve(async (req) => {
 
     if (!imageUrl) throw new Error("imageUrl is required");
     if (!layers || layers.length === 0) throw new Error("At least one text layer is required");
+    if (!projectId) throw new Error("projectId is required");
 
     console.log("[RENDER-AI-FINALIZE] Validação de entrada: ✓ OK");
 
@@ -201,25 +208,23 @@ ${textDescription}`;
     });
 
     // ── Log to cos_ledger and activity_log ─────────────────
-    if (user && projectId) {
-      await supabase.from("cos_ledger").insert({
-        project_id: projectId,
-        user_id: user.id,
-        operation_type: "RENDER_FINALIZE",
-        provider_used: "google/gemini-3-pro-image-preview",
-        credits_cost: 10,
-        estimated_usd: 0.10,
-        metadata: { layers_count: layers.length, niche, ratio, has_mask: !!maskDataUrl },
-      }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] ledger error:", err));
+    await supabase.from("cos_ledger").insert({
+      project_id: projectId,
+      user_id: user.id,
+      operation_type: "RENDER_FINALIZE",
+      provider_used: "google/gemini-3-pro-image-preview",
+      credits_cost: 10,
+      estimated_usd: 0.10,
+      metadata: { layers_count: layers.length, niche, ratio, has_mask: !!maskDataUrl },
+    }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] ledger error:", err));
 
-      await supabase.from("activity_log").insert({
-        project_id: projectId,
-        user_id: user.id,
-        action: "Renderização IA finalizada",
-        entity_type: "render",
-        metadata: { layers_count: layers.length, niche, ratio },
-      }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] activity error:", err));
-    }
+    await supabase.from("activity_log").insert({
+      project_id: projectId,
+      user_id: user.id,
+      action: "Renderização IA finalizada",
+      entity_type: "render",
+      metadata: { layers_count: layers.length, niche, ratio },
+    }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] activity error:", err));
 
     return new Response(
       JSON.stringify({
