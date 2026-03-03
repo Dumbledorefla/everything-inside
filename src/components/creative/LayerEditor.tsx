@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Download, Layers, Type, Move, Palette, Bold, Italic, Lock,
   AlignLeft, AlignCenter, AlignRight, ChevronDown, Copy, Plus,
-  Sparkles, Loader2,
+  Sparkles, Loader2, PenLine,
 } from "lucide-react";
 import { resolveNicheStyle, preloadNicheFonts, type NicheStyle } from "@/lib/nicheStyles";
 import { cleanFontFamily } from "@/lib/canvasFont";
@@ -82,7 +82,6 @@ function placementToPosition(placement?: string): { x: number; y: number } {
   return { x, y };
 }
 
-/** Analyze average brightness of an image (0=black, 255=white) */
 function analyzeImageBrightness(imgSrc: string): Promise<number> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -107,7 +106,6 @@ function analyzeImageBrightness(imgSrc: string): Promise<number> {
   });
 }
 
-/** Analyze dominant light direction from image (returns angle in degrees) */
 function analyzeLightDirection(imgSrc: string): Promise<number> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -151,7 +149,6 @@ function createDefaultLayers(
   const pos = placementToPosition(copyPlacement);
   const layers: TextLayer[] = [];
   const textColor = isDarkBg ? style.palette.textLight : style.palette.textDark;
-  // INK FUSION: multiply for dark text absorbing into light/textured bg; screen for bright text on dark bg
   const blendMode = isDarkBg ? "screen" : "multiply";
 
   if (headline) {
@@ -187,10 +184,9 @@ function createDefaultLayers(
   return layers;
 }
 
-// ── Directional Occlusion Shadows (NOT neon glow) ──────────────
+// ── Directional Occlusion Shadows ──────────────────────────────
 
 function getDirectionalShadow(lightAngle: number, type: "headline" | "body" | "cta"): string {
-  // Shadow falls OPPOSITE to light source
   const shadowAngle = (lightAngle + 180) % 360;
   const rad = shadowAngle * Math.PI / 180;
 
@@ -207,47 +203,87 @@ function getDirectionalShadow(lightAngle: number, type: "headline" | "body" | "c
   return "none";
 }
 
-/**
- * Per-layer inline styles for HIGH-FIDELITY integration.
- * - Editorial spacing (letter-spacing, line-height)
- * - Occlusion shadows (directional, no glow)
- * - Micro grain blur to match AI image texture
- * - Opacity modulation for blend modes
- */
 function getLayerTextStyle(layer: TextLayer, lightAngle = 135, _isDarkBg = true) {
   const isMultiply = layer.blendMode === "multiply";
-  // Multiply ink absorbs into the surface → slightly transparent
   const blendOpacity = isMultiply ? 0.88 : 1;
 
   const base = {
     textShadow: getDirectionalShadow(lightAngle, layer.type),
     WebkitTextStroke: "none" as const,
-    // Grain integration: micro-blur + contrast to match AI image frequency.
-    // NO box/background — applied directly to text paint.
     filter: "contrast(1.02) brightness(0.98) blur(0.3px)",
     opacity: blendOpacity,
   };
 
   if (layer.type === "headline") {
-    return {
-      ...base,
-      fontSize: "clamp(1rem, 3.5vw, 1.3rem)",
-      lineHeight: 1.1,
-      letterSpacing: "0.1em",
-    };
+    return { ...base, fontSize: "clamp(1rem, 3.5vw, 1.3rem)", lineHeight: 1.1, letterSpacing: "0.1em" };
   }
   if (layer.type === "body") {
-    return {
-      ...base,
-      fontSize: "clamp(0.6rem, 1.8vw, 0.75rem)",
-      lineHeight: 1.5,
-      letterSpacing: "0.02em",
-    };
+    return { ...base, fontSize: "clamp(0.6rem, 1.8vw, 0.75rem)", lineHeight: 1.5, letterSpacing: "0.02em" };
   }
   return {};
 }
 
-// ── Component ───────────────────────────────────────────────────
+// ── Side Panel Component ────────────────────────────────────────
+
+function TextEditPanel({
+  layers,
+  onUpdateLayer,
+  className,
+}: {
+  layers: TextLayer[];
+  onUpdateLayer: (id: string, updates: Partial<TextLayer>) => void;
+  className?: string;
+}) {
+  const layerLabels: Record<string, { label: string; icon: React.ReactNode; placeholder: string }> = {
+    headline: { label: "Headline", icon: <Type className="h-3.5 w-3.5" />, placeholder: "Digite o título..." },
+    body: { label: "Corpo", icon: <AlignLeft className="h-3.5 w-3.5" />, placeholder: "Digite o corpo do texto..." },
+    cta: { label: "CTA", icon: <Sparkles className="h-3.5 w-3.5" />, placeholder: "Texto do botão..." },
+  };
+
+  if (layers.length === 0) {
+    return (
+      <div className={cn("flex items-center justify-center p-4 text-xs text-muted-foreground", className)}>
+        Nenhuma camada de texto disponível.
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("flex flex-col gap-3 p-3", className)}>
+      <div className="flex items-center gap-2 text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+        <PenLine className="h-3.5 w-3.5 text-primary" />
+        Editar Textos
+      </div>
+
+      {layers.map((layer) => {
+        const meta = layerLabels[layer.type] || { label: layer.type, icon: <Type className="h-3.5 w-3.5" />, placeholder: "" };
+        return (
+          <div key={layer.id} className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+              {meta.icon}
+              {meta.label}
+              {!layer.visible && <span className="text-[9px] text-muted-foreground/40">(oculto)</span>}
+            </label>
+            <textarea
+              value={layer.content}
+              onChange={(e) => onUpdateLayer(layer.id, { content: e.target.value })}
+              placeholder={meta.placeholder}
+              rows={layer.type === "headline" ? 2 : layer.type === "body" ? 3 : 1}
+              className={cn(
+                "w-full rounded-lg border border-border/30 bg-background/60 px-3 py-2 text-xs text-foreground",
+                "placeholder:text-muted-foreground/40 resize-none",
+                "focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40",
+                "transition-colors"
+              )}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────
 
 export default function LayerEditor({
   imageUrl, headline, body, cta, ratio = "1:1",
@@ -266,19 +302,17 @@ export default function LayerEditor({
     textBakedInImage ? [] : createDefaultLayers(headline, body, cta, resolveNicheStyle(niche), copyPlacement)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [showToolbar, setShowToolbar] = useState(false);
   const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({});
 
   const selectedLayer = layers.find((l) => l.id === selectedId);
 
-  // ── Sync niche style → force brand fonts on all layers ────────
+  // ── Sync niche style ──────────────────────────────────────────
   useEffect(() => {
     const s = resolveNicheStyle(niche);
     setStyle(s);
     preloadNicheFonts(s);
-    // Force DNA fonts onto existing layers
     setLayers((prev) => prev.map((l) => ({
       ...l,
       fontFamily: l.type === "headline" ? s.fonts.headline
@@ -377,7 +411,7 @@ export default function LayerEditor({
     window.addEventListener("pointerup", onUp);
   }, [layers, updateLayer]);
 
-  // ── Generate In-paint Mask ──────────────────────────────────────
+  // ── Generate In-paint Mask ────────────────────────────────────
   const generateInpaintMask = useCallback((
     imgW: number, imgH: number, visibleLayers: TextLayer[]
   ): string => {
@@ -387,21 +421,17 @@ export default function LayerEditor({
     const ctx = maskCanvas.getContext("2d");
     if (!ctx) return "";
 
-    // Black background = preserve area
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, imgW, imgH);
 
-    // White rectangles = edit area (where text goes)
     ctx.fillStyle = "#FFFFFF";
     for (const layer of visibleLayers) {
       const lx = (layer.x / 100) * imgW;
       const ly = (layer.y / 100) * imgH;
       const maxW = (layer.maxWidthPercent / 100) * imgW;
-      // Estimate text height based on fontSize scaled to image dimensions
       const scaledFontSize = (layer.fontSize / 52) * imgH * 0.06;
       const lines = Math.ceil(layer.content.length / (maxW / (scaledFontSize * 0.6)));
       const blockH = scaledFontSize * 1.4 * Math.max(lines, 1);
-      // Add generous padding around text area
       const pad = scaledFontSize * 0.5;
       ctx.fillRect(lx - pad, ly - pad, maxW + pad * 2, blockH + pad * 2);
     }
@@ -421,25 +451,17 @@ export default function LayerEditor({
     try {
       const visibleLayers = layers.filter(l => l.visible && l.content);
       const layerMeta = visibleLayers.map(l => ({
-        type: l.type,
-        content: l.content,
-        x: l.x,
-        y: l.y,
-        fontSize: l.fontSize,
-        fontFamily: l.fontFamily,
-        fontWeight: l.fontWeight,
-        color: l.color,
-        textAlign: l.textAlign,
+        type: l.type, content: l.content, x: l.x, y: l.y,
+        fontSize: l.fontSize, fontFamily: l.fontFamily,
+        fontWeight: l.fontWeight, color: l.color, textAlign: l.textAlign,
       }));
 
-      // Generate in-paint mask from visible layers
       const maskDataUrl = generateInpaintMask(dims.w, dims.h, visibleLayers);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         throw new Error("Sessão expirada. Faça login novamente para renderizar.");
       }
-      const token = session.access_token;
 
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-ai-finalize`,
@@ -447,15 +469,11 @@ export default function LayerEditor({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            imageUrl,
-            layers: layerMeta,
-            niche: niche || undefined,
-            ratio,
-            lightAngle,
-            isDarkBackground,
+            imageUrl, layers: layerMeta,
+            niche: niche || undefined, ratio, lightAngle, isDarkBackground,
             maskDataUrl: maskDataUrl || undefined,
             projectId: projectId || undefined,
           }),
@@ -548,13 +566,11 @@ export default function LayerEditor({
       ctx.fillStyle = layer.color;
       ctx.textAlign = layer.textAlign;
 
-      // Canvas blend via globalCompositeOperation
       if (layer.blendMode === "screen") ctx.globalCompositeOperation = "screen";
       else if (layer.blendMode === "multiply") ctx.globalCompositeOperation = "multiply";
       else if (layer.blendMode === "overlay") ctx.globalCompositeOperation = "overlay";
       else ctx.globalCompositeOperation = "source-over";
 
-      // Multiply opacity simulation
       if (layer.blendMode === "multiply") ctx.globalAlpha = 0.88;
       else ctx.globalAlpha = 1;
 
@@ -614,178 +630,153 @@ export default function LayerEditor({
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className={cn("space-y-3", className)}>
-      {/* Canvas viewport */}
-      <div
-        ref={containerRef}
-        className={cn("relative w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-border/30 bg-card cursor-crosshair select-none", aspectClass)}
-        onClick={() => { setSelectedId(null); setEditingId(null); setShowToolbar(false); }}
-      >
-        {/* Background */}
-        {imageUrl ? (
-          <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-        ) : (
-          <div className="absolute inset-0 bg-card" />
-        )}
-
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: `linear-gradient(to top, ${style.palette.overlay}, ${style.palette.overlay.replace(/[\d.]+\)$/, "0.2)")}, transparent)`,
-        }} />
-
-        {/* Snap alignment guides */}
-        {draggingId && (
-          <>
-            {snapGuides.x !== undefined && (
-              <div className="absolute top-0 bottom-0 pointer-events-none z-50"
-                style={{ left: `${snapGuides.x}%`, width: 1, background: "rgba(99,182,255,0.6)" }}
-              />
+      {/* Main layout: Canvas + Side Panel */}
+      <div className="flex gap-3">
+        {/* Canvas viewport */}
+        <div className="flex-1 min-w-0">
+          <div
+            ref={containerRef}
+            className={cn("relative w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-border/30 bg-card cursor-crosshair select-none", aspectClass)}
+            onClick={() => { setSelectedId(null); setShowToolbar(false); }}
+          >
+            {/* Background */}
+            {imageUrl ? (
+              <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+            ) : (
+              <div className="absolute inset-0 bg-card" />
             )}
-            {snapGuides.y !== undefined && (
-              <div className="absolute left-0 right-0 pointer-events-none z-50"
-                style={{ top: `${snapGuides.y}%`, height: 1, background: "rgba(99,182,255,0.6)" }}
-              />
+
+            {/* Overlay gradient */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: `linear-gradient(to top, ${style.palette.overlay}, ${style.palette.overlay.replace(/[\d.]+\)$/, "0.2)")}, transparent)`,
+            }} />
+
+            {/* Snap alignment guides */}
+            {draggingId && (
+              <>
+                {snapGuides.x !== undefined && (
+                  <div className="absolute top-0 bottom-0 pointer-events-none z-50"
+                    style={{ left: `${snapGuides.x}%`, width: 1, background: "rgba(99,182,255,0.6)" }}
+                  />
+                )}
+                {snapGuides.y !== undefined && (
+                  <div className="absolute left-0 right-0 pointer-events-none z-50"
+                    style={{ top: `${snapGuides.y}%`, height: 1, background: "rgba(99,182,255,0.6)" }}
+                  />
+                )}
+                <div className="absolute top-0 bottom-0 pointer-events-none z-40" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.08)" }} />
+                <div className="absolute left-0 right-0 pointer-events-none z-40" style={{ top: "50%", height: 1, background: "rgba(255,255,255,0.08)" }} />
+              </>
             )}
-            <div className="absolute top-0 bottom-0 pointer-events-none z-40" style={{ left: "50%", width: 1, background: "rgba(255,255,255,0.08)" }} />
-            <div className="absolute left-0 right-0 pointer-events-none z-40" style={{ top: "50%", height: 1, background: "rgba(255,255,255,0.08)" }} />
-          </>
-        )}
 
-        {/* Brand elements */}
-        <div className="absolute top-0 left-0 right-0 p-[6%] pointer-events-none">
-          <div className="h-1 rounded-full mb-2" style={{ width: "12%", backgroundColor: ctaColor }} />
-          {logoUrl && <img src={logoUrl} alt="Logo" className="h-5 object-contain opacity-90" draggable={false} />}
-        </div>
-
-        {/* ── Text layers (HIGH-FIDELITY rendering) ──────────── */}
-        {layers.filter((l) => l.visible).map((layer) => {
-          const hierarchyStyle = getLayerTextStyle(layer, lightAngle, isDarkBackground);
-          const isEditing = editingId === layer.id;
-          const effectiveBlend = layer.blendMode || "normal";
-
-          return (
-            <div
-              key={layer.id}
-              className={cn(
-                "absolute group transition-shadow duration-150",
-                selectedId === layer.id && "ring-2 ring-primary/60 rounded",
-                draggingId === layer.id && "cursor-grabbing",
-                draggingId !== layer.id && "cursor-grab"
-              )}
-              style={{
-                left: `${layer.x}%`,
-                top: `${layer.y}%`,
-                maxWidth: `${layer.maxWidthPercent}%`,
-                zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
-                // Blend mode applied directly on the wrapper — NO background, NO box
-                mixBlendMode: effectiveBlend as any,
-              }}
-              onPointerDown={(e) => handlePointerDown(e, layer.id)}
-              onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
-              onDoubleClick={(e) => { e.stopPropagation(); setEditingId(layer.id); }}
-            >
-              {layer.type === "cta" ? (
-                <span
-                  className="inline-block px-4 py-1.5 text-xs font-bold"
-                  style={{
-                    fontFamily: layer.fontFamily,
-                    fontWeight: layer.fontWeight,
-                    fontStyle: layer.fontStyle,
-                    color: layer.color,
-                    textAlign: layer.textAlign,
-                    backgroundColor: ctaColor,
-                    borderRadius: style.cta.borderRadius,
-                    textShadow: "none",
-                    // CTA: drop-shadow for depth, NOT text-shadow
-                    filter: "drop-shadow(2px 4px 6px rgba(0,0,0,0.5))",
-                    mixBlendMode: "normal",
-                  }}
-                >
-                  {isEditing ? (
-                    <input
-                      autoFocus
-                      value={layer.content}
-                      onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
-                      onBlur={() => setEditingId(null)}
-                      onKeyDown={(e) => e.key === "Enter" && setEditingId(null)}
-                      className="bg-transparent outline-none w-full min-w-[60px]"
-                      style={{ color: layer.color, fontFamily: layer.fontFamily }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : layer.content}
-                </span>
-              ) : (
-                <div
-                  style={{
-                    fontFamily: layer.fontFamily,
-                    fontWeight: layer.fontWeight,
-                    fontStyle: layer.fontStyle,
-                    color: layer.color,
-                    textAlign: layer.textAlign,
-                    // Merge hierarchy style (shadow, spacing, filter, opacity)
-                    ...hierarchyStyle,
-                    paintOrder: "stroke fill",
-                    // NO url(#texture-grain) filter — removed the SVG box noise.
-                    // Grain is now ONLY via the CSS filter property in hierarchyStyle
-                    // which applies contrast+brightness+blur directly to text paint.
-                  }}
-                >
-                  {isEditing ? (
-                    <textarea
-                      autoFocus
-                      value={layer.content}
-                      onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
-                      onBlur={() => setEditingId(null)}
-                      rows={layer.type === "headline" ? 3 : 4}
-                      className="bg-transparent backdrop-blur-none rounded outline-none w-full resize-none p-1"
-                      style={{
-                        color: layer.color,
-                        fontFamily: layer.fontFamily,
-                        fontSize: "inherit",
-                        fontWeight: layer.fontWeight,
-                        // Remove ALL background from editing textarea — no gray box
-                        background: "none",
-                        caretColor: layer.color,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : layer.content}
-                </div>
-              )}
-
-              {/* Drag handle */}
-              {selectedId === layer.id && !editingId && (
-                <div className="absolute -top-5 left-0 flex items-center gap-1 rounded bg-primary/90 px-1.5 py-0.5 text-[9px] text-primary-foreground font-mono">
-                  <Move className="h-2.5 w-2.5" />
-                  {layer.type === "headline" ? "Título" : layer.type === "cta" ? "CTA" : "Corpo"}
-                </div>
-              )}
+            {/* Brand elements */}
+            <div className="absolute top-0 left-0 right-0 p-[6%] pointer-events-none">
+              <div className="h-1 rounded-full mb-2" style={{ width: "12%", backgroundColor: ctaColor }} />
+              {logoUrl && <img src={logoUrl} alt="Logo" className="h-5 object-contain opacity-90" draggable={false} />}
             </div>
-          );
-        })}
 
-        {/* Empty state for baked-in images */}
-        {textBakedInImage && layers.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center z-30">
-            <button
-              onClick={(e) => { e.stopPropagation(); addManualLayers(); }}
-              className="flex items-center gap-2 rounded-xl border border-border/30 bg-black/50 backdrop-blur-sm px-4 py-2.5 text-xs text-white/80 hover:bg-black/70 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Adicionar camadas de texto
-            </button>
+            {/* ── Text layers (read-only on canvas, editable in side panel) ── */}
+            {layers.filter((l) => l.visible).map((layer) => {
+              const hierarchyStyle = getLayerTextStyle(layer, lightAngle, isDarkBackground);
+              const effectiveBlend = layer.blendMode || "normal";
+
+              return (
+                <div
+                  key={layer.id}
+                  className={cn(
+                    "absolute group transition-shadow duration-150",
+                    selectedId === layer.id && "ring-2 ring-primary/60 rounded",
+                    draggingId === layer.id && "cursor-grabbing",
+                    draggingId !== layer.id && "cursor-grab"
+                  )}
+                  style={{
+                    left: `${layer.x}%`,
+                    top: `${layer.y}%`,
+                    maxWidth: `${layer.maxWidthPercent}%`,
+                    zIndex: layer.type === "headline" ? 30 : layer.type === "cta" ? 20 : 25,
+                    mixBlendMode: effectiveBlend as any,
+                  }}
+                  onPointerDown={(e) => handlePointerDown(e, layer.id)}
+                  onClick={(e) => { e.stopPropagation(); setSelectedId(layer.id); setShowToolbar(true); }}
+                >
+                  {layer.type === "cta" ? (
+                    <span
+                      className="inline-block px-4 py-1.5 text-xs font-bold"
+                      style={{
+                        fontFamily: layer.fontFamily,
+                        fontWeight: layer.fontWeight,
+                        fontStyle: layer.fontStyle,
+                        color: layer.color,
+                        textAlign: layer.textAlign,
+                        backgroundColor: ctaColor,
+                        borderRadius: style.cta.borderRadius,
+                        textShadow: "none",
+                        filter: "drop-shadow(2px 4px 6px rgba(0,0,0,0.5))",
+                        mixBlendMode: "normal",
+                      }}
+                    >
+                      {layer.content}
+                    </span>
+                  ) : (
+                    <div
+                      style={{
+                        fontFamily: layer.fontFamily,
+                        fontWeight: layer.fontWeight,
+                        fontStyle: layer.fontStyle,
+                        color: layer.color,
+                        textAlign: layer.textAlign,
+                        ...hierarchyStyle,
+                        paintOrder: "stroke fill",
+                      }}
+                    >
+                      {layer.content}
+                    </div>
+                  )}
+
+                  {/* Drag handle */}
+                  {selectedId === layer.id && (
+                    <div className="absolute -top-5 left-0 flex items-center gap-1 rounded bg-primary/90 px-1.5 py-0.5 text-[9px] text-primary-foreground font-mono">
+                      <Move className="h-2.5 w-2.5" />
+                      {layer.type === "headline" ? "Título" : layer.type === "cta" ? "CTA" : "Corpo"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Empty state for baked-in images */}
+            {textBakedInImage && layers.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center z-30">
+                <button
+                  onClick={(e) => { e.stopPropagation(); addManualLayers(); }}
+                  className="flex items-center gap-2 rounded-xl border border-border/30 bg-black/50 backdrop-blur-sm px-4 py-2.5 text-xs text-white/80 hover:bg-black/70 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar camadas de texto
+                </button>
+              </div>
+            )}
+
+            {/* Layer badge */}
+            <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/70 pointer-events-none">
+              <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
+            </div>
+
+            {/* Blend indicator */}
+            <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/60 pointer-events-none">
+              {isDarkBackground ? "☀ Screen" : "● Multiply"}
+              <span className="opacity-40">·</span>
+              <span className="opacity-50">L{Math.round(lightAngle)}°</span>
+            </div>
           </div>
-        )}
-
-        {/* Layer badge */}
-        <div className="absolute top-2 right-2 flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/70 pointer-events-none">
-          <Layers className="h-2.5 w-2.5" />{layers.filter((l) => l.visible).length + 2} camadas
         </div>
 
-        {/* Blend indicator */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-0.5 text-[9px] text-white/60 pointer-events-none">
-          {isDarkBackground ? "☀ Screen" : "● Multiply"}
-          <span className="opacity-40">·</span>
-          <span className="opacity-50">L{Math.round(lightAngle)}°</span>
+        {/* ── Side Panel: Text Editing ──────────────────────────── */}
+        <div className="w-56 shrink-0 rounded-xl border border-border/20 bg-card/60 backdrop-blur-sm overflow-y-auto max-h-[500px]">
+          <TextEditPanel
+            layers={layers}
+            onUpdateLayer={updateLayer}
+          />
         </div>
       </div>
 
