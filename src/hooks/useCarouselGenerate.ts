@@ -34,6 +34,22 @@ export function useCarouselGenerate() {
   const [formula, setFormula] = useState<CarouselFormula>("tutorial");
   const [activeFormula, setActiveFormula] = useState<CarouselFormula>("tutorial");
 
+  const invokeWithTimeout = useCallback(async (
+    functionName: string,
+    body: Record<string, any>,
+    timeoutMs = 120_000
+  ) => {
+    const invokePromise = supabase.functions.invoke(functionName, { body });
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("A requisição demorou demais. Tente novamente.")), timeoutMs);
+    });
+
+    return await Promise.race([invokePromise, timeoutPromise]) as {
+      data: any;
+      error: any;
+    };
+  }, []);
+
   const generateStoryline = useCallback(async (params: {
     projectId: string;
     referenceId?: string;
@@ -47,9 +63,12 @@ export function useCarouselGenerate() {
     setSlides([]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("carousel-generate", {
-        body: { ...params, mode: "storyline", formula },
-      });
+      const { data, error } = await invokeWithTimeout("carousel-generate", {
+        ...params,
+        mode: "storyline",
+        formula,
+      }, 90_000);
+
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -62,7 +81,7 @@ export function useCarouselGenerate() {
       toast.error(e.message || "Erro ao gerar roteiro");
       setStep("idle");
     }
-  }, [formula]);
+  }, [formula, invokeWithTimeout]);
 
   const generateSlides = useCallback(async (params: {
     projectId: string;
@@ -72,29 +91,66 @@ export function useCarouselGenerate() {
   }) => {
     if (!storyline.length) return;
     setStep("generating-slides");
+    setSlides([]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("carousel-generate", {
-        body: {
+      const collected: CarouselSlideResult[] = [];
+      let failed = 0;
+
+      for (const slide of storyline) {
+        const { data, error } = await invokeWithTimeout("carousel-generate", {
           ...params,
           mode: "generate",
-          slideCount: storyline.length,
-          approvedStoryline: storyline,
+          slideCount: 1,
+          approvedStoryline: [slide],
           styleAnchor,
           formula: activeFormula,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+        });
 
-      setSlides(data.slides || []);
+        const failureMessage = error?.message || data?.error;
+        if (failureMessage) {
+          failed += 1;
+          collected.push({
+            slideNumber: slide.slideNumber,
+            role: slide.role,
+            headline: slide.headline,
+            body: slide.body,
+            copyPlacement: slide.copyPlacement,
+            imageUrl: null,
+            error: failureMessage,
+          });
+        } else {
+          const generatedSlide = data?.slides?.[0];
+          if (generatedSlide) {
+            collected.push(generatedSlide);
+          } else {
+            failed += 1;
+            collected.push({
+              slideNumber: slide.slideNumber,
+              role: slide.role,
+              headline: slide.headline,
+              body: slide.body,
+              copyPlacement: slide.copyPlacement,
+              imageUrl: null,
+              error: "Slide sem retorno da IA",
+            });
+          }
+        }
+
+        setSlides([...collected]);
+      }
+
       setStep("done");
-      toast.success(`${data.slides?.length || 0} slides do carrossel gerados!`);
+      if (failed > 0) {
+        toast.warning(`${collected.length - failed} slides gerados e ${failed} falharam.`);
+      } else {
+        toast.success(`${collected.length} slides do carrossel gerados!`);
+      }
     } catch (e: any) {
       toast.error(e.message || "Erro ao gerar slides");
       setStep("reviewing");
     }
-  }, [storyline, styleAnchor, activeFormula]);
+  }, [storyline, styleAnchor, activeFormula, invokeWithTimeout]);
 
   const reset = useCallback(() => {
     setStep("idle");

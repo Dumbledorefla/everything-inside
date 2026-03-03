@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 1;
+const REQUEST_TIMEOUT_MS = 120_000;
 
 export interface BatchResult {
   id: string;
@@ -53,10 +54,22 @@ export function useBatchGenerate() {
     abortRef.current = true;
   }, []);
 
+  const invokeWithTimeout = useCallback(async (body: Record<string, any>) => {
+    const invokePromise = supabase.functions.invoke("cos-generate", { body });
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Tempo limite ao conectar com o backend.")), REQUEST_TIMEOUT_MS);
+    });
+
+    return await Promise.race([invokePromise, timeoutPromise]) as {
+      data: any;
+      error: any;
+    };
+  }, []);
+
   const generate = useCallback(async (params: BatchGenerateParams) => {
     const { quantity, ...rest } = params;
     const totalBatches = Math.ceil(quantity / BATCH_SIZE);
-    
+
     abortRef.current = false;
     setResults([]);
     setProgress({ total: quantity, completed: 0, failed: 0, running: true });
@@ -74,9 +87,7 @@ export function useBatchGenerate() {
       const batchQty = Math.min(BATCH_SIZE, quantity - b * BATCH_SIZE);
 
       try {
-        const { data, error } = await supabase.functions.invoke("cos-generate", {
-          body: { ...rest, quantity: batchQty },
-        });
+        const { data, error } = await invokeWithTimeout({ ...rest, quantity: batchQty });
 
         if (error) throw error;
         if (data?.error) {
@@ -96,7 +107,7 @@ export function useBatchGenerate() {
       } catch (e: any) {
         failedCount += batchQty;
         console.error(`Batch ${b + 1} error:`, e);
-        toast.error(`Lote ${b + 1} falhou: ${e.message}`);
+        toast.error(`Lote ${b + 1} falhou: ${e?.message || "Erro de conexão"}`);
       }
 
       setProgress({ total: quantity, completed: completedCount, failed: failedCount, running: !abortRef.current });
@@ -109,7 +120,7 @@ export function useBatchGenerate() {
 
     setProgress((p) => ({ ...p, running: false }));
     return allResults;
-  }, []);
+  }, [invokeWithTimeout]);
 
   return { results, progress, generate, cancel, setResults };
 }
