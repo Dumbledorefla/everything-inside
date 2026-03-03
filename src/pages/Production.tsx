@@ -551,6 +551,7 @@ export default function Production() {
               spec={spec}
               roleLabels={roleLabels}
               projectDna={projectDna}
+              activeProjectId={activeProjectId}
               carouselLayerStyles={carouselLayerStyles}
               setCarouselLayerStyles={setCarouselLayerStyles}
               activeEditorSlide={activeEditorSlide}
@@ -670,7 +671,7 @@ export default function Production() {
 
 /* ═══════ Carousel sub-view (unchanged logic, extracted for readability) ═══════ */
 function CarouselView({
-  carousel, spec, roleLabels, projectDna, carouselLayerStyles, setCarouselLayerStyles,
+  carousel, spec, roleLabels, projectDna, activeProjectId, carouselLayerStyles, setCarouselLayerStyles,
   activeEditorSlide, setActiveEditorSlide, handleApplyToAll,
 }: any) {
   return (
@@ -762,6 +763,7 @@ function CarouselView({
                   cta={slide.role === "cta" ? slide.headline : undefined}
                   ratio={spec.ratio}
                   niche={projectDna?.niche}
+                  projectId={activeProjectId}
                   logoUrl={projectDna?.logoUrl}
                   brandColors={projectDna?.brandColors}
                   copyPlacement={slide.copyPlacement}

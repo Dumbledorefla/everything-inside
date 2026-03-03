@@ -436,7 +436,10 @@ export default function LayerEditor({
       const maskDataUrl = generateInpaintMask(dims.w, dims.h, visibleLayers);
 
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      if (!session?.access_token) {
+        throw new Error("Sessão expirada. Faça login novamente para renderizar.");
+      }
+      const token = session.access_token;
 
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-ai-finalize`,
@@ -478,7 +481,7 @@ export default function LayerEditor({
     } finally {
       setIsAiRendering(false);
     }
-  }, [imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, dims, generateInpaintMask, onAiRendered]);
+  }, [imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, dims, generateInpaintMask, onAiRendered, projectId]);
 
   // ── Export PNG ────────────────────────────────────────────────
   const exportPNG = useCallback(async () => {
