@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
-  Check, RotateCcw, ChevronRight,
+  Check, RotateCcw, ChevronRight, Lightbulb,
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,8 @@ import ShimmerCanvas from "@/components/production/ShimmerCanvas";
 import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
 import { cn } from "@/lib/utils";
+import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
+import { Button } from "@/components/ui/button";
 
 const PIECE_ICONS: Record<string, React.ElementType> = {
   post: LayoutGrid, banner: Rows3, story: FileText, ad: Sparkles,
@@ -79,6 +81,13 @@ export default function Production() {
   const [carouselLayerStyles, setCarouselLayerStyles] = useState<Record<number, TextLayer[]>>({});
   const [refining, setRefining] = useState(false);
   const [isEditorMode, setIsEditorMode] = useState(false);
+  const [showIdeaGenerator, setShowIdeaGenerator] = useState(false);
+
+  const handleIdeaSelected = (idea: { headline: string; body: string }) => {
+    setUserPrompt(idea.headline + ": " + idea.body);
+    setShowIdeaGenerator(false);
+    toast.info("Ideia aplicada ao prompt. Clique em 'Gerar' para criar.");
+  };
 
   const [operationMode, setOperationModeLocal] = useState<OperationMode>("social");
 
@@ -456,6 +465,24 @@ export default function Production() {
                   <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
                 </label>
               </div>
+            </>
+          )}
+
+          {/* Idea Generator */}
+          {!isCarousel && (
+            <>
+              <Button variant="outline" onClick={() => setShowIdeaGenerator(!showIdeaGenerator)} className="w-full gap-2">
+                <Lightbulb className={cn("h-4 w-4", showIdeaGenerator && "text-primary")} />
+                Gerador de Ideias
+              </Button>
+
+              {showIdeaGenerator && activeProjectId && (
+                <IdeaGenerator
+                  projectId={activeProjectId}
+                  pieceType={spec.pieceType}
+                  onIdeaSelected={handleIdeaSelected}
+                />
+              )}
             </>
           )}
 
