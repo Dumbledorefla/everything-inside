@@ -24,6 +24,7 @@ import Models from "./pages/Models";
 import SettingsPage from "./pages/SettingsPage";
 import Logs from "./pages/Logs";
 import ProjectReferences from "./pages/ProjectReferences";
+import AdFactory from "./pages/AdFactory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function App() {
                     <Route path="/project/:projectId/history" element={<ProjectHistory />} />
                     <Route path="/project/:projectId/pages" element={<ProjectPages />} />
                     <Route path="/project/:projectId/references" element={<ProjectReferences />} />
+                    <Route path="/project/:projectId/ad-factory" element={<AdFactory />} />
                     <Route path="/project/:projectId/models" element={<Models />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
