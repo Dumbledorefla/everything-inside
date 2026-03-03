@@ -389,57 +389,34 @@ export default function LayerEditor({
           </div>
         </div>
 
-        {/* ── Side Panel: EDITAR TEXTOS ── */}
+        {/* ── Side Panel: EDITAR TEXTOS (Desativado) ── */}
+        {/*
         <div className="w-60 shrink-0 rounded-xl border border-border/20 bg-card/60 backdrop-blur-sm overflow-y-auto max-h-[500px]">
           <div className="flex flex-col gap-4 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground uppercase tracking-wider">
               <PenLine className="h-4 w-4 text-primary" />
               Editar Textos
             </div>
-
             {layers.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Nenhuma camada de texto disponível.
-              </p>
+              <p className="text-xs text-muted-foreground">Nenhuma camada de texto disponível.</p>
             ) : (
               layers.map((layer) => (
                 <div key={layer.id} className="flex flex-col space-y-1.5">
-                  <Label
-                    htmlFor={`layer-${layer.id}`}
-                    className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
-                  >
-                    {layer.type === "headline" ? (
-                      <Type className="h-3 w-3" />
-                    ) : layer.type === "cta" ? (
-                      <Sparkles className="h-3 w-3" />
-                    ) : (
-                      <AlignLeft className="h-3 w-3" />
-                    )}
+                  <Label htmlFor={`layer-${layer.id}`} className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                    {layer.type === "headline" ? <Type className="h-3 w-3" /> : layer.type === "cta" ? <Sparkles className="h-3 w-3" /> : <AlignLeft className="h-3 w-3" />}
                     {LAYER_LABELS[layer.type] || layer.type.toUpperCase()}
                   </Label>
                   {layer.type === "body" ? (
-                    <Textarea
-                      id={`layer-${layer.id}`}
-                      value={layer.content}
-                      onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
-                      rows={3}
-                      className="text-xs resize-none"
-                      placeholder="Digite o corpo do texto..."
-                    />
+                    <Textarea id={`layer-${layer.id}`} value={layer.content} onChange={(e) => updateLayer(layer.id, { content: e.target.value })} rows={3} className="text-xs resize-none" placeholder="Digite o corpo do texto..." />
                   ) : (
-                    <Input
-                      id={`layer-${layer.id}`}
-                      value={layer.content}
-                      onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
-                      className="text-xs"
-                      placeholder={layer.type === "headline" ? "Digite o título..." : "Texto do botão..."}
-                    />
+                    <Input id={`layer-${layer.id}`} value={layer.content} onChange={(e) => updateLayer(layer.id, { content: e.target.value })} className="text-xs" placeholder={layer.type === "headline" ? "Digite o título..." : "Texto do botão..."} />
                   )}
                 </div>
               ))
             )}
           </div>
         </div>
+        */}
       </div>
 
       {/* Action buttons */}
@@ -449,22 +426,17 @@ export default function LayerEditor({
           Exportar ({dims.w}×{dims.h})
         </Button>
 
+        {/*
         <Button
           onClick={handleAiRender}
           disabled={isAiRendering || !imageUrl || layers.length === 0}
           size="sm"
-          className={cn(
-            "flex-1 gap-2",
-            isAiRendering && "cursor-wait"
-          )}
+          className={cn("flex-1 gap-2", isAiRendering && "cursor-wait")}
         >
-          {isAiRendering ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Sparkles className="h-3.5 w-3.5" />
-          )}
+          {isAiRendering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           {isAiRendering ? "Renderizando..." : "Renderizar com IA"}
         </Button>
+        */}
 
         {showApplyToAll && onApplyToAll && (
           <Button variant="outline" size="sm" onClick={() => onApplyToAll(layers)} className="gap-2">

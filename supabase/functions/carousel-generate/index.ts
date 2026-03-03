@@ -252,34 +252,35 @@ Retorne APENAS JSON válido (sem markdown, sem backticks):
       const styleAnchor = body.styleAnchor || "Professional, consistent lighting and color grading across all slides.";
 
       for (const slide of approvedStoryline) {
-        const imagePrompt = `Você é um Diretor de Arte de elite. Sua missão é criar o slide ${slide.slideNumber} de ${approvedStoryline.length} de um carrossel visualmente impactante, com o texto já integrado de forma orgânica.
-
-**CONSISTÊNCIA VISUAL (OBRIGATÓRIO EM TODOS OS SLIDES):**
-${styleAnchor}
+        const imagePrompt = `Você é um Diretor de Arte e Designer Gráfico de elite, criando o slide ${slide.slideNumber} de um carrossel de ${approvedStoryline.length} slides para o Instagram.
 
 **DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
 
-**DIREÇÃO VISUAL DESTE SLIDE:**
-Papel: ${getRoleDescription(slide.role)}
-Direção: ${slide.visualDirection}
+**CONSISTÊNCIA VISUAL (OBRIGATÓRIO EM TODOS OS SLIDES):**
+${styleAnchor}
 
-**TEXTO A SER INTEGRADO NA IMAGEM (REGRAS DE CONCISÃO):**
--   **Headline**: "${slide.headline}" (Renderize esta frase com destaque).
--   **Body (Opcional e Curto)**: Se houver, renderize de forma sutil e com no máximo 20 palavras: "${(slide as any).body || ''}".
+**INSTRUÇÕES PARA ESTE SLIDE ESPECÍFICO:**
+- **Função do Slide:** ${getRoleDescription(slide.role)}
+- **Direção Visual:** ${slide.visualDirection}
+- **Posicionamento do Texto:** ${slide.copyPlacement}
 
-**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO:**
-1.  **Renderização Direta do Texto**: O texto DEVE ser renderizado diretamente na imagem, parecendo parte da cena.
-2.  **Respeito ao DNA Visual**: A tipografia e as cores devem seguir ESTRITAMENTE o DNA do projeto.
-3.  **Integração Orgânica**: O texto deve respeitar a iluminação, perspectiva e textura da cena.
-4.  **Hierarquia e Legibilidade**: Organize o texto de forma profissional, com hierarquia clara entre headline e body.
-5.  **Qualidade Fotográfica**: A imagem final deve ter qualidade de estúdio (cinematic lighting, high detail, 8k resolution).
+**TEXTO A SER INTEGRADO NA IMAGEM:**
+- **Headline:** "${slide.headline}"
+- **Body (se houver):** "${(slide as any).body || ''}"
+
+**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO (EXTREMAMENTE CRÍTICO):**
+1.  **Renderização Direta e Perfeita do Texto**: O texto DEVE ser renderizado diretamente na imagem, com soletração e gramática perfeitas. Ele precisa parecer parte da cena, não um adesivo. A qualidade da tipografia é o critério número 1 de sucesso.
+2.  **Respeito ao DNA Visual**: A tipografia (família, peso, estilo) e as cores devem seguir ESTRITAMENTE o que está definido no DNA do projeto.
+3.  **Integração Orgânica e Realista**: O texto deve respeitar a iluminação, perspectiva e textura da cena. Deve parecer que foi filmado junto com a cena.
+4.  **Hierarquia e Legibilidade Profissional**: Organize o texto de forma profissional, seguindo o posicionamento definido (${slide.copyPlacement}). Use o espaço negativo de forma inteligente.
+5.  **Consistência Visual**: Mantenha EXATAMENTE a mesma iluminação, paleta de cores, estilo e mood visual de todos os outros slides.
 
 **REQUERIMENTOS TÉCNICOS:**
 - Aspect Ratio: ${ratio || "1:1"}
-- Mantenha EXATAMENTE a mesma iluminação, paleta de cores, estilo e mood visual de todos os outros slides.
+- Qualidade Fotográfica: Qualidade de estúdio, iluminação cinematográfica, alta definição.
 
-Gere a imagem final como uma peça única e coesa.`;
+Gere a imagem final para este slide como uma peça única, coesa e com a tipografia perfeitamente renderizada.`;
 
         try {
         let imageUrl: string | null = null;

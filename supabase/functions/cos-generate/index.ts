@@ -619,29 +619,29 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       const ctaText = cta || "";
       
 
-      const imagePrompt = `Você é um Diretor de Arte e Designer Gráfico de elite. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada.
+      const imagePrompt = `Você é um Diretor de Arte e Designer Gráfico de elite, especialista em tipografia e composição para marketing digital. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada, com o texto perfeitamente integrado à imagem.
 
 **DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
 
 **TEXTO A SER INTEGRADO NA IMAGEM (REGRAS DE CONCISÃO):**
--   **Headline**: "${headlineText}" (Renderize esta frase com destaque).
+-   **Headline**: "${headlineText}" (Renderize esta frase com destaque máximo).
 -   **CTA (Opcional e Curto)**: Se houver um CTA, renderize-o de forma discreta e com no máximo 10 palavras: "${ctaText}".
 -   **NÃO RENDERIZE O BODY**: O corpo do texto (\`body\`) NÃO deve ser incluído na imagem. Ele serve apenas como contexto para a IA entender o tema.
 
-**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO:**
-1.  **Renderização Direta do Texto**: O texto DEVE ser renderizado diretamente na imagem. Ele precisa parecer parte da cena, não um adesivo.
-2.  **Respeito ao DNA Visual**: A tipografia (família, peso, estilo) e as cores devem seguir ESTRITAMENTE o que está definido no DNA do projeto. Para o nicho de Tarot, use fontes serifadas e elegantes; para Tech, fontes limpas e modernas.
-3.  **Integração Orgânica**: O texto deve respeitar a iluminação, perspectiva, textura e profundidade de campo da cena. Se a imagem tiver uma parede de tijolos, o texto deve se deformar sutilmente sobre ela. Se a luz vier da esquerda, o texto deve projetar uma sombra suave para a direita.
-4.  **Hierarquia e Legibilidade**: Organize o texto de forma profissional. A headline deve ter mais impacto, o corpo deve ser legível e o CTA deve ser claro. Use o espaço negativo da composição de forma inteligente.
-5.  **Qualidade Fotográfica**: A imagem final deve ter qualidade de estúdio (cinematic lighting, high detail, 8k resolution), seguindo o qualityImageFinishing.
+**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO (EXTREMAMENTE CRÍTICO):**
+1.  **Renderização Direta e Perfeita do Texto**: O texto DEVE ser renderizado diretamente na imagem, com soletração e gramática perfeitas. Ele precisa parecer parte da cena, não um adesivo. A qualidade da tipografia é o critério número 1 de sucesso.
+2.  **Respeito ao DNA Visual**: A tipografia (família, peso, estilo) e as cores devem seguir ESTRITAMENTE o que está definido no DNA do projeto. Para o nicho de Tarot, use fontes serifadas e elegantes; para Tech, fontes limpas e modernas. Se o DNA pede por uma cor específica, use-a.
+3.  **Integração Orgânica e Realista**: O texto deve respeitar a iluminação, perspectiva, textura e profundidade de campo da cena. Se a imagem tiver uma parede de tijolos, o texto deve se deformar sutilmente sobre ela. Se a luz vier da esquerda, o texto deve projetar uma sombra suave para a direita. O texto deve parecer que foi filmado junto com a cena, não adicionado depois.
+4.  **Hierarquia e Legibilidade Profissional**: Organize o texto de forma profissional. A headline deve ter o maior impacto visual, o corpo (se houver) deve ser legível e o CTA deve ser claro, mas secundário. Use o espaço negativo da composição de forma inteligente para garantir a legibilidade.
+5.  **Qualidade Fotográfica de Estúdio**: A imagem final deve ter qualidade de estúdio (iluminação cinematográfica, alta definição, resolução 8k), seguindo as diretrizes de qualidade do perfil selecionado.
 
 **REQUERIMENTOS TÉCNICOS:**
 - Aspect Ratio: ${ratio}
-- Estilo de Intensidade: ${intensity === "Agressivo" ? "Cores ousadas, alto contraste." : intensity === "Suave" ? "Tons suaves, calmos e elegantes." : "Visual equilibrado e profissional."}
+- Estilo de Intensidade: ${intensity === "Agressivo" ? "Cores ousadas, alto contraste, impacto máximo." : intensity === "Suave" ? "Tons suaves, calmos, elegantes e etéreos." : "Visual equilibrado, profissional e limpo."}
 ${qualityImageFinishing}
 
-Gere a imagem final como uma peça única e coesa.`;
+Gere a imagem final como uma peça única, coesa e com a tipografia perfeitamente renderizada. A qualidade da integração do texto é o fator mais importante.`;
 
       try {
         console.log(`Tentando gerar imagem com modelo: ${model}`);
