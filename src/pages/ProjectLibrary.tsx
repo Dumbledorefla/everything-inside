@@ -42,19 +42,44 @@ export default function ProjectLibrary() {
   const { selectAsset, selectedAsset } = useAssistant();
   const queryClient = useQueryClient();
 
-  const { data: assets, isLoading } = useQuery({
+  const { data: assets, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["project-assets", projectId, statusFilter],
     queryFn: async () => {
       let q = supabase
         .from("assets")
-        .select("*, asset_versions(created_at, headline, body, cta, image_url, generation_metadata)")
+        .select("id, title, status, output, provider_used, profile_used, created_at")
         .eq("project_id", projectId!)
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
-      const { data } = await q.limit(100);
-      return data || [];
+
+      const { data: baseAssets, error: assetsError } = await q.limit(24);
+      if (assetsError) throw assetsError;
+
+      const assetIds = (baseAssets || []).map((asset) => asset.id);
+      if (assetIds.length === 0) return [];
+
+      const { data: versions, error: versionsError } = await supabase
+        .from("asset_versions")
+        .select("asset_id, created_at, headline, body, cta, image_url, generation_metadata")
+        .in("asset_id", assetIds);
+
+      if (versionsError) throw versionsError;
+
+      const latestByAsset = new Map<string, any>();
+      for (const version of versions || []) {
+        const current = latestByAsset.get(version.asset_id);
+        if (!current || new Date(version.created_at).getTime() > new Date(current.created_at).getTime()) {
+          latestByAsset.set(version.asset_id, version);
+        }
+      }
+
+      return (baseAssets || []).map((asset) => ({
+        ...asset,
+        asset_versions: latestByAsset.get(asset.id) ? [latestByAsset.get(asset.id)] : [],
+      }));
     },
     enabled: !!projectId,
+    retry: 1,
   });
 
   const approveMutation = useMutation({
@@ -158,8 +183,21 @@ export default function ProjectLibrary() {
         </div>
       )}
 
+      {!isLoading && error && (
+        <div className="rounded-2xl border border-border/30 bg-card/20 p-8 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">Erro ao carregar a biblioteca deste projeto.</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-secondary/30 transition-colors"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+            Recarregar
+          </button>
+        </div>
+      )}
+
       {/* Empty state */}
-      {!isLoading && filtered.length === 0 && (
+      {!isLoading && !error && filtered.length === 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -176,7 +214,7 @@ export default function ProjectLibrary() {
       )}
 
       {/* ═══ Masonry Grid ═══ */}
-      {!isLoading && filtered.length > 0 && view === "masonry" && (
+      {!isLoading && !error && filtered.length > 0 && view === "masonry" && (
         <div className="masonry-grid">
           <AnimatePresence>
             {filtered.map((asset, i) => {
@@ -280,7 +318,7 @@ export default function ProjectLibrary() {
       )}
 
       {/* ═══ List View ═══ */}
-      {!isLoading && filtered.length > 0 && view === "list" && (
+      {!isLoading && !error && filtered.length > 0 && view === "list" && (
         <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden">
           <div className="grid grid-cols-[1fr_90px_90px_120px_80px] gap-4 border-b border-border px-5 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             <span>Ativo</span><span>Status</span><span>Perfil</span><span>Provedor</span><span>Data</span>
