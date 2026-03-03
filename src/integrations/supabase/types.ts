@@ -67,6 +67,7 @@ export type Database = {
           image_url: string | null
           template_id: string | null
           version: number
+          video_url: string | null
         }
         Insert: {
           asset_id: string
@@ -79,6 +80,7 @@ export type Database = {
           image_url?: string | null
           template_id?: string | null
           version?: number
+          video_url?: string | null
         }
         Update: {
           asset_id?: string
@@ -91,6 +93,7 @@ export type Database = {
           image_url?: string | null
           template_id?: string | null
           version?: number
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -1135,7 +1138,7 @@ export type Database = {
         | "official"
         | "archived"
         | "error"
-      output_type: "text" | "image" | "both"
+      output_type: "text" | "image" | "both" | "video"
       page_type:
         | "sales"
         | "landing"
@@ -1283,7 +1286,7 @@ export const Constants = {
         "archived",
         "error",
       ],
-      output_type: ["text", "image", "both"],
+      output_type: ["text", "image", "both", "video"],
       page_type: [
         "sales",
         "landing",
