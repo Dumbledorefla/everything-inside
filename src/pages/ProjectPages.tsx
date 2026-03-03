@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, FileText, Loader2, ChevronRight, Layout, Play, Download, Sparkles } from "lucide-react";
+import { Plus, FileText, Loader2, ChevronRight, Layout, Play, Download, Sparkles, Copy } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,9 @@ import SectionList from "@/components/pages/SectionList";
 import VariantInspector from "@/components/pages/VariantInspector";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
+import { CloneRemodel } from "@/components/pages/CloneRemodel";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const pageTypeLabels: Record<string, string> = {
   sales: "Página de Vendas", landing: "Landing Page", vsl: "VSL", presell: "Presell",
@@ -27,6 +30,8 @@ export default function ProjectPages() {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [generatingSection, setGeneratingSection] = useState<string | null>(null);
   const [assembling, setAssembling] = useState<string | null>(null);
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const navigate = useNavigate();
 
   const { data: pages, isLoading } = useQuery({
     queryKey: ["pages", projectId],
@@ -160,11 +165,16 @@ export default function ProjectPages() {
             <p className="text-xs text-muted-foreground/60 mt-0.5">Outline IA → Geração por seção → Assembly → Export</p>
           </div>
         </div>
-        <motion.button onClick={() => setShowCreate(true)}
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
-          <Plus className="h-3.5 w-3.5" />Nova Página
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowCloneModal(true)} className="gap-2 text-xs">
+            <Copy className="h-3.5 w-3.5" />Clone & Remodel
+          </Button>
+          <motion.button onClick={() => setShowCreate(true)}
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
+            <Plus className="h-3.5 w-3.5" />Nova Página
+          </motion.button>
+        </div>
       </div>
 
       {/* Create form */}
@@ -278,6 +288,19 @@ export default function ProjectPages() {
           </motion.div>
         )}
       </div>
+
+      <Dialog open={showCloneModal} onOpenChange={setShowCloneModal}>
+        <DialogContent className="max-w-lg p-0">
+          <CloneRemodel
+            projectId={projectId!}
+            onSuccess={(pageId) => {
+              setShowCloneModal(false);
+              navigate(`/project/${projectId}/pages`);
+            }}
+            onClose={() => setShowCloneModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
