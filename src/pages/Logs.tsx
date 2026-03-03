@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle, CheckCircle2, Clock, Loader2, Search,
   Filter, ChevronDown, Zap, CreditCard, Image, MessageSquare,
-  RefreshCw, XCircle, Info,
+  RefreshCw, XCircle, Info, Download,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,65 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+
+// ── Export helpers ────────────────────────────────────
+function downloadFile(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportJSON(data: any[], filename: string) {
+  downloadFile(JSON.stringify(data, null, 2), `${filename}.json`, "application/json");
+  toast.success(`Exportado ${data.length} registros em JSON`);
+}
+
+function exportCSV(data: any[], filename: string) {
+  if (data.length === 0) { toast.warning("Nenhum dado para exportar"); return; }
+  const keys = Object.keys(data[0]).filter(k => k !== "projects");
+  const header = keys.join(",");
+  const rows = data.map(row =>
+    keys.map(k => {
+      const val = row[k];
+      if (val === null || val === undefined) return "";
+      if (typeof val === "object") return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+      return `"${String(val).replace(/"/g, '""')}"`;
+    }).join(",")
+  );
+  downloadFile([header, ...rows].join("\n"), `${filename}.csv`, "text/csv");
+  toast.success(`Exportado ${data.length} registros em CSV`);
+}
+
+function exportMarkdown(data: any[], filename: string, type: "operations" | "activity") {
+  if (data.length === 0) { toast.warning("Nenhum dado para exportar"); return; }
+  let md = `# Logs - ${type === "operations" ? "Operações IA" : "Atividades"}\n`;
+  md += `> Exportado em ${new Date().toLocaleString("pt-BR")}\n\n`;
+  md += `Total: **${data.length}** registros\n\n---\n\n`;
+
+  if (type === "operations") {
+    md += "| Data | Tipo | Provider | Créditos | USD | Status |\n";
+    md += "|------|------|----------|----------|-----|--------|\n";
+    data.forEach((op: any) => {
+      const hasError = op.metadata?.error || op.metadata?.fallback;
+      md += `| ${new Date(op.created_at).toLocaleString("pt-BR")} | ${op.operation_type} | ${op.provider_used} | ${op.credits_cost} | $${op.estimated_usd?.toFixed(3)} | ${hasError ? "❌" : "✅"} |\n`;
+    });
+  } else {
+    md += "| Data | Ação | Tipo | Entidade |\n";
+    md += "|------|------|------|----------|\n";
+    data.forEach((a: any) => {
+      md += `| ${new Date(a.created_at).toLocaleString("pt-BR")} | ${a.action} | ${a.entity_type || "—"} | ${a.entity_id?.slice(0, 8) || "—"} |\n`;
+    });
+  }
+
+  downloadFile(md, `${filename}.md`, "text/markdown");
+  toast.success(`Exportado ${data.length} registros em Markdown`);
+}
 
 // ── Icon/color mappings ──────────────────────────────
 const opIcons: Record<string, typeof Zap> = {
@@ -124,15 +183,46 @@ export default function Logs() {
             Acompanhe todas as operações de IA, erros e consumo do sistema
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => { refetchOps(); refetchAct(); }}
-          className="gap-2"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="h-3.5 w-3.5" />
+                Exportar
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                const data = tab === "operations" ? filteredOps : filteredActs;
+                exportJSON(data, `logs-${tab}`);
+              }}>
+                📄 Exportar JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const data = tab === "operations" ? filteredOps : filteredActs;
+                exportCSV(data, `logs-${tab}`);
+              }}>
+                📊 Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const data = tab === "operations" ? filteredOps : filteredActs;
+                exportMarkdown(data, `logs-${tab}`, tab as "operations" | "activity");
+              }}>
+                📝 Exportar Markdown
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { refetchOps(); refetchAct(); }}
+            className="gap-2"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
