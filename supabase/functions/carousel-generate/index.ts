@@ -39,10 +39,10 @@ const TEXT_MODELS: Record<string, string> = {
   quality: "google/gemini-2.5-pro",
 };
 
-const IMAGE_MODELS: Record<string, string> = {
-  economy: "google/gemini-2.5-flash-image",
-  standard: "google/gemini-2.5-flash-image",
-  quality: "google/gemini-3-pro-image-preview",
+const IMAGE_MODELS: Record<string, string[]> = {
+  economy: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
+  standard: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
+  quality: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
 };
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -248,50 +248,72 @@ Retorne APENAS JSON válido (sem markdown, sem backticks):
     // ── MODE: GENERATE (after storyline approval) ───────────────
     if (mode === "generate" && approvedStoryline?.length) {
       const results: any[] = [];
-      const imageModel = IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
+      const imageModels = IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
       const styleAnchor = body.styleAnchor || "Professional, consistent lighting and color grading across all slides.";
 
       for (const slide of approvedStoryline) {
-        const imagePrompt = `Create slide ${slide.slideNumber} of ${approvedStoryline.length} for an Instagram carousel.
+        const imagePrompt = `Você é um Diretor de Arte de elite. Sua missão é criar o slide ${slide.slideNumber} de ${approvedStoryline.length} de um carrossel visualmente impactante, com o texto já integrado de forma orgânica.
 
-VISUAL CONSISTENCY LOCK (MUST MATCH ALL SLIDES):
+**CONSISTÊNCIA VISUAL (OBRIGATÓRIO EM TODOS OS SLIDES):**
 ${styleAnchor}
 
-THIS SLIDE:
-Role: ${getRoleDescription(slide.role)}
-Visual Direction: ${slide.visualDirection}
-Copy Placement Zone: ${slide.copyPlacement} (leave this area completely clean and empty for text overlay)
-
+**DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
 
-Aspect ratio: ${ratio || "1:1"}
+**DIREÇÃO VISUAL DESTE SLIDE:**
+Papel: ${getRoleDescription(slide.role)}
+Direção: ${slide.visualDirection}
 
-CRITICAL RULES:
-- DO NOT render any text, letters, words, numbers, or typographic elements in the image.
-- The image must be a CLEAN visual base — all text (headline, body, CTA) will be added as editable overlays later.
-- Leave generous negative space in the "${slide.copyPlacement}" zone for text placement.
-- Maintain EXACT SAME lighting, color palette, style, and visual mood as all other slides in this carousel.
-- Focus 100% on visual storytelling: lighting, color, texture, composition, and mood.`;
+**TEXTO A SER INTEGRADO NA IMAGEM (REGRAS DE CONCISÃO):**
+-   **Headline**: "${slide.headline}" (Renderize esta frase com destaque).
+-   **Body (Opcional e Curto)**: Se houver, renderize de forma sutil e com no máximo 20 palavras: "${(slide as any).body || ''}".
+
+**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO:**
+1.  **Renderização Direta do Texto**: O texto DEVE ser renderizado diretamente na imagem, parecendo parte da cena.
+2.  **Respeito ao DNA Visual**: A tipografia e as cores devem seguir ESTRITAMENTE o DNA do projeto.
+3.  **Integração Orgânica**: O texto deve respeitar a iluminação, perspectiva e textura da cena.
+4.  **Hierarquia e Legibilidade**: Organize o texto de forma profissional, com hierarquia clara entre headline e body.
+5.  **Qualidade Fotográfica**: A imagem final deve ter qualidade de estúdio (cinematic lighting, high detail, 8k resolution).
+
+**REQUERIMENTOS TÉCNICOS:**
+- Aspect Ratio: ${ratio || "1:1"}
+- Mantenha EXATAMENTE a mesma iluminação, paleta de cores, estilo e mood visual de todos os outros slides.
+
+Gere a imagem final como uma peça única e coesa.`;
 
         try {
-          const imgResp = await fetch(AI_GATEWAY, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: imageModel,
-              messages: [{ role: "user", content: imagePrompt }],
-              modalities: ["image", "text"],
-            }),
-          });
+        let imageUrl: string | null = null;
+        let usedModel = imageModels[0];
 
-          let imageUrl: string | null = null;
-          if (imgResp.ok) {
+        for (const model of imageModels) {
+          try {
+            const imgResp = await fetch(AI_GATEWAY, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model,
+                messages: [{ role: "user", content: imagePrompt }],
+                modalities: ["image", "text"],
+              }),
+            });
+
+            if (!imgResp.ok) {
+              console.warn(`Slide ${slide.slideNumber}: ${model} failed (${imgResp.status}), trying fallback`);
+              continue;
+            }
+
             const imgData = await imgResp.json();
             imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+            usedModel = model;
+            if (imageUrl) break;
+          } catch (fetchErr: any) {
+            console.warn(`Slide ${slide.slideNumber}: ${model} error: ${fetchErr.message}`);
+            continue;
           }
+        }
 
           const { data: savedAsset } = await supabase
             .from("assets")
@@ -303,7 +325,7 @@ CRITICAL RULES:
               status: "draft",
               folder: "Exploração",
               profile_used: profile,
-              provider_used: imageModel,
+              provider_used: usedModel,
               destination: "feed",
               preset: ratio || "1:1",
               tags: ["carousel", `slide-${slide.slideNumber}`, `formula-${effectiveFormula}`],
@@ -353,13 +375,14 @@ CRITICAL RULES:
       }
 
       const generatedSlides = results.filter((r) => !!r.id).length;
-      const totalCreditCost = generatedSlides * (CREDIT_COSTS[imageModel] || 0);
+      const usedModelForLedger = imageModels[0];
+      const totalCreditCost = generatedSlides * (CREDIT_COSTS[usedModelForLedger] || 0);
 
       await supabase.from("cos_ledger").insert({
         project_id: projectId,
         user_id: user.id,
         operation_type: "CAROUSEL_GENERATE",
-        provider_used: imageModel,
+        provider_used: usedModelForLedger,
         credits_cost: totalCreditCost,
         estimated_usd: totalCreditCost * 0.01,
         metadata: {
