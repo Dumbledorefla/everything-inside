@@ -33,7 +33,6 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Auth user
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -41,20 +40,12 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const body = await req.text();
-
-    console.log("[RENDER-AI-FINALIZE] ===== INÍCIO DA REQUISIÇÃO =====");
-    console.log(`[RENDER-AI-FINALIZE] Timestamp: ${new Date().toISOString()}`);
-    console.log(`[RENDER-AI-FINALIZE] Método: ${req.method}`);
-    console.log(`[RENDER-AI-FINALIZE] Payload size: ${body.length} bytes`);
-
-    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl, projectId } = JSON.parse(body) as {
+    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl, projectId } = await req.json() as {
       imageUrl: string;
       layers: TextLayerMeta[];
       niche?: string;
@@ -65,21 +56,9 @@ serve(async (req) => {
       projectId?: string;
     };
 
-    console.log("[RENDER-AI-FINALIZE] Campos recebidos:", {
-      imageUrl: imageUrl ? "✓ presente" : "✗ faltando",
-      layers: layers?.length ?? 0,
-      niche: niche || "não especificado",
-      ratio: ratio || "não especificado",
-      lightAngle: lightAngle ?? "não especificado",
-      isDarkBackground,
-      maskDataUrl: maskDataUrl ? "✓ presente" : "✗ faltando",
-    });
-
     if (!imageUrl) throw new Error("imageUrl is required");
     if (!layers || layers.length === 0) throw new Error("At least one text layer is required");
     if (!projectId) throw new Error("projectId is required");
-
-    console.log("[RENDER-AI-FINALIZE] Validação de entrada: ✓ OK");
 
     // Build text placement description
     const textDescription = layers.map((l) => {
@@ -88,18 +67,9 @@ serve(async (req) => {
       return `- ${l.type.toUpperCase()}: "${l.content}" | Position: ${position} | Font: ${fontDesc} ${l.fontWeight >= 700 ? "Bold" : "Regular"} | Color: ${l.color} | Size: ${l.fontSize}pt | Align: ${l.textAlign}`;
     }).join("\n");
 
-    console.log("[RENDER-AI-FINALIZE] Camadas de texto processadas:", {
-      total: layers.length,
-      descricao: textDescription.slice(0, 200) + "...",
-    });
-
-    // Build scene context from physical data
     const angle = lightAngle ?? 315;
     const dark = isDarkBackground ?? false;
     const sceneContext = `A iluminação principal vem de um ângulo de ${angle}°. O fundo é predominantemente ${dark ? "escuro" : "claro"}.`;
-
-    console.log("[RENDER-AI-FINALIZE] Contexto de cena:", sceneContext);
-
     const nicheContext = niche ? ` O estilo visual é "${niche}".` : "";
     const ratioContext = ratio ? ` O aspect ratio da imagem é ${ratio}.` : "";
 
@@ -109,19 +79,13 @@ Contexto da Cena: ${sceneContext}${nicheContext}${ratioContext}
 
 REGRAS CRÍTICAS DE INTEGRAÇÃO:
 1.  **Fidelidade à Máscara**: ${maskDataUrl ? "Altere APENAS as áreas brancas da imagem de máscara. O resto da imagem deve permanecer 100% intacto." : "Preserve toda a composição original da imagem — NÃO altere o cenário, sujeitos ou objetos."}
-2.  **Integração Física**: O texto deve herdar a textura, o grão e a iluminação da superfície onde está sendo aplicado. Se estiver sobre um pergaminho, deve parecer tinta absorvida; se sobre metal, deve ter reflexos.
+2.  **Integração Física**: O texto deve herdar a textura, o grão e a iluminação da superfície onde está sendo aplicado.
 3.  **Sombras Realistas**: O texto deve projetar sombras sutis e realistas, opostas à direção da luz principal (${angle}°).
 4.  **Tipografia Exata**: Use as fontes e pesos exatos especificados para cada camada de texto.
 
 ELEMENTOS DE TEXTO PARA RENDERIZAR:
 ${textDescription}`;
 
-    console.log("[RENDER-AI-FINALIZE] Prompt construído:", {
-      tamanho: prompt.length,
-      primeiras_100_chars: prompt.slice(0, 100) + "...",
-    });
-
-    // Build content array: prompt + original image + optional mask
     const contentParts: any[] = [
       { type: "text", text: prompt },
       { type: "image_url", image_url: { url: imageUrl } },
@@ -130,11 +94,7 @@ ${textDescription}`;
       contentParts.push({ type: "image_url", image_url: { url: maskDataUrl } });
     }
 
-    console.log("[RENDER-AI-FINALIZE] Chamando AI Gateway...", {
-      model: "google/gemini-3-pro-image-preview",
-      imagens_no_payload: maskDataUrl ? 2 : 1,
-      timestamp: new Date().toISOString(),
-    });
+    console.log("[RENDER-AI-FINALIZE] Calling AI Gateway...");
 
     const response = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -144,70 +104,100 @@ ${textDescription}`;
       },
       body: JSON.stringify({
         model: "google/gemini-3-pro-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: contentParts,
-          },
-        ],
+        messages: [{ role: "user", content: contentParts }],
         modalities: ["image", "text"],
       }),
     });
 
-    console.log("[RENDER-AI-FINALIZE] Resposta da IA recebida:", {
-      status: response.status,
-      statusOk: response.ok,
-      timestamp: new Date().toISOString(),
-    });
-
     if (!response.ok) {
       const errText = await response.text();
-      console.error("[RENDER-AI-FINALIZE] Erro HTTP da IA Gateway:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: errText.slice(0, 500),
-      });
-
+      console.error("[RENDER-AI-FINALIZE] AI error:", response.status, errText.slice(0, 300));
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Credits exhausted. Please add credits to continue." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-
-      throw new Error(`AI gateway returned ${response.status}: ${errText}`);
+      throw new Error(`AI gateway returned ${response.status}`);
     }
 
     const data = await response.json();
-
-    console.log("[RENDER-AI-FINALIZE] Dados da resposta:", {
-      choices_length: data.choices?.length,
-      message_content_type: typeof data.choices?.[0]?.message?.content,
-      images_length: data.choices?.[0]?.message?.images?.length,
-      primeira_imagem_url: data.choices?.[0]?.message?.images?.[0]?.image_url?.url ? "✓ presente" : "✗ faltando",
-    });
-
-    const renderedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     const aiMessage = data.choices?.[0]?.message?.content || "";
 
-    if (!renderedImageUrl) {
+    // ── Extract image from response ─────────────────────────────
+    let imageBytes: Uint8Array | null = null;
+    let contentType = "image/png";
+
+    // Try images array (Gemini image output)
+    const imageEntry = data.choices?.[0]?.message?.images?.[0];
+    if (imageEntry?.image_url?.url) {
+      const imgUrl = imageEntry.image_url.url;
+      if (imgUrl.startsWith("data:")) {
+        // data:image/png;base64,xxxx
+        const match = imgUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (match) {
+          contentType = match[1];
+          imageBytes = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
+        }
+      } else {
+        // Direct URL — download it
+        const dl = await fetch(imgUrl);
+        if (dl.ok) {
+          contentType = dl.headers.get("content-type") || "image/png";
+          imageBytes = new Uint8Array(await dl.arrayBuffer());
+        }
+      }
+    }
+
+    // Fallback: inline_data in content parts
+    if (!imageBytes) {
+      const parts = data.choices?.[0]?.message?.content;
+      if (Array.isArray(parts)) {
+        for (const part of parts) {
+          if (part.inline_data?.data) {
+            contentType = part.inline_data.mime_type || "image/png";
+            imageBytes = Uint8Array.from(atob(part.inline_data.data), (c) => c.charCodeAt(0));
+            break;
+          }
+        }
+      }
+    }
+
+    if (!imageBytes) {
       console.error("[RENDER-AI-FINALIZE] No image in AI response:", JSON.stringify(data).slice(0, 500));
       throw new Error("AI did not return a rendered image. Try again.");
     }
 
-    console.log("[RENDER-AI-FINALIZE] ===== SUCESSO =====");
-    console.log("[RENDER-AI-FINALIZE] Imagem renderizada:", {
-      url_length: renderedImageUrl.length,
-      timestamp: new Date().toISOString(),
-    });
+    console.log("[RENDER-AI-FINALIZE] Image extracted, size:", imageBytes.length);
 
-    // ── Log to cos_ledger and activity_log ─────────────────
+    // ── Save to Supabase Storage ────────────────────────────────
+    const ext = contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "png";
+    const fileName = `renders/${projectId}/render_${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("assets")
+      .upload(fileName, imageBytes, {
+        contentType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("[RENDER-AI-FINALIZE] Storage upload error:", uploadError);
+      throw new Error(`Failed to save rendered image: ${uploadError.message}`);
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("assets")
+      .getPublicUrl(fileName);
+
+    const renderedImageUrl = publicUrlData.publicUrl;
+    console.log("[RENDER-AI-FINALIZE] Saved to storage:", renderedImageUrl);
+
+    // ── Log to cos_ledger and activity_log ──────────────────────
     await supabase.from("cos_ledger").insert({
       project_id: projectId,
       user_id: user.id,
@@ -216,31 +206,26 @@ ${textDescription}`;
       credits_cost: 10,
       estimated_usd: 0.10,
       metadata: { layers_count: layers.length, niche, ratio, has_mask: !!maskDataUrl },
-    }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] ledger error:", err));
+    }).catch((err: any) => console.error("[RENDER-AI-FINALIZE] ledger error:", err));
 
     await supabase.from("activity_log").insert({
       project_id: projectId,
       user_id: user.id,
       action: "Renderização IA finalizada",
       entity_type: "render",
-      metadata: { layers_count: layers.length, niche, ratio },
-    }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] activity error:", err));
+      metadata: { layers_count: layers.length, niche, ratio, storage_path: fileName },
+    }).catch((err: any) => console.error("[RENDER-AI-FINALIZE] activity error:", err));
 
     return new Response(
       JSON.stringify({
+        success: true,
+        message: aiMessage || "In-painting concluído com sucesso.",
         renderedImageUrl,
-        message: aiMessage,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
-    console.error("[RENDER-AI-FINALIZE] ===== ERRO =====");
-    console.error("[RENDER-AI-FINALIZE] Erro completo:", {
-      mensagem: e instanceof Error ? e.message : String(e),
-      stack: e instanceof Error ? e.stack : undefined,
-      tipo: e instanceof Error ? e.constructor.name : typeof e,
-      timestamp: new Date().toISOString(),
-    });
+    console.error("[RENDER-AI-FINALIZE] Error:", e instanceof Error ? e.message : e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
