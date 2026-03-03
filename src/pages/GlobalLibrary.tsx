@@ -23,19 +23,42 @@ const pickLatestVersion = (asset: any) => {
 export default function GlobalLibrary() {
   const [search, setSearch] = useState("");
 
-  const { data: assets = [], isLoading, isFetching, refetch } = useQuery({
+  const { data: assets = [], isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["global-library-assets"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: baseAssets, error: assetsError } = await supabase
         .from("assets")
-        .select("id, title, status, output, created_at, projects(name), asset_versions(created_at, headline, image_url)")
+        .select("id, title, status, output, created_at, projects(name)")
         .order("created_at", { ascending: false })
-        .limit(80);
+        .limit(24);
 
-      if (error) throw error;
-      return data || [];
+      if (assetsError) throw assetsError;
+
+      const assetIds = (baseAssets || []).map((asset) => asset.id);
+      if (assetIds.length === 0) return [];
+
+      const { data: versions, error: versionsError } = await supabase
+        .from("asset_versions")
+        .select("asset_id, created_at, headline, image_url")
+        .in("asset_id", assetIds);
+
+      if (versionsError) throw versionsError;
+
+      const latestByAsset = new Map<string, any>();
+      for (const version of versions || []) {
+        const current = latestByAsset.get(version.asset_id);
+        if (!current || new Date(version.created_at).getTime() > new Date(current.created_at).getTime()) {
+          latestByAsset.set(version.asset_id, version);
+        }
+      }
+
+      return (baseAssets || []).map((asset) => ({
+        ...asset,
+        asset_versions: latestByAsset.get(asset.id) ? [latestByAsset.get(asset.id)] : [],
+      }));
     },
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 
   const filtered = useMemo(() => {
@@ -82,6 +105,18 @@ export default function GlobalLibrary() {
         <div className="rounded-lg border border-border bg-card p-12 text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Carregando ativos recentes...</p>
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-border bg-card p-12 text-center space-y-3">
+          <Library className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Falha ao carregar a biblioteca: {(error as Error)?.message || "erro desconhecido"}</p>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-secondary/40 px-3 py-1.5 text-xs font-medium hover:bg-secondary/70 transition-colors"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            Tentar novamente
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-12 text-center">
