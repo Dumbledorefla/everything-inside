@@ -584,6 +584,7 @@ export default function Production() {
                       cta={selectedResult.cta}
                       ratio={spec.ratio}
                       niche={projectDna?.niche}
+                      projectId={activeProjectId}
                       logoUrl={projectDna?.logoUrl}
                       brandColors={projectDna?.brandColors}
                       onAiRendered={(renderedUrl) => {

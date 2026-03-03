@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +30,17 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Auth user
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await supabaseUser.auth.getUser();
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
     const body = await req.text();
 
     console.log("[RENDER-AI-FINALIZE] ===== INÍCIO DA REQUISIÇÃO =====");
@@ -36,7 +48,7 @@ serve(async (req) => {
     console.log(`[RENDER-AI-FINALIZE] Método: ${req.method}`);
     console.log(`[RENDER-AI-FINALIZE] Payload size: ${body.length} bytes`);
 
-    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl } = JSON.parse(body) as {
+    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl, projectId } = JSON.parse(body) as {
       imageUrl: string;
       layers: TextLayerMeta[];
       niche?: string;
@@ -44,6 +56,7 @@ serve(async (req) => {
       lightAngle?: number;
       isDarkBackground?: boolean;
       maskDataUrl?: string;
+      projectId?: string;
     };
 
     console.log("[RENDER-AI-FINALIZE] Campos recebidos:", {
@@ -186,6 +199,27 @@ ${textDescription}`;
       url_length: renderedImageUrl.length,
       timestamp: new Date().toISOString(),
     });
+
+    // ── Log to cos_ledger and activity_log ─────────────────
+    if (user && projectId) {
+      await supabase.from("cos_ledger").insert({
+        project_id: projectId,
+        user_id: user.id,
+        operation_type: "RENDER_FINALIZE",
+        provider_used: "google/gemini-3-pro-image-preview",
+        credits_cost: 10,
+        estimated_usd: 0.10,
+        metadata: { layers_count: layers.length, niche, ratio, has_mask: !!maskDataUrl },
+      }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] ledger error:", err));
+
+      await supabase.from("activity_log").insert({
+        project_id: projectId,
+        user_id: user.id,
+        action: "Renderização IA finalizada",
+        entity_type: "render",
+        metadata: { layers_count: layers.length, niche, ratio },
+      }).then(() => {}).catch((err: any) => console.error("[RENDER-AI-FINALIZE] activity error:", err));
+    }
 
     return new Response(
       JSON.stringify({
