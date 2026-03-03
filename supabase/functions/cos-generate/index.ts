@@ -624,10 +624,10 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 **DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
 
-**TEXTO A SER INTEGRADO NA IMAGEM:**
-- Headline: "${headlineText}"
-- Body: "${bodyText}"
-- CTA: "${ctaText}"
+**TEXTO A SER INTEGRADO NA IMAGEM (REGRAS DE CONCISÃO):**
+-   **Headline**: "${headlineText}" (Renderize esta frase com destaque).
+-   **CTA (Opcional e Curto)**: Se houver um CTA, renderize-o de forma discreta e com no máximo 10 palavras: "${ctaText}".
+-   **NÃO RENDERIZE O BODY**: O corpo do texto (\`body\`) NÃO deve ser incluído na imagem. Ele serve apenas como contexto para a IA entender o tema.
 
 **INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO:**
 1.  **Renderização Direta do Texto**: O texto DEVE ser renderizado diretamente na imagem. Ele precisa parecer parte da cena, não um adesivo.
