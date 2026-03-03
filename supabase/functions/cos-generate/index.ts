@@ -283,6 +283,38 @@ serve(async (req) => {
           });
         }
 
+        // ── 7b. Log to cos_ledger for monitoring ──────────────
+        const estimatedUsd = creditCost * 0.01;
+        await supabase.from("cos_ledger").insert({
+          project_id: projectId,
+          user_id: user.id,
+          operation_type: output === "image" ? "IMAGE_GEN" : output === "text" ? "TEXT_GEN" : "IMAGE_GEN",
+          provider_used: variation.providerUsed || "cos-system",
+          credits_cost: creditCost,
+          estimated_usd: estimatedUsd,
+          asset_id: savedAsset.id,
+          metadata: {
+            piece_type: pieceType,
+            profile,
+            ratio,
+            mode,
+            operation_mode: operationMode || null,
+            text_model: variation.textModel,
+            image_model: variation.imageModel,
+            fallback_events: variation.fallbackEvents,
+          },
+        }).then(() => {}).catch((err: any) => console.error("cos_ledger insert error:", err));
+
+        // ── 7c. Log to activity_log ───────────────────────────
+        await supabase.from("activity_log").insert({
+          project_id: projectId,
+          user_id: user.id,
+          action: `Geração: ${pieceType} (${profile})`,
+          entity_type: "asset",
+          entity_id: savedAsset.id,
+          metadata: { output, provider: variation.providerUsed, credit_cost: creditCost },
+        }).then(() => {}).catch((err: any) => console.error("activity_log insert error:", err));
+
         results.push({
           id: savedAsset.id,
           headline: variation.headline,

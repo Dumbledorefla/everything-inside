@@ -9,6 +9,7 @@ import { resolveNicheStyle, preloadNicheFonts, type NicheStyle } from "@/lib/nic
 import { cleanFontFamily } from "@/lib/canvasFont";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export interface LayerEditorProps {
   cta?: string;
   ratio: string;
   niche?: string | null;
+  projectId?: string | null;
   logoUrl?: string | null;
   brandColors?: { primary?: string; secondary?: string } | null;
   copyPlacement?: string;
@@ -249,7 +251,7 @@ function getLayerTextStyle(layer: TextLayer, lightAngle = 135, _isDarkBg = true)
 
 export default function LayerEditor({
   imageUrl, headline, body, cta, ratio = "1:1",
-  niche, logoUrl, brandColors, copyPlacement,
+  niche, projectId, logoUrl, brandColors, copyPlacement,
   onLayersChange, onApplyToAll, onAiRendered, showApplyToAll, textBakedInImage, className,
 }: LayerEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -433,13 +435,16 @@ export default function LayerEditor({
       // Generate in-paint mask from visible layers
       const maskDataUrl = generateInpaintMask(dims.w, dims.h, visibleLayers);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-ai-finalize`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             imageUrl,
@@ -449,6 +454,7 @@ export default function LayerEditor({
             lightAngle,
             isDarkBackground,
             maskDataUrl: maskDataUrl || undefined,
+            projectId: projectId || undefined,
           }),
         }
       );
