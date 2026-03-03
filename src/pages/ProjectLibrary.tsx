@@ -24,6 +24,14 @@ const statusLabels: Record<string, string> = {
   draft: "Rascunho", review: "Revisão", approved: "Aprovado", official: "Oficial", archived: "Arquivado", error: "Erro",
 };
 
+const pickLatestVersion = (asset: any) => {
+  const versions = asset.asset_versions || [];
+  if (versions.length <= 1) return versions[0] || null;
+  return [...versions].sort(
+    (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  )[0] || null;
+};
+
 export default function ProjectLibrary() {
   const { projectId } = useParams();
   const [view, setView] = useState<"grid" | "masonry" | "list">("masonry");
@@ -39,7 +47,7 @@ export default function ProjectLibrary() {
     queryFn: async () => {
       let q = supabase
         .from("assets")
-        .select("*, asset_versions(headline, body, cta, image_url, generation_metadata)")
+        .select("*, asset_versions(created_at, headline, body, cta, image_url, generation_metadata)")
         .eq("project_id", projectId!)
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
@@ -62,9 +70,10 @@ export default function ProjectLibrary() {
   });
 
   const filtered = assets?.filter((a) => {
+    const version = pickLatestVersion(a);
     if (!search) return true;
     const s = search.toLowerCase();
-    return (a.title || "").toLowerCase().includes(s) || (a.asset_versions?.[0]?.headline || "").toLowerCase().includes(s);
+    return (a.title || "").toLowerCase().includes(s) || (version?.headline || "").toLowerCase().includes(s);
   }) || [];
 
   const statusFilterOptions = [
@@ -171,7 +180,7 @@ export default function ProjectLibrary() {
         <div className="masonry-grid">
           <AnimatePresence>
             {filtered.map((asset, i) => {
-              const version = asset.asset_versions?.[0];
+              const version = pickLatestVersion(asset);
               const hasImage = !!version?.image_url;
               const isApproved = approvedId === asset.id;
 
@@ -278,7 +287,7 @@ export default function ProjectLibrary() {
           </div>
           <div className="divide-y divide-border">
             {filtered.map((asset, i) => {
-              const version = asset.asset_versions?.[0];
+              const version = pickLatestVersion(asset);
               return (
                 <motion.div
                   key={asset.id}
