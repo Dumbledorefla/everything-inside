@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.idea-generator]
 verify_jwt = false
+
+[functions.page-clone]
+verify_jwt = false
