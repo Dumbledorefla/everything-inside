@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.reference-url-analyze]
 verify_jwt = false
+
+[functions.idea-generator]
+verify_jwt = false
