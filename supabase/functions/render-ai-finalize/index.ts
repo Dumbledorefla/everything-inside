@@ -29,7 +29,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl } = await req.json() as {
+    const body = await req.text();
+
+    console.log("[RENDER-AI-FINALIZE] ===== INÍCIO DA REQUISIÇÃO =====");
+    console.log(`[RENDER-AI-FINALIZE] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[RENDER-AI-FINALIZE] Método: ${req.method}`);
+    console.log(`[RENDER-AI-FINALIZE] Payload size: ${body.length} bytes`);
+
+    const { imageUrl, layers, niche, ratio, lightAngle, isDarkBackground, maskDataUrl } = JSON.parse(body) as {
       imageUrl: string;
       layers: TextLayerMeta[];
       niche?: string;
@@ -39,8 +46,20 @@ serve(async (req) => {
       maskDataUrl?: string;
     };
 
+    console.log("[RENDER-AI-FINALIZE] Campos recebidos:", {
+      imageUrl: imageUrl ? "✓ presente" : "✗ faltando",
+      layers: layers?.length ?? 0,
+      niche: niche || "não especificado",
+      ratio: ratio || "não especificado",
+      lightAngle: lightAngle ?? "não especificado",
+      isDarkBackground,
+      maskDataUrl: maskDataUrl ? "✓ presente" : "✗ faltando",
+    });
+
     if (!imageUrl) throw new Error("imageUrl is required");
     if (!layers || layers.length === 0) throw new Error("At least one text layer is required");
+
+    console.log("[RENDER-AI-FINALIZE] Validação de entrada: ✓ OK");
 
     // Build text placement description
     const textDescription = layers.map((l) => {
@@ -49,10 +68,17 @@ serve(async (req) => {
       return `- ${l.type.toUpperCase()}: "${l.content}" | Position: ${position} | Font: ${fontDesc} ${l.fontWeight >= 700 ? "Bold" : "Regular"} | Color: ${l.color} | Size: ${l.fontSize}pt | Align: ${l.textAlign}`;
     }).join("\n");
 
+    console.log("[RENDER-AI-FINALIZE] Camadas de texto processadas:", {
+      total: layers.length,
+      descricao: textDescription.slice(0, 200) + "...",
+    });
+
     // Build scene context from physical data
     const angle = lightAngle ?? 315;
     const dark = isDarkBackground ?? false;
     const sceneContext = `A iluminação principal vem de um ângulo de ${angle}°. O fundo é predominantemente ${dark ? "escuro" : "claro"}.`;
+
+    console.log("[RENDER-AI-FINALIZE] Contexto de cena:", sceneContext);
 
     const nicheContext = niche ? ` O estilo visual é "${niche}".` : "";
     const ratioContext = ratio ? ` O aspect ratio da imagem é ${ratio}.` : "";
@@ -70,7 +96,10 @@ REGRAS CRÍTICAS DE INTEGRAÇÃO:
 ELEMENTOS DE TEXTO PARA RENDERIZAR:
 ${textDescription}`;
 
-    console.log("Sending render request to AI gateway with model google/gemini-3-pro-image-preview...");
+    console.log("[RENDER-AI-FINALIZE] Prompt construído:", {
+      tamanho: prompt.length,
+      primeiras_100_chars: prompt.slice(0, 100) + "...",
+    });
 
     // Build content array: prompt + original image + optional mask
     const contentParts: any[] = [
@@ -80,6 +109,12 @@ ${textDescription}`;
     if (maskDataUrl) {
       contentParts.push({ type: "image_url", image_url: { url: maskDataUrl } });
     }
+
+    console.log("[RENDER-AI-FINALIZE] Chamando AI Gateway...", {
+      model: "google/gemini-3-pro-image-preview",
+      imagens_no_payload: maskDataUrl ? 2 : 1,
+      timestamp: new Date().toISOString(),
+    });
 
     const response = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -99,9 +134,19 @@ ${textDescription}`;
       }),
     });
 
+    console.log("[RENDER-AI-FINALIZE] Resposta da IA recebida:", {
+      status: response.status,
+      statusOk: response.ok,
+      timestamp: new Date().toISOString(),
+    });
+
     if (!response.ok) {
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
+      console.error("[RENDER-AI-FINALIZE] Erro HTTP da IA Gateway:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errText.slice(0, 500),
+      });
 
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
@@ -120,15 +165,27 @@ ${textDescription}`;
     }
 
     const data = await response.json();
+
+    console.log("[RENDER-AI-FINALIZE] Dados da resposta:", {
+      choices_length: data.choices?.length,
+      message_content_type: typeof data.choices?.[0]?.message?.content,
+      images_length: data.choices?.[0]?.message?.images?.length,
+      primeira_imagem_url: data.choices?.[0]?.message?.images?.[0]?.image_url?.url ? "✓ presente" : "✗ faltando",
+    });
+
     const renderedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     const aiMessage = data.choices?.[0]?.message?.content || "";
 
     if (!renderedImageUrl) {
-      console.error("No image in AI response:", JSON.stringify(data).slice(0, 500));
+      console.error("[RENDER-AI-FINALIZE] No image in AI response:", JSON.stringify(data).slice(0, 500));
       throw new Error("AI did not return a rendered image. Try again.");
     }
 
-    console.log("AI render successful, image received");
+    console.log("[RENDER-AI-FINALIZE] ===== SUCESSO =====");
+    console.log("[RENDER-AI-FINALIZE] Imagem renderizada:", {
+      url_length: renderedImageUrl.length,
+      timestamp: new Date().toISOString(),
+    });
 
     return new Response(
       JSON.stringify({
@@ -138,7 +195,13 @@ ${textDescription}`;
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
-    console.error("render-ai-finalize error:", e);
+    console.error("[RENDER-AI-FINALIZE] ===== ERRO =====");
+    console.error("[RENDER-AI-FINALIZE] Erro completo:", {
+      mensagem: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+      tipo: e instanceof Error ? e.constructor.name : typeof e,
+      timestamp: new Date().toISOString(),
+    });
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
