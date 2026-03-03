@@ -98,7 +98,7 @@ function formatTimestamp(ts: string) {
 }
 
 export default function Logs() {
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [tab, setTab] = useState("operations");
@@ -107,12 +107,20 @@ export default function Logs() {
   const { data: operations = [], isLoading: opsLoading, refetch: refetchOps } = useQuery({
     queryKey: ["logs-operations", user?.id],
     queryFn: async () => {
+      // Ensure fresh session before querying
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        await refreshSession();
+      }
       const { data, error } = await supabase
         .from("cos_ledger")
         .select("*, projects(name)")
         .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+        .limit(200);
+      if (error) {
+        console.error("[LOGS] cos_ledger query error:", error);
+        throw error;
+      }
       return data || [];
     },
     enabled: !!user,
@@ -123,12 +131,19 @@ export default function Logs() {
   const { data: activities = [], isLoading: actLoading, refetch: refetchAct } = useQuery({
     queryKey: ["logs-activity", user?.id],
     queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        await refreshSession();
+      }
       const { data, error } = await supabase
         .from("activity_log")
         .select("*, projects(name)")
         .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
+        .limit(200);
+      if (error) {
+        console.error("[LOGS] activity_log query error:", error);
+        throw error;
+      }
       return data || [];
     },
     enabled: !!user,
@@ -216,7 +231,12 @@ export default function Logs() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { refetchOps(); refetchAct(); }}
+            onClick={async () => {
+              await refreshSession();
+              refetchOps();
+              refetchAct();
+              toast.success("Logs atualizados");
+            }}
             className="gap-2"
           >
             <RefreshCw className="h-3.5 w-3.5" />
