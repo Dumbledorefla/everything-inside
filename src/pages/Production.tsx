@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
-  Check, RotateCcw, ChevronRight, Lightbulb,
+  Check, RotateCcw, ChevronRight, Lightbulb, Film,
 } from "lucide-react";
+import { AnimateVideoModal } from "@/components/creative/AnimateVideoModal";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -82,6 +84,7 @@ export default function Production() {
   const [refining, setRefining] = useState(false);
   const [isEditorMode, setIsEditorMode] = useState(false);
   const [showIdeaGenerator, setShowIdeaGenerator] = useState(false);
+  const [showAnimateModal, setShowAnimateModal] = useState(false);
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
@@ -596,12 +599,20 @@ export default function Production() {
                       <Layers className="inline h-3 w-3 mr-1" />{isEditorMode ? "Smart Canvas" : "Resultado Final"}
                     </p>
                     {selectedResult.imageUrl && (
-                      <button
-                        onClick={() => setIsEditorMode(!isEditorMode)}
-                        className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-border/20 bg-card/30 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
-                      >
-                        {isEditorMode ? "← Ver Resultado" : "Editar Camadas"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setShowAnimateModal(true)}
+                          className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all flex items-center gap-1.5"
+                        >
+                          <Film className="h-3 w-3" /> Animar
+                        </button>
+                        <button
+                          onClick={() => setIsEditorMode(!isEditorMode)}
+                          className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-border/20 bg-card/30 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
+                        >
+                          {isEditorMode ? "← Ver Resultado" : "Editar Camadas"}
+                        </button>
+                      </div>
                     )}
                   </div>
                   {isEditorMode ? (
@@ -691,6 +702,19 @@ export default function Production() {
             profileLabels={profileLabels}
           />
         </div>
+      )}
+
+      {/* Video Animate Modal */}
+      {selectedResult?.imageUrl && (
+        <Dialog open={showAnimateModal} onOpenChange={setShowAnimateModal}>
+          <DialogContent className="max-w-md p-0">
+            <AnimateVideoModal
+              assetId={selectedResult.id}
+              imageUrl={selectedResult.imageUrl}
+              onClose={() => setShowAnimateModal(false)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
