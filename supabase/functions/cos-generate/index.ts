@@ -586,24 +586,30 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       const bodyText = body || "";
       const ctaText = cta || "";
       
-      const textOverlay = [
-        headlineText && `HEADLINE: "${headlineText}"`,
-        bodyText && `BODY: "${bodyText}"`,
-        ctaText && `CTA: "${ctaText}"`,
-      ].filter(Boolean).join("\n");
 
-      const intensityStyle = intensity === "Agressivo" ? "bold colors, high contrast" : intensity === "Suave" ? "soft, elegant tones" : "balanced, professional";
+      const imagePrompt = `Você é um Diretor de Arte e Designer Gráfico de elite. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada.
 
-      const imagePrompt = `Create a professional ${pieceType} marketing graphic, ${ratio} aspect ratio, ${intensityStyle}.
+**DNA DO PROJETO (Guia Criativo Obrigatório):**
+${dnaContext}
 
-${textOverlay ? `Render ONLY this exact text on the image (no other text):
-${textOverlay}
+**TEXTO A SER INTEGRADO NA IMAGEM:**
+- Headline: "${headlineText}"
+- Body: "${bodyText}"
+- CTA: "${ctaText}"
 
-Text must be legible, well-positioned with clear hierarchy. Headline largest, CTA as a button or badge.` : "Do NOT include any text or letters in the image."}
+**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO:**
+1.  **Renderização Direta do Texto**: O texto DEVE ser renderizado diretamente na imagem. Ele precisa parecer parte da cena, não um adesivo.
+2.  **Respeito ao DNA Visual**: A tipografia (família, peso, estilo) e as cores devem seguir ESTRITAMENTE o que está definido no DNA do projeto. Para o nicho de Tarot, use fontes serifadas e elegantes; para Tech, fontes limpas e modernas.
+3.  **Integração Orgânica**: O texto deve respeitar a iluminação, perspectiva, textura e profundidade de campo da cena. Se a imagem tiver uma parede de tijolos, o texto deve se deformar sutilmente sobre ela. Se a luz vier da esquerda, o texto deve projetar uma sombra suave para a direita.
+4.  **Hierarquia e Legibilidade**: Organize o texto de forma profissional. A headline deve ter mais impacto, o corpo deve ser legível e o CTA deve ser claro. Use o espaço negativo da composição de forma inteligente.
+5.  **Qualidade Fotográfica**: A imagem final deve ter qualidade de estúdio (cinematic lighting, high detail, 8k resolution), seguindo o qualityImageFinishing.
 
-Style: cinematic lighting, studio quality, 8k.
-${dnaContext ? `Brand context: ${dnaContext.slice(0, 500)}` : ""}
-${qualityImageFinishing}`;
+**REQUERIMENTOS TÉCNICOS:**
+- Aspect Ratio: ${ratio}
+- Estilo de Intensidade: ${intensity === "Agressivo" ? "Cores ousadas, alto contraste." : intensity === "Suave" ? "Tons suaves, calmos e elegantes." : "Visual equilibrado e profissional."}
+${qualityImageFinishing}
+
+Gere a imagem final como uma peça única e coesa.`;
 
       try {
         console.log(`Tentando gerar imagem com modelo: ${model}`);
