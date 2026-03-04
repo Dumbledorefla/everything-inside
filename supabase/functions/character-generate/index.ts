@@ -54,13 +54,21 @@ Visual Style: ${(dna.visual?.colorPalette || []).join(", ") || "not defined"}.
 Strategy: ${strategy.positioning || "not defined"}.`;
 }
 
-function buildCharacterPrompt(prompt: string, attributes: any, dnaContext: string, variationIndex: number, total: number): string {
+function buildAttributesPrompt(attributes: any): string {
   const attrParts: string[] = [];
   if (attributes?.ethnicity) attrParts.push(`Ethnicity: ${attributes.ethnicity}`);
   if (attributes?.apparentAge) attrParts.push(`Apparent age: ${attributes.apparentAge}`);
   if (attributes?.hairColor) attrParts.push(`Hair color: ${attributes.hairColor}`);
   if (attributes?.hairStyle) attrParts.push(`Hair style: ${attributes.hairStyle}`);
   if (attributes?.clothingStyle) attrParts.push(`Clothing style: ${attributes.clothingStyle}`);
+  if (attributes?.bodyType) attrParts.push(`Body type: ${attributes.bodyType}`);
+  if (attributes?.eyeColor) attrParts.push(`Eye color: ${attributes.eyeColor}`);
+  if (attributes?.facialFeatures?.length) attrParts.push(`Facial features: ${attributes.facialFeatures.join(", ")}`);
+  return attrParts.length > 0 ? `PHYSICAL ATTRIBUTES:\n${attrParts.join("\n")}` : "";
+}
+
+function buildCharacterPrompt(prompt: string, attributes: any, dnaContext: string, variationIndex: number, total: number): string {
+  const attrsBlock = buildAttributesPrompt(attributes);
 
   return `Generate a photorealistic portrait photo for a virtual influencer/brand ambassador.
 
@@ -70,12 +78,13 @@ ${dnaContext}
 CHARACTER DESCRIPTION:
 ${prompt}
 
-${attrParts.length > 0 ? `PHYSICAL ATTRIBUTES:\n${attrParts.join("\n")}` : ""}
+${attrsBlock}
 
 REQUIREMENTS:
-- High quality, photorealistic, professional lighting
-- Suitable for social media marketing
-- The person should look natural and approachable
+- High quality, photorealistic, cinematic lighting with depth
+- Captured with an 85mm f/1.4 lens for soft bokeh background
+- Suitable for social media marketing — avoid stock photo look
+- The person should look natural, approachable and authentic
 - The character should visually align with the brand identity described above
 - Variation ${variationIndex + 1} of ${total} — make each variation slightly different in expression, angle, or styling
 - DO NOT render any text in the image`;
@@ -171,21 +180,27 @@ serve(async (req) => {
 
     // ═══ MODE: generate_prompt_suggestion ═══
     if (mode === "generate_prompt_suggestion") {
-      const suggestionPrompt = `You are a creative director for a digital marketing brand.
+      const suggestionPrompt = `You are an AI Photography Director. Your mission is to create an extremely detailed image prompt to generate a character (influencer or customer) that is the face of a project.
 
-BRAND CONTEXT:
+PROJECT DNA:
 ${dnaContext}
 
-Based on this brand DNA (niche, audience, tone of voice, visual style), create a detailed description for a virtual influencer/brand ambassador that would be the perfect face of this brand.
+INSTRUCTIONS:
+Create a detailed character description divided into 5 clear sections. Be specific and creative to generate a unique, professional image — avoid the "stock photo" look.
 
-Describe in detail:
-1. Physical appearance (age, ethnicity, facial features)
-2. Hair style and color
-3. Clothing style and typical outfit
-4. Expression and body language
-5. A typical scene/background setting
+FORMAT YOUR RESPONSE AS FOLLOWS:
 
-Write the description in a single paragraph, in the same language the brand name suggests (Portuguese if Brazilian brand, English otherwise). Be specific and vivid.`;
+**1. Main Subject:** [Describe the main character concisely. E.g.: Photorealistic portrait of a fitness influencer.]
+
+**2. Detailed Character Description:** [Be very specific about appearance, including ethnicity, age, hair, eye color, body type, and unique facial features. E.g.: 28-year-old African-American woman with short blonde afro, brown eyes, athletic body, light freckles on nose.]
+
+**3. Wardrobe & Style:** [Describe clothing and accessories in detail, aligned with the project DNA. E.g.: Wearing a Nike sport top and yoga leggings, smartwatch on wrist.]
+
+**4. Scene & Composition:** [Where is the photo taken? Background? Framing? E.g.: In a modern, well-lit gym during sunrise. Medium close-up, character looking directly at camera with confident expression.]
+
+**5. Lighting & Photographic Style:** [Light source? Photo style? E.g.: Soft natural light from large side window. Cinematic style, 85mm f/1.4 lens with soft bokeh. Vibrant colors, high contrast.]
+
+Write the description in the same language the brand name suggests (Portuguese if Brazilian brand, English otherwise). Be vivid and specific.`;
 
       const aiResponse = await fetch(AI_GATEWAY, {
         method: "POST",
@@ -232,12 +247,7 @@ Write the description in a single paragraph, in the same language the brand name
             imagePrompt = buildCharacterPrompt(prompt, character_attributes, dnaContext, i, num_variations);
           } else {
             // Evaluation mode: build intelligent prompt with DNA + attributes
-            const attrParts: string[] = [];
-            if (character_attributes?.ethnicity) attrParts.push(`Ethnicity: ${character_attributes.ethnicity}`);
-            if (character_attributes?.apparentAge) attrParts.push(`Apparent age: ${character_attributes.apparentAge}`);
-            if (character_attributes?.hairColor) attrParts.push(`Hair color: ${character_attributes.hairColor}`);
-            if (character_attributes?.hairStyle) attrParts.push(`Hair style: ${character_attributes.hairStyle}`);
-            if (character_attributes?.clothingStyle) attrParts.push(`Clothing style: ${character_attributes.clothingStyle}`);
+            const attrsBlock = buildAttributesPrompt(character_attributes);
 
             imagePrompt = `Generate a photorealistic portrait photo of a SATISFIED CUSTOMER for use in a testimonial/review.
 
@@ -247,12 +257,13 @@ ${dnaContext}
 CHARACTER DESCRIPTION:
 ${prompt}
 
-${attrParts.length > 0 ? `PHYSICAL ATTRIBUTES:\n${attrParts.join("\n")}` : ""}
+${attrsBlock}
 
 REQUIREMENTS:
-- High quality, photorealistic, natural lighting
+- High quality, photorealistic, soft natural lighting with warmth
+- Captured with an 85mm f/1.4 lens for cinematic depth
 - The person should look authentic and genuine, NOT like a stock photo
-- Expression should convey genuine satisfaction and trust
+- Expression should convey genuine satisfaction, trust and warmth
 - The character should look like a real customer of the brand described above
 - Variation ${i + 1} of ${num_variations} — each variation should be a DIFFERENT person to create a diverse set of "customers"
 - DO NOT render any text in the image`;
