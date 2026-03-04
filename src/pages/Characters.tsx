@@ -18,28 +18,52 @@ const AGE_OPTIONS = ["18-24 anos", "25-30 anos", "30-40 anos", "40-50 anos", "50
 const HAIR_COLOR_OPTIONS = ["Preto", "Castanho", "Loiro", "Ruivo", "Grisalho", "Colorido"];
 const HAIR_STYLE_OPTIONS = ["Curto", "Médio", "Longo", "Cacheado", "Liso", "Ondulado", "Careca"];
 const CLOTHING_OPTIONS = ["Moderno", "Casual", "Corporativo", "Fitness", "Místico", "Elegante", "Streetwear"];
+const BODY_TYPE_OPTIONS = ["Atlético", "Médio", "Curvilíneo", "Robusto", "Magro"];
+const EYE_COLOR_OPTIONS = ["Castanho", "Azul", "Verde", "Mel", "Cinza"];
+const FACIAL_FEATURES_OPTIONS = ["Barba", "Bigode", "Sardas", "Óculos", "Tatuagem Facial", "Piercing"];
+
+type CharacterAttributes = {
+  ethnicity: string;
+  apparentAge: string;
+  hairColor: string;
+  hairStyle: string;
+  clothingStyle: string;
+  bodyType: string;
+  eyeColor: string;
+  facialFeatures: string[];
+};
+
+const emptyAttributes = (): CharacterAttributes => ({
+  ethnicity: "", apparentAge: "", hairColor: "", hairStyle: "", clothingStyle: "", bodyType: "", eyeColor: "", facialFeatures: [],
+});
 
 // ── Reusable Attribute Builder ──
-function AttributeBuilder({ attributes, onChange }: {
-  attributes: { ethnicity: string; apparentAge: string; hairColor: string; hairStyle: string; clothingStyle: string };
-  onChange: (a: typeof attributes) => void;
-}) {
-  const set = (key: string, value: string) => onChange({ ...attributes, [key]: value });
-  const fields = [
+function AttributeBuilder({ attributes, onChange }: { attributes: CharacterAttributes; onChange: (a: CharacterAttributes) => void }) {
+  const set = (key: string, value: any) => onChange({ ...attributes, [key]: value });
+  const selectFields = [
     { key: "ethnicity", label: "Etnia", options: ETHNICITY_OPTIONS },
     { key: "apparentAge", label: "Idade Aparente", options: AGE_OPTIONS },
     { key: "hairColor", label: "Cor do Cabelo", options: HAIR_COLOR_OPTIONS },
     { key: "hairStyle", label: "Estilo do Cabelo", options: HAIR_STYLE_OPTIONS },
     { key: "clothingStyle", label: "Estilo de Roupa", options: CLOTHING_OPTIONS },
+    { key: "bodyType", label: "Tipo de Corpo", options: BODY_TYPE_OPTIONS },
+    { key: "eyeColor", label: "Cor dos Olhos", options: EYE_COLOR_OPTIONS },
   ];
+
+  const toggleFeature = (feature: string) => {
+    const current = attributes.facialFeatures;
+    const next = current.includes(feature) ? current.filter((f) => f !== feature) : [...current, feature];
+    set("facialFeatures", next);
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
         <User className="h-3 w-3 text-muted-foreground" />
         Construtor de Atributos
       </h4>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-        {fields.map((f) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {selectFields.map((f) => (
           <div key={f.key} className="space-y-1">
             <Label className="text-[10px] text-muted-foreground">{f.label}</Label>
             <Select value={(attributes as any)[f.key]} onValueChange={(v) => set(f.key, v)}>
@@ -49,16 +73,35 @@ function AttributeBuilder({ attributes, onChange }: {
           </div>
         ))}
       </div>
+      {/* Facial features checkboxes */}
+      <div className="space-y-2">
+        <Label className="text-[10px] text-muted-foreground">Características Faciais</Label>
+        <div className="flex flex-wrap gap-2">
+          {FACIAL_FEATURES_OPTIONS.map((feature) => (
+            <label key={feature} className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer border transition-all",
+              attributes.facialFeatures.includes(feature)
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border bg-secondary text-muted-foreground hover:border-primary/20"
+            )}>
+              <input
+                type="checkbox"
+                checked={attributes.facialFeatures.includes(feature)}
+                onChange={() => toggleFeature(feature)}
+                className="sr-only"
+              />
+              {feature}
+            </label>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Character Card with hover overlay ──
 function CharacterCard({ asset, onAction, actionLabel, actionIcon: ActionIcon }: {
-  asset: any;
-  onAction?: () => void;
-  actionLabel?: string;
-  actionIcon?: any;
+  asset: any; onAction?: () => void; actionLabel?: string; actionIcon?: any;
 }) {
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -68,9 +111,7 @@ function CharacterCard({ asset, onAction, actionLabel, actionIcon: ActionIcon }:
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `${asset.title || "character"}.png`;
-      a.click();
+      a.href = url; a.download = `${asset.title || "character"}.png`; a.click();
       URL.revokeObjectURL(url);
     } catch { toast.error("Erro ao baixar"); }
   };
@@ -82,18 +123,14 @@ function CharacterCard({ asset, onAction, actionLabel, actionIcon: ActionIcon }:
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
       className="group relative rounded-2xl overflow-hidden border border-border hover:border-primary/40 transition-all cursor-pointer"
-      onClick={onAction}
-    >
+      onClick={onAction}>
       <img src={asset.final_render_url} alt={asset.title} className="w-full aspect-[3/4] object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3 gap-2">
         {actionLabel && (
           <div className="flex items-center gap-1.5 text-white text-xs font-medium">
-            {ActionIcon && <ActionIcon className="h-3.5 w-3.5" />}
-            {actionLabel}
+            {ActionIcon && <ActionIcon className="h-3.5 w-3.5" />} {actionLabel}
           </div>
         )}
         <div className="flex gap-1.5">
@@ -125,6 +162,28 @@ function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string;
   );
 }
 
+// ── Description + AI Suggestion block ──
+function DescriptionBlock({ prompt, setPrompt, suggesting, onSuggest, placeholder }: {
+  prompt: string; setPrompt: (v: string) => void; suggesting: boolean; onSuggest: () => void; placeholder: string;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">Descreva o Personagem</h3>
+        </div>
+        <Button variant="outline" size="sm" onClick={onSuggest} disabled={suggesting} className="gap-2 text-xs h-8">
+          {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+          Gerar Sugestão com IA
+        </Button>
+      </div>
+      <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={placeholder}
+        className="min-h-[100px] bg-secondary border-border text-sm" />
+    </>
+  );
+}
+
 export default function Characters() {
   const { activeProjectId } = useAssistant();
   const { session } = useAuth();
@@ -140,12 +199,8 @@ export default function Characters() {
   const [suggestingPrompt, setSuggestingPrompt] = useState(false);
   const [suggestingEvalPrompt, setSuggestingEvalPrompt] = useState(false);
 
-  const [attributes, setAttributes] = useState({
-    ethnicity: "", apparentAge: "", hairColor: "", hairStyle: "", clothingStyle: "",
-  });
-  const [evalAttributes, setEvalAttributes] = useState({
-    ethnicity: "", apparentAge: "", hairColor: "", hairStyle: "", clothingStyle: "",
-  });
+  const [attributes, setAttributes] = useState<CharacterAttributes>(emptyAttributes());
+  const [evalAttributes, setEvalAttributes] = useState<CharacterAttributes>(emptyAttributes());
 
   // ── Queries ──
   const { data: project } = useQuery({
@@ -306,57 +361,22 @@ export default function Characters() {
         { n: 3, label: "Variações" },
       ].map((s, i) => (
         <div key={s.n} className="flex items-center gap-1">
-          {i > 0 && (
-            <div className={cn("h-px w-8 transition-colors", effectiveStep > i ? "bg-primary/50" : "bg-border")} />
-          )}
+          {i > 0 && <div className={cn("h-px w-8 transition-colors", effectiveStep > i ? "bg-primary/50" : "bg-border")} />}
           <div className={cn(
             "flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-bold transition-all",
-            effectiveStep === s.n
-              ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
-              : effectiveStep > s.n
-                ? "bg-primary/20 text-primary"
-                : "bg-secondary text-muted-foreground"
+            effectiveStep === s.n ? "bg-primary text-primary-foreground shadow-md shadow-primary/30"
+              : effectiveStep > s.n ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
           )}>
             {effectiveStep > s.n ? <Check className="h-3.5 w-3.5" /> : s.n}
           </div>
-          <span className={cn(
-            "text-[11px] font-medium hidden sm:inline",
-            effectiveStep === s.n ? "text-foreground" : "text-muted-foreground"
-          )}>
-            {s.label}
-          </span>
+          <span className={cn("text-[11px] font-medium hidden sm:inline", effectiveStep === s.n ? "text-foreground" : "text-muted-foreground")}>{s.label}</span>
         </div>
       ))}
     </div>
   );
 
-  // ── Description + AI Suggestion block (reusable) ──
-  const DescriptionBlock = ({ prompt, setPrompt, suggesting, onSuggest, placeholder }: {
-    prompt: string; setPrompt: (v: string) => void; suggesting: boolean; onSuggest: () => void; placeholder: string;
-  }) => (
-    <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Descreva o Personagem</h3>
-        </div>
-        <Button variant="outline" size="sm" onClick={onSuggest} disabled={suggesting} className="gap-2 text-xs h-8">
-          {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
-          Gerar Sugestão com IA
-        </Button>
-      </div>
-      <Textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder={placeholder}
-        className="min-h-[100px] bg-secondary border-border text-sm"
-      />
-    </>
-  );
-
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
           <User className="h-5 w-5 text-primary" />
@@ -381,22 +401,18 @@ export default function Characters() {
         <TabsContent value="influencer" className="space-y-6">
           <StepIndicator />
           <AnimatePresence mode="wait">
-            {/* STEP 1 */}
             {effectiveStep === 1 && (
               <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                 <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
-                  <DescriptionBlock
-                    prompt={basePrompt} setPrompt={setBasePrompt}
-                    suggesting={suggestingPrompt} onSuggest={() => handleSuggestPrompt("base")}
-                    placeholder="Ex: mulher mística de 30 anos, pele morena, cabelos escuros longos, olhos verdes, para marca de tarot"
-                  />
+                  <DescriptionBlock prompt={basePrompt} setPrompt={setBasePrompt} suggesting={suggestingPrompt}
+                    onSuggest={() => handleSuggestPrompt("base")}
+                    placeholder="Ex: mulher mística de 30 anos, pele morena, cabelos escuros longos, olhos verdes, para marca de tarot" />
                   <AttributeBuilder attributes={attributes} onChange={setAttributes} />
                   <Button onClick={handleGenerateBase} disabled={generating || !basePrompt.trim()} className="gap-2 h-10">
                     {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {generating ? "Gerando candidatos..." : "Gerar Candidatos"}
                   </Button>
                 </div>
-
                 {candidates.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -415,7 +431,6 @@ export default function Characters() {
               </motion.div>
             )}
 
-            {/* STEP 2 */}
             {effectiveStep === 2 && !hasMainInfluencer && (
               <motion.div key="step2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                 <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="gap-1 text-xs text-muted-foreground">
@@ -440,7 +455,6 @@ export default function Characters() {
               </motion.div>
             )}
 
-            {/* STEP 3 */}
             {effectiveStep === 3 && hasMainInfluencer && (
               <motion.div key="step3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
                 <div className="flex gap-6">
@@ -467,18 +481,14 @@ export default function Characters() {
                     </Button>
                   </div>
                 </div>
-
                 {variations.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold text-foreground mb-3">Variações Geradas ({variations.length})</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {variations.map((v: any) => (
-                        <CharacterCard key={v.id} asset={v} />
-                      ))}
+                      {variations.map((v: any) => <CharacterCard key={v.id} asset={v} />)}
                     </div>
                   </div>
                 )}
-
                 <div className="pt-4 border-t border-border">
                   <Button variant="outline" size="sm" onClick={handleResetInfluencer} className="gap-2 text-xs">
                     <RotateCcw className="h-3 w-3" /> Trocar Personagem
@@ -489,7 +499,7 @@ export default function Characters() {
           </AnimatePresence>
         </TabsContent>
 
-        {/* ═══ TAB 2: Personagens para Avaliação ═══ */}
+        {/* ═══ TAB 2: Avaliação ═══ */}
         <TabsContent value="evaluation" className="space-y-6">
           <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
             <div className="flex items-center gap-2">
@@ -499,15 +509,10 @@ export default function Characters() {
             <p className="text-xs text-muted-foreground">
               Crie personagens realistas para uso em depoimentos, avaliações e provas sociais.
             </p>
-
-            <DescriptionBlock
-              prompt={evalPrompt} setPrompt={setEvalPrompt}
-              suggesting={suggestingEvalPrompt} onSuggest={() => handleSuggestPrompt("eval")}
-              placeholder="Ex: homem de 50 anos, feliz, barba grisalha, sorriso largo, cliente satisfeito"
-            />
-
+            <DescriptionBlock prompt={evalPrompt} setPrompt={setEvalPrompt} suggesting={suggestingEvalPrompt}
+              onSuggest={() => handleSuggestPrompt("eval")}
+              placeholder="Ex: homem de 50 anos, feliz, barba grisalha, sorriso largo, cliente satisfeito" />
             <AttributeBuilder attributes={evalAttributes} onChange={setEvalAttributes} />
-
             <Button onClick={handleGenerateEval} disabled={generatingEval || !evalPrompt.trim()} className="gap-2 h-10">
               {generatingEval ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
               {generatingEval ? "Gerando..." : "Gerar Personagem para Avaliação"}
@@ -516,13 +521,9 @@ export default function Characters() {
 
           {evalCharacters.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-foreground mb-3">
-                Personagens Gerados ({evalCharacters.length})
-              </h3>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Personagens Gerados ({evalCharacters.length})</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {evalCharacters.map((p: any) => (
-                  <CharacterCard key={p.id} asset={p} />
-                ))}
+                {evalCharacters.map((p: any) => <CharacterCard key={p.id} asset={p} />)}
               </div>
             </div>
           )}
