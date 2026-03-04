@@ -119,6 +119,7 @@ export type Database = {
           operation_mode: string | null
           output: Database["public"]["Enums"]["output_type"]
           parent_asset_id: string | null
+          persona_type: string | null
           platform: string | null
           preset: string | null
           profile_used: Database["public"]["Enums"]["profile_level"] | null
@@ -128,6 +129,7 @@ export type Database = {
           provider_selected: string | null
           provider_used: string | null
           rating: number | null
+          reference_asset_id: string | null
           scheduled_for: string | null
           status: Database["public"]["Enums"]["asset_status"]
           tags: string[] | null
@@ -149,6 +151,7 @@ export type Database = {
           operation_mode?: string | null
           output?: Database["public"]["Enums"]["output_type"]
           parent_asset_id?: string | null
+          persona_type?: string | null
           platform?: string | null
           preset?: string | null
           profile_used?: Database["public"]["Enums"]["profile_level"] | null
@@ -158,6 +161,7 @@ export type Database = {
           provider_selected?: string | null
           provider_used?: string | null
           rating?: number | null
+          reference_asset_id?: string | null
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
@@ -179,6 +183,7 @@ export type Database = {
           operation_mode?: string | null
           output?: Database["public"]["Enums"]["output_type"]
           parent_asset_id?: string | null
+          persona_type?: string | null
           platform?: string | null
           preset?: string | null
           profile_used?: Database["public"]["Enums"]["profile_level"] | null
@@ -188,6 +193,7 @@ export type Database = {
           provider_selected?: string | null
           provider_used?: string | null
           rating?: number | null
+          reference_asset_id?: string | null
           scheduled_for?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           tags?: string[] | null
@@ -209,6 +215,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_reference_asset_id_fkey"
+            columns: ["reference_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
             referencedColumns: ["id"]
           },
           {
@@ -777,6 +790,7 @@ export type Database = {
           description: string | null
           id: string
           is_pinned: boolean | null
+          main_influencer_asset_id: string | null
           name: string
           niche: string | null
           operation_mode: string
@@ -791,6 +805,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_pinned?: boolean | null
+          main_influencer_asset_id?: string | null
           name: string
           niche?: string | null
           operation_mode?: string
@@ -805,6 +820,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_pinned?: boolean | null
+          main_influencer_asset_id?: string | null
           name?: string
           niche?: string | null
           operation_mode?: string
@@ -814,7 +830,15 @@ export type Database = {
           user_id?: string
           workspace_folder?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_main_influencer_asset_id_fkey"
+            columns: ["main_influencer_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       provider_configs: {
         Row: {

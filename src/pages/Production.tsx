@@ -4,7 +4,7 @@ import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
   Check, RotateCcw, ChevronRight, ChevronDown, Lightbulb, Film,
-  Minus, Plus,
+  Minus, Plus, User,
 } from "lucide-react";
 import { AnimateVideoModal } from "@/components/creative/AnimateVideoModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -107,6 +107,7 @@ export default function Production() {
   const [isEditorMode, setIsEditorMode] = useState(false);
   const [showIdeaGenerator, setShowIdeaGenerator] = useState(false);
   const [showAnimateModal, setShowAnimateModal] = useState(false);
+  const [useInfluencer, setUseInfluencer] = useState(false);
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
@@ -121,7 +122,7 @@ export default function Production() {
     queryFn: async () => {
       const { data } = await supabase
         .from("projects")
-        .select("operation_mode, niche")
+        .select("operation_mode, niche, main_influencer_asset_id")
         .eq("id", activeProjectId!)
         .single();
       return data;
@@ -129,6 +130,22 @@ export default function Production() {
     enabled: !!activeProjectId,
     staleTime: 60_000,
   });
+
+  // Fetch main influencer image URL when needed
+  const { data: mainInfluencerAsset } = useQuery({
+    queryKey: ["main-influencer-production", (projectData as any)?.main_influencer_asset_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("assets")
+        .select("id, final_render_url")
+        .eq("id", (projectData as any)!.main_influencer_asset_id!)
+        .single();
+      return data;
+    },
+    enabled: !!(projectData as any)?.main_influencer_asset_id,
+  });
+
+  const hasInfluencer = !!(projectData as any)?.main_influencer_asset_id && !!mainInfluencerAsset;
 
   useEffect(() => {
     if (projectData?.operation_mode) {
@@ -264,6 +281,41 @@ export default function Production() {
       return;
     }
     setSelectedResultId(null);
+
+    // If influencer mode is active, use persona-generate variation
+    if (useInfluencer && hasInfluencer && mainInfluencerAsset?.final_render_url) {
+      try {
+        const { data, error } = await supabase.functions.invoke("persona-generate", {
+          body: {
+            mode: "generate_variation",
+            project_id: activeProjectId,
+            prompt: userPrompt || "A mesma pessoa em um cenário de marketing profissional",
+            reference_image_url: mainInfluencerAsset.final_render_url,
+            num_variations: spec.quantity,
+          },
+        });
+        if (error) throw error;
+        if (data?.results) {
+          const mapped = data.results.map((r: any) => ({
+            id: r.id,
+            headline: r.title || "",
+            body: "",
+            cta: "",
+            imageUrl: r.imageUrl,
+            provider: "persona-generate",
+            profile: spec.profile,
+            status: "draft",
+            creditCost: 10,
+          }));
+          setResults(mapped);
+          toast.success(`${data.count} variações com influencer geradas!`);
+        }
+      } catch (err: any) {
+        toast.error(err.message || "Erro ao gerar com influencer");
+      }
+      return;
+    }
+
     await generate({
       projectId: activeProjectId,
       mode: spec.mode,
@@ -509,6 +561,27 @@ export default function Production() {
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
                     Perfil Visual
                     <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
+                  </label>
+                  {/* Influencer Toggle */}
+                  <label className={cn(
+                    "flex items-center justify-between rounded-xl border px-3 py-2 text-[10px] cursor-pointer transition-all",
+                    hasInfluencer
+                      ? useInfluencer
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border bg-secondary text-muted-foreground hover:border-primary/15"
+                      : "border-border bg-secondary/50 text-muted-foreground/50 cursor-not-allowed"
+                  )}>
+                    <span className="flex items-center gap-1.5">
+                      <User className="h-3 w-3" />
+                      Usar Influencer
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={useInfluencer}
+                      onChange={(e) => setUseInfluencer(e.target.checked)}
+                      disabled={!hasInfluencer}
+                      className="accent-primary"
+                    />
                   </label>
                 </div>
               </ConfigSection>

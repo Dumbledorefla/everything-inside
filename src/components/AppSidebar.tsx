@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Zap, Calendar, Library, FileStack, Settings,
-  ChevronLeft, ChevronRight, FolderOpen, Dna, Home, History, Layers, FileText, Sparkles, ScrollText, Eye, Target,
+  ChevronLeft, ChevronRight, FolderOpen, Dna, Home, History, Layers, FileText, Sparkles, ScrollText, Eye, Target, User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -20,6 +20,7 @@ const projectNav = [
   { to: "references", icon: Eye, label: "Referências" },
   { to: "production", icon: Zap, label: "Produção" },
   { to: "ad-factory", icon: Target, label: "Ad Factory" },
+  { to: "personas", icon: User, label: "Personas" },
   { to: "library", icon: FolderOpen, label: "Biblioteca" },
   { to: "planning", icon: Calendar, label: "Planejamento" },
   { to: "sprints", icon: Layers, label: "Sprints" },
