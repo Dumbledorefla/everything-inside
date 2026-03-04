@@ -11,14 +11,12 @@ const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 async function authenticateUser(req: Request, supabaseUrl: string, anonKey: string) {
   const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) throw new Error("Unauthorized");
-  const token = authHeader.replace("Bearer ", "");
   const anonClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
-  const { data, error } = await anonClient.auth.getClaims(token);
-  if (error || !data?.claims) throw new Error("Unauthorized");
-  return { id: data.claims.sub as string, email: data.claims.email as string };
+  const { data: { user }, error } = await anonClient.auth.getUser();
+  if (error || !user) throw new Error("Unauthorized");
+  return user;
 }
 
 async function verifyProjectOwnership(supabase: any, projectId: string, userId: string) {
