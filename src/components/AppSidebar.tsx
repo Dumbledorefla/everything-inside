@@ -35,7 +35,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
   return (
     <aside className={cn(
       "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
-      "bg-sidebar border-r border-border",
+      "bg-sidebar border-r border-sidebar-border",
       collapsed ? "w-[60px]" : "w-56"
     )}>
       {/* Brand header */}
@@ -53,7 +53,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
         </div>
       </div>
 
-      {/* Toggle button — elegant pill at sidebar edge */}
+      {/* Toggle button */}
       <button
         onClick={onToggle}
         className="absolute -right-3 top-[22px] z-50 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all shadow-sm"
@@ -65,8 +65,13 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
         {isInProject && (
           <>
             {!collapsed && (
-              <div className="mb-2 px-3">
-                <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Projeto</span>
+              <div className="mb-3 px-3 pt-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <span className="text-[11px] font-mono-brand font-semibold uppercase tracking-[0.15em] text-foreground/70">
+                  Projeto Atual
+                </span>
               </div>
             )}
             {projectNav.map((item) => {
@@ -100,10 +105,14 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
                 </NavLink>
               );
             })}
-            <div className="my-3 mx-3 border-t border-border" />
+            <div className="my-4 mx-3">
+              <div className="h-px bg-border" />
+            </div>
             {!collapsed && (
-              <div className="mb-2 px-3">
-                <span className="text-[9px] font-mono-brand uppercase tracking-[0.2em] text-muted-foreground/60">Global</span>
+              <div className="mb-3 px-3">
+                <span className="text-[11px] font-mono-brand font-semibold uppercase tracking-[0.15em] text-foreground/70">
+                  Global
+                </span>
               </div>
             )}
           </>
@@ -140,7 +149,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
 
       {/* Bottom */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-border">
+        <div className="px-4 py-3 border-t border-sidebar-border">
           <p className="text-[8px] text-muted-foreground/40 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
         </div>
       )}

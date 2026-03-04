@@ -10,38 +10,38 @@
 
 @layer base {
   /* ═══════════════════════════════════════════════
-     OBSIDIAN SPACE — Permanently Dark
+     OBSIDIAN SPACE — Permanently Dark (Enhanced Contrast)
      ═══════════════════════════════════════════════ */
   :root {
-    /* ── Master Background: Deep Petrol Black ── */
-    --background: 240 6% 4%;
-    --foreground: 0 0% 93%;
-    --card: 240 5% 8%;
+    /* ── Master Background: Deep Space Blue ── */
+    --background: 216 28% 7%;
+    --foreground: 0 0% 100%;
+    --card: 215 25% 9%;
     --card-foreground: 0 0% 93%;
-    --popover: 240 5% 7%;
+    --popover: 215 25% 8%;
     --popover-foreground: 0 0% 93%;
     --primary: 187 94% 43%;
     --primary-foreground: 0 0% 2%;
-    --secondary: 240 5% 11%;
+    --secondary: 215 20% 13%;
     --secondary-foreground: 0 0% 80%;
-    --muted: 240 5% 11%;
-    --muted-foreground: 240 5% 64%;
-    --accent: 240 5% 13%;
+    --muted: 215 20% 13%;
+    --muted-foreground: 215 10% 55%;
+    --accent: 215 18% 15%;
     --accent-foreground: 0 0% 88%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 100% / 0.06;
-    --input: 0 0% 100% / 0.07;
+    --border: 215 15% 20%;
+    --input: 215 15% 22%;
     --ring: 187 94% 43%;
     --radius: 0.75rem;
 
-    /* Elevation surfaces — solid layers, no transparency */
-    --surface-0: 240 6% 4%;
-    --surface-1: 240 5% 7%;
-    --surface-2: 240 5% 10%;
-    --surface-3: 240 5% 13%;
+    /* Elevation surfaces */
+    --surface-0: 216 28% 7%;
+    --surface-1: 215 25% 9%;
+    --surface-2: 215 22% 12%;
+    --surface-3: 215 18% 15%;
 
-    /* Shadows — clean depth */
+    /* Shadows */
     --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.5);
     --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.6);
     --shadow-lg: 0 12px 32px -8px rgba(0,0,0,0.7);
@@ -53,23 +53,24 @@
     --cos-cyan: 187 94% 43%;
     --cos-cyan-glow: 187 94% 55%;
     --cos-success: 160 60% 45%;
-    --cos-warning: 220 45% 56%;
+    --cos-warning: 35 92% 55%;
     --cos-error: 0 65% 50%;
     --cos-purple: 270 70% 62%;
+    --cos-orange: 30 100% 55%;
 
-    /* Sidebar — solid, no glass */
-    --sidebar-background: 240 5% 5%;
+    /* Sidebar */
+    --sidebar-background: 216 28% 6%;
     --sidebar-foreground: 0 0% 85%;
     --sidebar-primary: 187 94% 43%;
     --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 240 5% 9%;
+    --sidebar-accent: 215 22% 11%;
     --sidebar-accent-foreground: 0 0% 78%;
-    --sidebar-border: 0 0% 100% / 0.06;
+    --sidebar-border: 215 15% 18%;
     --sidebar-ring: 187 94% 43%;
 
-    /* Glass — reduced, more solid */
-    --glass-bg: 240 5% 6% / 0.92;
-    --glass-border: 0 0% 100% / 0.06;
+    /* Glass */
+    --glass-bg: 215 25% 8% / 0.92;
+    --glass-border: 215 15% 20%;
 
     /* Star field */
     --star-color: 0 0% 100%;
@@ -77,11 +78,9 @@
   }
 
   /* ═══════════════════════════════════════════════
-     RAINY MODE — Frosted Glass Studio
-     Conceito: janela de vidro fosco com chuva ao fundo
+     RAINY MODE — Light Studio
      ═══════════════════════════════════════════════ */
   .rainy {
-    /* ── Standard Light Mode — High Visibility ── */
     --background: 220 14% 96%;
     --foreground: 220 15% 10%;
     --card: 0 0% 100%;
@@ -102,7 +101,6 @@
     --input: 220 10% 87%;
     --ring: 187 80% 34%;
 
-    /* Superfícies — solid, high contrast */
     --surface-0: 220 14% 96%;
     --surface-1: 0 0% 100%;
     --surface-2: 220 12% 96%;
@@ -121,8 +119,8 @@
     --cos-warning: 38 80% 48%;
     --cos-error: 0 72% 51%;
     --cos-purple: 270 55% 50%;
+    --cos-orange: 30 90% 50%;
 
-    /* Sidebar — solid white */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 12% 20%;
     --sidebar-primary: 187 80% 34%;
@@ -172,7 +170,6 @@
   .surface-2 { background-color: hsl(var(--surface-2)); }
   .surface-3 { background-color: hsl(var(--surface-3)); }
 
-  /* Glass morphism — Space Elite */
   .glass {
     background: hsl(var(--glass-bg));
     border: 1px solid hsl(var(--glass-border));
@@ -186,25 +183,21 @@
     -webkit-backdrop-filter: blur(40px) saturate(1.6);
   }
 
-  /* Ultra-deep blur for dock */
   .backdrop-blur-3xl {
     backdrop-filter: blur(64px) saturate(1.8);
     -webkit-backdrop-filter: blur(64px) saturate(1.8);
   }
 
-  /* Soft Clay Elevation */
   .elevation-1 { box-shadow: var(--shadow-sm); }
   .elevation-2 { box-shadow: var(--shadow-md); }
   .elevation-3 { box-shadow: var(--shadow-lg); }
   .elevation-4 { box-shadow: var(--shadow-xl); }
   .elevation-clay { box-shadow: var(--shadow-clay); }
 
-  /* Noise overlay — disabled for clean look */
   .noise-overlay {
     position: relative;
   }
 
-  /* Atomic borders */
   .border-atomic {
     border-width: 0.5px;
     border-style: solid;
@@ -229,8 +222,6 @@
   }
 
   /* ── Light Mode Overrides ── */
-
-  /* Light: clean scrollbars */
   .rainy ::-webkit-scrollbar { width: 6px; height: 6px; }
   .rainy ::-webkit-scrollbar-track { background: transparent; }
   .rainy ::-webkit-scrollbar-thumb {
@@ -241,13 +232,11 @@
     background: hsl(220 10% 55%);
   }
 
-  /* Light: header solid */
   .rainy .bg-surface-0 {
     background: hsl(0 0% 100%) !important;
     border-bottom: 1px solid hsl(220 10% 88%) !important;
   }
 
-  /* Light: glass → solid white */
   .rainy .glass,
   .rainy .glass-intense {
     background: hsl(0 0% 100%);
@@ -257,29 +246,24 @@
     box-shadow: var(--shadow-sm);
   }
 
-  /* Light: remove backdrop-blur from cards */
   .rainy [class*="backdrop-blur"] {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 
-  /* Light: fix low-opacity backgrounds */
   .rainy [class*="bg-card\\/"] {
     background-color: hsl(var(--card)) !important;
   }
 
-  /* Light: sidebar solid border */
   .rainy [class*="bg-sidebar"] {
     border-right: 1px solid hsl(220 10% 90%);
   }
 
-  /* Light: buttons clean hover */
   .rainy button:hover,
   .rainy [role="button"]:hover {
     box-shadow: var(--shadow-sm);
   }
 
-  /* Light: inputs */
   .rainy input, .rainy textarea, .rainy select {
     background: hsl(0 0% 100%) !important;
     border-color: hsl(220 10% 85%) !important;
@@ -291,7 +275,6 @@
     .masonry-grid { columns: 4; }
   }
 
-  /* Skeleton shimmer */
   .skeleton-space {
     background: linear-gradient(
       90deg,

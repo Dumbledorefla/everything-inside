@@ -45,6 +45,7 @@ export default {
           warning: "hsl(var(--cos-warning))",
           error: "hsl(var(--cos-error))",
           purple: "hsl(var(--cos-purple))",
+          orange: "hsl(var(--cos-orange))",
         },
         surface: {
           0: "hsl(var(--surface-0))",

@@ -13,6 +13,7 @@ import StatsRow from "@/components/dashboard/StatsRow";
 import ProjectCard from "@/components/dashboard/ProjectCard";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import { cn } from "@/lib/utils";
+import { Zap, Library, Target, Plus, Rocket } from "lucide-react";
 
 const PROJECTS_CACHE_KEY = "dashboard:projects-cache:v1";
 
@@ -39,6 +40,7 @@ const withTimeout = <T,>(promise: Promise<T>, ms = 12000): Promise<T> =>
         reject(error);
       });
   });
+
 export default function Dashboard() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -154,6 +156,7 @@ export default function Dashboard() {
   }, [enriched, selectedFolder, filters, assetCounts]);
 
   const pinnedCount = projects.filter((p: any) => p.is_pinned).length;
+  const showWelcome = !isLoading && projects.length <= 2;
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -171,7 +174,7 @@ export default function Dashboard() {
                 <h1 className="text-xl font-bold tracking-tight font-mono-brand">Mission Control</h1>
                 <ConnectionStatus />
               </div>
-              <p className="text-[11px] text-muted-foreground/70 font-mono-brand tracking-widest uppercase">
+              <p className="text-xs text-muted-foreground font-mono-brand tracking-widest uppercase">
                 Centro de comando · {projects.length} projetos
               </p>
             </div>
@@ -185,10 +188,51 @@ export default function Dashboard() {
           whileTap={{ scale: 0.98 }}
           className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)] shrink-0"
         >
-          <span className="text-base leading-none">+</span>
+          <Plus className="h-4 w-4" />
           Novo Projeto
         </motion.button>
       </div>
+
+      {/* ─── Welcome Card (when few projects) ─── */}
+      {showWelcome && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 rounded-2xl border border-primary/15 bg-card p-8"
+        >
+          <div className="flex items-start gap-6">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              <Rocket className="h-7 w-7 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold font-mono-brand mb-1">Bem-vindo ao Creative OS</h2>
+              <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                Sua central de produção criativa com IA. Comece criando um projeto ou explore as funcionalidades disponíveis.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => setWizardOpen(true)}
+                  className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all"
+                >
+                  <Plus className="h-4 w-4" /> Criar Novo Projeto
+                </button>
+                <button
+                  onClick={() => navigate("/library")}
+                  className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent transition-all"
+                >
+                  <Library className="h-4 w-4" /> Biblioteca Global
+                </button>
+                <button
+                  onClick={() => navigate("/models")}
+                  className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent transition-all"
+                >
+                  <Zap className="h-4 w-4" /> Modelos
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* ─── Search ─── */}
       <div className="mb-6">
@@ -203,10 +247,10 @@ export default function Dashboard() {
       {/* ─── Workspace Folders ─── */}
       <div className="mb-2">
         <div className="flex items-center gap-2 mb-3">
-          <svg className="h-3 w-3 text-muted-foreground/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="h-3 w-3 text-muted-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="text-[10px] font-mono-brand text-muted-foreground/50 uppercase tracking-[0.2em]">Workspaces</span>
+          <span className="text-[10px] font-mono-brand text-muted-foreground uppercase tracking-[0.2em]">Workspaces</span>
         </div>
         <WorkspaceFolderManager folders={folders} onSelect={setSelectedFolder} selectedFolder={selectedFolder} />
       </div>
@@ -222,12 +266,12 @@ export default function Dashboard() {
         <div className="col-span-12 lg:col-span-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <svg className="h-3.5 w-3.5 text-muted-foreground/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="h-3.5 w-3.5 text-muted-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
               </svg>
-              <h2 className="text-[10px] font-mono-brand text-muted-foreground/70 uppercase tracking-[0.2em]">Projetos</h2>
+              <h2 className="text-xs font-mono-brand text-muted-foreground uppercase tracking-[0.15em]">Projetos</h2>
             </div>
-            <span className="text-[9px] text-muted-foreground/40 font-mono-brand px-2.5 py-0.5 rounded-full bg-card/30 border border-border/10">
+            <span className="text-[10px] text-muted-foreground font-mono-brand px-2.5 py-0.5 rounded-full bg-secondary border border-border">
               {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
               {selectedFolder && ` · ${selectedFolder}`}
             </span>
@@ -270,21 +314,11 @@ export default function Dashboard() {
                     <path d="M2 12h20" />
                   </svg>
                 </motion.div>
-                {[0, 1, 2].map((j) => (
-                  <motion.div
-                    key={j}
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 10 + j * 4, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-0"
-                  >
-                    <div className="w-1 h-1 rounded-full bg-primary/30 absolute" style={{ top: `${8 + j * 6}%`, left: "50%" }} />
-                  </motion.div>
-                ))}
               </div>
               <h3 className="text-base font-semibold mb-1.5 font-mono-brand">
                 {projects.length === 0 ? "Pronto para a decolagem?" : "Nenhum projeto corresponde aos filtros"}
               </h3>
-              <p className="text-xs text-muted-foreground/60 mb-6 max-w-sm mx-auto leading-relaxed">
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto leading-relaxed">
                 {projects.length === 0
                   ? "Crie seu primeiro projeto e deixe a IA cuidar do resto."
                   : "Tente ajustar os filtros ou pastas de trabalho."}
@@ -296,7 +330,7 @@ export default function Dashboard() {
                   onClick={() => setWizardOpen(true)}
                   className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-[0_0_24px_-6px_hsl(var(--primary)/0.4)]"
                 >
-                  <span className="text-base leading-none">+</span>
+                  <Plus className="h-4 w-4" />
                   Criar Primeiro Projeto
                 </motion.button>
               )}

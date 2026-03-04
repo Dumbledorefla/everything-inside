@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
-  Check, RotateCcw, ChevronRight, Lightbulb, Film,
+  Check, RotateCcw, ChevronRight, ChevronDown, Lightbulb, Film,
+  Minus, Plus,
 } from "lucide-react";
 import { AnimateVideoModal } from "@/components/creative/AnimateVideoModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -23,6 +24,11 @@ import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
 import { cn } from "@/lib/utils";
 import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const PIECE_ICONS: Record<string, React.ElementType> = {
   post: LayoutGrid, banner: Rows3, story: FileText, ad: Sparkles,
@@ -68,6 +74,22 @@ const IMAGE_PROVIDER_OPTIONS = [
   { value: "google/gemini-2.5-flash-image", label: "Nano Banana" },
   { value: "google/gemini-3-pro-image-preview", label: "Nano Banana Pro" },
 ];
+
+/* ── Collapsible Section helper ── */
+function ConfigSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="w-full flex items-center justify-between py-1.5 group">
+        <span className="text-[11px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground font-medium group-hover:text-foreground transition-colors">{title}</span>
+        <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pt-2">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export default function Production() {
   const { spec, setSpec, selectAsset, activeProjectId } = useAssistant();
@@ -139,14 +161,11 @@ export default function Production() {
       : [...TEXT_PROVIDER_OPTIONS, ...IMAGE_PROVIDER_OPTIONS];
 
   useEffect(() => {
-    // Reset to Auto only if current provider is incompatible with selected output
     const isTextProvider = TEXT_PROVIDER_OPTIONS.some((p) => p.value === spec.provider);
     const isImageProvider = IMAGE_PROVIDER_OPTIONS.some((p) => p.value === spec.provider);
-
     const invalidForCurrentOutput =
       (spec.output === "image" && isTextProvider) ||
       (spec.output === "text" && isImageProvider);
-
     if (invalidForCurrentOutput) {
       setSpec({ provider: "Auto" });
     }
@@ -158,7 +177,6 @@ export default function Production() {
     }
   }, [operationMode]);
 
-  // Auto-select latest result for canvas
   useEffect(() => {
     if (results.length > 0 && !selectedResultId) {
       setSelectedResultId(results[0].id);
@@ -292,58 +310,61 @@ export default function Production() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
-      {/* ═══════ LEFT PANEL — Config (20%) ═══════ */}
-      <div className="w-[260px] shrink-0 border-r border-border bg-card overflow-y-auto">
-        <div className="p-4 space-y-4">
+      {/* ═══════ LEFT PANEL — Config ═══════ */}
+      <div className="w-[280px] shrink-0 border-r border-border bg-card overflow-y-auto">
+        <div className="p-4 space-y-5">
           {/* Mode selector */}
           <OperationModeSelector mode={operationMode} onChange={setOperationMode} />
 
-          {/* Piece type */}
-          <div>
-            <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-2 block">
-              Formato · <span className="text-primary">{MODE_LABELS[operationMode]}</span>
-            </label>
-            <div className="grid grid-cols-3 gap-1">
-              {availablePieceTypes.map((t) => {
-                const Icon = PIECE_ICONS[t.id] || Sparkles;
-                return (
-                  <button key={t.id} onClick={() => { setSpec({ pieceType: t.id }); if (t.id !== "carousel") carousel.reset(); }}
-                    className={cn(
-                      "flex flex-col items-center gap-0.5 rounded-xl border py-2 text-[9px] transition-all",
-                      spec.pieceType === t.id
-                        ? "border-primary/40 bg-primary/10 text-primary"
-                        : "border-border/15 text-muted-foreground/50 hover:border-primary/20 hover:text-foreground"
-                    )}>
-                    <Icon className="h-3 w-3" />{t.label}
-                  </button>
-                );
-              })}
+          {/* ── Section: Focus & Format ── */}
+          <ConfigSection title="Foco e Formato" defaultOpen={true}>
+            {/* Piece type */}
+            <div>
+              <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-2 block">
+                Formato · <span className="text-primary">{MODE_LABELS[operationMode]}</span>
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {availablePieceTypes.map((t) => {
+                  const Icon = PIECE_ICONS[t.id] || Sparkles;
+                  return (
+                    <button key={t.id} onClick={() => { setSpec({ pieceType: t.id }); if (t.id !== "carousel") carousel.reset(); }}
+                      className={cn(
+                        "flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[10px] transition-all",
+                        spec.pieceType === t.id
+                          ? "border-primary/40 bg-primary/10 text-primary font-medium"
+                          : "border-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
+                      )}>
+                      <Icon className="h-4 w-4" />{t.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Ratio */}
-          <div>
-            <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Proporção</label>
-            <div className="flex gap-1 rounded-xl bg-background/30 p-0.5">
-              {availableRatios.map((r) => (
-                <button key={r} onClick={() => setSpec({ ratio: r })}
-                  className={cn(
-                    "flex-1 rounded-lg py-1.5 text-[10px] font-mono-brand transition-all",
-                    spec.ratio === r
-                      ? "bg-primary/15 text-primary font-medium"
-                      : "text-muted-foreground/40 hover:text-foreground"
-                  )}>
-                  {r}
-                </button>
-              ))}
+            {/* Ratio */}
+            <div>
+              <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Proporção</label>
+              <div className="flex gap-1 rounded-xl bg-secondary p-0.5">
+                {availableRatios.map((r) => (
+                  <button key={r} onClick={() => setSpec({ ratio: r })}
+                    className={cn(
+                      "flex-1 rounded-lg py-1.5 text-[10px] font-mono-brand transition-all",
+                      spec.ratio === r
+                        ? "bg-primary/15 text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}>
+                    {r}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          </ConfigSection>
 
           {/* Carousel-specific controls */}
           {isCarousel ? (
-            <>
+            <ConfigSection title="Carrossel" defaultOpen={true}>
               <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">
+                <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
                   Slides: <span className="text-primary font-semibold">{carouselSlideCount}</span>
                 </label>
                 <input type="range" min={3} max={10} value={carouselSlideCount}
@@ -352,14 +373,14 @@ export default function Production() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Tema</label>
+                <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Tema</label>
                 <textarea value={carouselTopic} onChange={(e) => setCarouselTopic(e.target.value)}
                   placeholder="Ex: 5 erros ao investir..."
-                  rows={2} className="w-full rounded-xl border border-border/15 bg-background/30 px-3 py-2 text-xs placeholder:text-muted-foreground/30 focus:border-primary/40 focus:outline-none resize-none" />
+                  rows={2} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs placeholder:text-muted-foreground/50 focus:border-primary/40 focus:outline-none resize-none" />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Fórmula</label>
+                <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Fórmula</label>
                 <div className="space-y-1">
                   {formulaOptions.map((f) => (
                     <button key={f.id} onClick={() => carousel.setFormula(f.id)}
@@ -367,12 +388,12 @@ export default function Production() {
                         "w-full flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition-all",
                         carousel.formula === f.id
                           ? "border-primary/30 bg-primary/10 text-primary"
-                          : "border-border/15 text-muted-foreground/50 hover:border-primary/20"
+                          : "border-border text-muted-foreground hover:border-primary/20"
                       )}>
                       <span className="text-sm">{f.icon}</span>
                       <div>
                         <p className="text-[10px] font-semibold leading-tight">{f.label}</p>
-                        <p className="text-[8px] text-muted-foreground/40">{f.desc}</p>
+                        <p className="text-[8px] text-muted-foreground">{f.desc}</p>
                       </div>
                     </button>
                   ))}
@@ -381,9 +402,9 @@ export default function Production() {
 
               {references && references.length > 0 && (
                 <div>
-                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Referência</label>
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Referência</label>
                   <select value={selectedReferenceId || ""} onChange={(e) => setSelectedReferenceId(e.target.value || undefined)}
-                    className="w-full rounded-xl border border-border/15 bg-background/30 px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
+                    className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
                     <option value="">Nenhuma</option>
                     {references.map((r: any) => (
                       <option key={r.id} value={r.id}>{r.visual_archetype} — {r.emotional_tone}</option>
@@ -391,113 +412,141 @@ export default function Production() {
                   </select>
                 </div>
               )}
-            </>
+            </ConfigSection>
           ) : (
             <>
-              {/* Output type */}
-              <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Saída</label>
-                <div className="flex gap-1">
-                  {([
-                    { id: "text" as const, label: "Texto", icon: Type },
-                    { id: "image" as const, label: "Imagem", icon: Image },
-                    { id: "both" as const, label: "Ambos", icon: Zap },
-                  ]).map((o) => (
-                    <button key={o.id} onClick={() => setSpec({ output: o.id })}
-                      className={cn(
-                        "flex-1 flex flex-col items-center gap-0.5 rounded-xl border py-2 text-[9px] transition-all",
-                        spec.output === o.id
-                          ? "border-primary/30 bg-primary/10 text-primary"
-                          : "border-border/15 text-muted-foreground/50 hover:border-primary/20"
-                      )}>
-                      <o.icon className="h-3 w-3" />{o.label}
-                    </button>
-                  ))}
+              {/* ── Section: Style & Variations ── */}
+              <ConfigSection title="Estilo e Variações" defaultOpen={true}>
+                {/* Output type */}
+                <div>
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Saída</label>
+                  <div className="flex gap-1">
+                    {([
+                      { id: "text" as const, label: "Texto", icon: Type },
+                      { id: "image" as const, label: "Imagem", icon: Image },
+                      { id: "both" as const, label: "Ambos", icon: Zap },
+                    ]).map((o) => (
+                      <button key={o.id} onClick={() => setSpec({ output: o.id })}
+                        className={cn(
+                          "flex-1 flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[10px] transition-all",
+                          spec.output === o.id
+                            ? "border-primary/30 bg-primary/10 text-primary font-medium"
+                            : "border-border text-muted-foreground hover:border-primary/20"
+                        )}>
+                        <o.icon className="h-4 w-4" />{o.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Quantity */}
-              <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">
-                  Variações: <span className="text-primary font-semibold">{spec.quantity}</span>
-                </label>
-                <input type="range" min={1} max={50} value={spec.quantity} onChange={(e) => setSpec({ quantity: +e.target.value })}
-                  className="w-full accent-primary h-1 rounded-full" />
-              </div>
-
-              {/* Profile */}
-              <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">Perfil</label>
-                <div className="flex gap-1 rounded-xl bg-background/30 p-0.5">
-                  {(["economy", "standard", "quality"] as const).map((p) => (
-                    <button key={p} onClick={() => setSpec({ profile: p })}
-                      className={cn(
-                        "flex-1 rounded-lg py-1.5 text-[10px] transition-all",
-                        spec.profile === p
-                          ? "bg-primary/15 text-primary font-medium"
-                          : "text-muted-foreground/40 hover:text-foreground"
-                      )}>
-                      {profileLabels[p]}
+                {/* Quantity — numeric input with +/- */}
+                <div>
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
+                    Variações
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSpec({ quantity: Math.max(1, spec.quantity - 1) })}
+                      className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
                     </button>
-                  ))}
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={spec.quantity}
+                      onChange={(e) => setSpec({ quantity: Math.min(50, Math.max(1, +e.target.value)) })}
+                      className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-center text-sm font-mono-brand text-foreground focus:border-primary/40 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      onClick={() => setSpec({ quantity: Math.min(50, spec.quantity + 1) })}
+                      className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Provider */}
-              <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">
-                  Provedor {spec.output === "image" ? "(imagem)" : spec.output === "text" ? "(texto)" : "(automático)"}
-                </label>
-                <select value={spec.provider} onChange={(e) => setSpec({ provider: e.target.value })}
-                  className="w-full rounded-xl border border-border/15 bg-background/30 px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
-                  <option value="Auto">Auto (Fallback)</option>
-                  {providerOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
+                {/* Profile */}
+                <div>
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Perfil</label>
+                  <div className="flex gap-1 rounded-xl bg-secondary p-0.5">
+                    {(["economy", "standard", "quality"] as const).map((p) => (
+                      <button key={p} onClick={() => setSpec({ profile: p })}
+                        className={cn(
+                          "flex-1 rounded-lg py-1.5 text-[10px] transition-all",
+                          spec.profile === p
+                            ? "bg-primary/15 text-primary font-medium"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}>
+                        {profileLabels[p]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Toggles */}
-              <div className="space-y-1.5">
-                <label className="flex items-center justify-between rounded-xl border border-border/15 bg-background/30 px-3 py-2 text-[10px] text-muted-foreground/60 cursor-pointer hover:border-primary/15 transition-all">
-                  Usar Modelo
-                  <input type="checkbox" checked={spec.useModel} onChange={(e) => setSpec({ useModel: e.target.checked })} className="accent-primary" />
-                </label>
-                <label className="flex items-center justify-between rounded-xl border border-border/15 bg-background/30 px-3 py-2 text-[10px] text-muted-foreground/60 cursor-pointer hover:border-primary/15 transition-all">
-                  Perfil Visual
-                  <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
-                </label>
-              </div>
-            </>
-          )}
+                {/* Provider */}
+                <div>
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
+                    Provedor {spec.output === "image" ? "(imagem)" : spec.output === "text" ? "(texto)" : "(automático)"}
+                  </label>
+                  <select value={spec.provider} onChange={(e) => setSpec({ provider: e.target.value })}
+                    className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
+                    <option value="Auto">Auto (Fallback)</option>
+                    {providerOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
 
-          {/* Idea Generator */}
-          {!isCarousel && (
-            <>
-              <Button variant="outline" onClick={() => setShowIdeaGenerator(!showIdeaGenerator)} className="w-full gap-2">
-                <Lightbulb className={cn("h-4 w-4", showIdeaGenerator && "text-primary")} />
-                Gerador de Ideias
-              </Button>
+                {/* Toggles */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
+                    Usar Modelo
+                    <input type="checkbox" checked={spec.useModel} onChange={(e) => setSpec({ useModel: e.target.checked })} className="accent-primary" />
+                  </label>
+                  <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
+                    Perfil Visual
+                    <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
+                  </label>
+                </div>
+              </ConfigSection>
 
-              {showIdeaGenerator && activeProjectId && (
-                <IdeaGenerator
-                  projectId={activeProjectId}
-                  pieceType={spec.pieceType}
-                  onIdeaSelected={handleIdeaSelected}
+              {/* ── Section: Prompt & Generation ── */}
+              <ConfigSection title="Prompt e Geração" defaultOpen={true}>
+                {/* Idea Generator - opens as modal via button */}
+                <div className="flex gap-2">
+                  <Dialog open={showIdeaGenerator} onOpenChange={setShowIdeaGenerator}>
+                    <Button variant="outline" onClick={() => setShowIdeaGenerator(true)} className="flex-1 gap-2 border-cos-orange/20 text-cos-orange hover:bg-cos-orange/10 hover:text-cos-orange">
+                      <Lightbulb className="h-4 w-4" />
+                      Gerador de Ideias
+                    </Button>
+                    <DialogContent className="max-w-md">
+                      {activeProjectId && (
+                        <IdeaGenerator
+                          projectId={activeProjectId}
+                          pieceType={spec.pieceType}
+                          onIdeaSelected={(idea) => {
+                            handleIdeaSelected(idea);
+                            setShowIdeaGenerator(false);
+                          }}
+                        />
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Smart Prompt — taller */}
+                <SmartPromptInput
+                  value={userPrompt}
+                  onChange={setUserPrompt}
+                  disabled={progress.running}
+                  onRefine={handleRefinePrompt}
+                  refining={refining}
                 />
-              )}
+              </ConfigSection>
             </>
-          )}
-
-          {/* Smart Prompt */}
-          {!isCarousel && (
-            <SmartPromptInput
-              value={userPrompt}
-              onChange={setUserPrompt}
-              disabled={progress.running}
-              onRefine={handleRefinePrompt}
-              refining={refining}
-            />
           )}
 
           {/* Generate button */}
@@ -506,12 +555,12 @@ export default function Production() {
               {carousel.step === "idle" && (
                 <motion.button onClick={handleCarouselStoryline}
                   whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all">
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all">
                   <GalleryHorizontalEnd className="h-4 w-4" /> Gerar Roteiro
                 </motion.button>
               )}
               {carousel.step === "generating-storyline" && (
-                <div className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary/50 py-2.5 text-sm text-primary-foreground">
+                <div className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary/50 py-3 text-sm text-primary-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Criando roteiro...
                 </div>
               )}
@@ -519,23 +568,23 @@ export default function Production() {
                 <>
                   <motion.button onClick={handleCarouselGenerate}
                     whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all">
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all">
                     <Check className="h-4 w-4" /> Aprovar e Gerar
                   </motion.button>
                   <button onClick={carousel.reset}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-border/15 py-2 text-[10px] text-muted-foreground/50 hover:text-foreground transition-all">
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2 text-[10px] text-muted-foreground hover:text-foreground transition-all">
                     <RotateCcw className="h-3 w-3" /> Refazer
                   </button>
                 </>
               )}
               {carousel.step === "generating-slides" && (
-                <div className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary/50 py-2.5 text-sm text-primary-foreground">
+                <div className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary/50 py-3 text-sm text-primary-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Gerando slides...
                 </div>
               )}
               {carousel.step === "done" && (
                 <button onClick={carousel.reset}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border/15 py-2 text-[10px] text-muted-foreground/50 hover:text-foreground transition-all">
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border py-2 text-[10px] text-muted-foreground hover:text-foreground transition-all">
                   <RotateCcw className="h-3 w-3" /> Novo Carrossel
                 </button>
               )}
@@ -543,7 +592,7 @@ export default function Production() {
           ) : (
             <motion.button onClick={handleGenerate} disabled={progress.running}
               whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50">
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 glow-cyan">
               {progress.running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
               {progress.running ? `${progress.completed}/${progress.total}` : "Gerar"}
             </motion.button>
@@ -551,24 +600,24 @@ export default function Production() {
         </div>
       </div>
 
-      {/* ═══════ CENTER PANEL — Canvas (60%) ═══════ */}
+      {/* ═══════ CENTER PANEL — Canvas ═══════ */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="shrink-0 h-10 border-b border-border/10 flex items-center justify-between px-4">
+        <div className="shrink-0 h-10 border-b border-border flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/40">
+            <span className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
               {MODE_LABELS[operationMode]}
             </span>
-            <ChevronRight className="h-3 w-3 text-muted-foreground/20" />
-            <span className="text-[10px] font-mono-brand text-foreground/70">{currentPieceLabel}</span>
-            <span className="text-[10px] font-mono-brand text-muted-foreground/30 ml-1">{spec.ratio}</span>
+            <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+            <span className="text-[10px] font-mono-brand text-foreground">{currentPieceLabel}</span>
+            <span className="text-[10px] font-mono-brand text-muted-foreground ml-1">{spec.ratio}</span>
           </div>
           {selectedResult && (
             <div className="flex items-center gap-2">
               <span className={cn("rounded-lg border px-2 py-0.5 text-[9px] font-mono-brand", profileColors[selectedResult.profile] || "")}>
                 {profileLabels[selectedResult.profile] || selectedResult.profile}
               </span>
-              <span className="text-[9px] font-mono-brand text-muted-foreground/30">{selectedResult.creditCost}cr</span>
+              <span className="text-[9px] font-mono-brand text-muted-foreground">{selectedResult.creditCost}cr</span>
             </div>
           )}
         </div>
@@ -595,20 +644,20 @@ export default function Production() {
               ) : selectedResult ? (
                 <div className="max-w-[600px] mx-auto">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/40">
+                    <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
                       <Layers className="inline h-3 w-3 mr-1" />{isEditorMode ? "Smart Canvas" : "Resultado Final"}
                     </p>
                     {selectedResult.imageUrl && (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setShowAnimateModal(true)}
-                          className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all flex items-center gap-1.5"
+                          className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 transition-all flex items-center gap-1.5"
                         >
                           <Film className="h-3 w-3" /> Animar
                         </button>
                         <button
                           onClick={() => setIsEditorMode(!isEditorMode)}
-                          className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-border/20 bg-card/30 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
+                          className="text-[10px] font-mono-brand uppercase tracking-wider px-3 py-1 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"
                         >
                           {isEditorMode ? "← Ver Resultado" : "Editar Camadas"}
                         </button>
@@ -640,7 +689,7 @@ export default function Production() {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.98 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="relative rounded-2xl overflow-hidden border border-border/10 bg-black/20"
+                      className="relative rounded-2xl overflow-hidden border border-border bg-secondary"
                     >
                       <img
                         src={selectedResult.imageUrl}
@@ -651,13 +700,22 @@ export default function Production() {
                   ) : null}
                 </div>
               ) : (
-                <CanvasOverlay
-                  imageUrl={null}
-                  ratio={spec.ratio}
-                  onEditText={() => {}}
-                  onVary={handleGenerate}
-                  onExport={() => {}}
-                />
+                /* ── Enhanced empty state ── */
+                <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                  <motion.div
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-24 h-24 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-6"
+                  >
+                    <Sparkles className="h-12 w-12 text-primary/30" />
+                  </motion.div>
+                  <h3 className="text-lg font-semibold font-mono-brand mb-2 text-foreground">
+                    Seu próximo criativo genial começa aqui
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+                    Configure as opções à esquerda — escolha o formato, estilo e escreva um prompt — depois clique em <span className="text-primary font-medium">Gerar</span>.
+                  </p>
+                </div>
               )}
 
               {/* Text-only output: show text below */}
@@ -665,10 +723,10 @@ export default function Production() {
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="max-w-[600px] mx-auto mt-4 rounded-2xl border border-border/15 bg-card/20 p-4 space-y-2"
+                  className="max-w-[600px] mx-auto mt-4 rounded-2xl border border-border bg-card p-4 space-y-2"
                 >
                   <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
-                  <p className="text-xs text-muted-foreground/70 leading-relaxed">{selectedResult.body}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{selectedResult.body}</p>
                   {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
                 </motion.div>
               )}
@@ -680,9 +738,9 @@ export default function Production() {
         </div>
       </div>
 
-      {/* ═══════ RIGHT PANEL — History (20%) ═══════ */}
+      {/* ═══════ RIGHT PANEL — History ═══════ */}
       {!isCarousel && (
-        <div className="w-[200px] shrink-0 border-l border-border/15 bg-card/10 backdrop-blur-sm overflow-hidden">
+        <div className="w-[220px] shrink-0 border-l border-border bg-card overflow-hidden">
           <HistoryPanel
             results={results}
             selectedId={selectedResultId}
@@ -720,7 +778,7 @@ export default function Production() {
   );
 }
 
-/* ═══════ Carousel sub-view (unchanged logic, extracted for readability) ═══════ */
+/* ═══════ Carousel sub-view ═══════ */
 function CarouselView({
   carousel, spec, roleLabels, projectDna, activeProjectId, carouselLayerStyles, setCarouselLayerStyles,
   activeEditorSlide, setActiveEditorSlide, handleApplyToAll,
@@ -743,14 +801,14 @@ function CarouselView({
         <div className="space-y-3 max-w-2xl mx-auto">
           {carousel.styleAnchor && (
             <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 mb-4">
-              <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground/50 mb-1">Âncora Visual</p>
+              <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1">Âncora Visual</p>
               <p className="text-xs text-foreground/80">{carousel.styleAnchor}</p>
             </div>
           )}
           {carousel.storyline.map((slide: any, i: number) => (
             <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06 }}
-              className="rounded-2xl border border-border/15 bg-card/20 p-4">
+              className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-3 mb-2">
                 <span className="rounded-lg bg-primary/10 text-primary text-xs font-mono-brand font-bold w-6 h-6 flex items-center justify-center">
                   {slide.slideNumber}
@@ -758,14 +816,9 @@ function CarouselView({
                 <span className="text-xs font-medium">{roleLabels[slide.role] || slide.role}</span>
               </div>
               <input value={slide.headline} onChange={(e: any) => carousel.updateSlide(i, { headline: e.target.value })}
-                className="w-full text-sm font-semibold bg-transparent border-b border-border/15 pb-1 mb-2 focus:outline-none focus:border-primary/30"
-                disabled={carousel.step === "generating-slides"} />
-              {slide.body && (
-                <textarea value={slide.body} onChange={(e: any) => carousel.updateSlide(i, { body: e.target.value })}
-                  rows={2} className="w-full text-xs text-muted-foreground/70 bg-transparent border-b border-border/10 pb-1 mb-2 focus:outline-none resize-none"
-                  disabled={carousel.step === "generating-slides"} />
-              )}
-              <p className="text-[10px] text-muted-foreground/50 italic">{slide.visualDirection}</p>
+                className="w-full bg-transparent border-b border-border text-sm font-medium mb-1.5 pb-1 focus:outline-none focus:border-primary/40" />
+              <textarea value={slide.body} onChange={(e: any) => carousel.updateSlide(i, { body: e.target.value })}
+                rows={2} className="w-full bg-transparent text-xs text-muted-foreground focus:outline-none resize-none" />
             </motion.div>
           ))}
         </div>
@@ -773,31 +826,22 @@ function CarouselView({
 
       {/* Generated Slides */}
       {carousel.step === "done" && carousel.slides.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {carousel.slides.map((slide: any, i: number) => (
-              <motion.button key={i} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.06 }}
-                onClick={() => setActiveEditorSlide(activeEditorSlide === slide.slideNumber ? null : slide.slideNumber)}
+        <div className="space-y-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {carousel.slides.map((slide: any) => (
+              <motion.div key={slide.slideNumber} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: slide.slideNumber * 0.05 }}
+                onClick={() => setActiveEditorSlide(slide.slideNumber)}
                 className={cn(
-                  "shrink-0 w-20 rounded-xl border overflow-hidden transition-all",
-                  activeEditorSlide === slide.slideNumber
-                    ? "border-primary/50 ring-2 ring-primary/20"
-                    : "border-border/15 hover:border-primary/20"
+                  "rounded-xl border overflow-hidden cursor-pointer transition-all hover:shadow-lg",
+                  activeEditorSlide === slide.slideNumber ? "border-primary ring-2 ring-primary/20" : "border-border"
                 )}>
-                {slide.imageUrl ? (
-                  <img src={slide.imageUrl} alt={slide.headline} className="w-full aspect-square object-cover" />
-                ) : (
-                  <div className="w-full aspect-square bg-card/20 flex items-center justify-center">
-                    <Image className="h-4 w-4 text-muted-foreground/15" />
-                  </div>
-                )}
-                <div className="p-1 text-center">
-                  <span className="text-[8px] font-mono-brand text-muted-foreground/50">
-                    {slide.slideNumber}
-                  </span>
+                {slide.imageUrl && <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="w-full aspect-square object-cover" />}
+                <div className="p-2">
+                  <p className="text-[10px] font-mono-brand text-primary">Slide {slide.slideNumber}</p>
+                  <p className="text-[9px] text-muted-foreground truncate">{slide.headline}</p>
                 </div>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
 
@@ -805,43 +849,31 @@ function CarouselView({
             const slide = carousel.slides.find((s: any) => s.slideNumber === activeEditorSlide);
             if (!slide) return null;
             return (
-              <motion.div key={slide.slideNumber} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                className="max-w-[600px] mx-auto">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-mono-brand text-primary font-semibold">Editando Slide {slide.slideNumber}</span>
+                  <span className="text-[10px] text-muted-foreground">{roleLabels[slide.role] || slide.role}</span>
+                </div>
                 <LayerEditor
                   imageUrl={slide.imageUrl}
                   headline={slide.headline}
                   body={slide.body}
-                  cta={slide.role === "cta" ? slide.headline : undefined}
+                  cta={slide.cta}
                   ratio={spec.ratio}
                   niche={projectDna?.niche}
                   projectId={activeProjectId}
                   logoUrl={projectDna?.logoUrl}
                   brandColors={projectDna?.brandColors}
-                  copyPlacement={slide.copyPlacement}
-                  showApplyToAll={carousel.slides.length > 1}
+                  onLayersChange={(layers: TextLayer[]) => {
+                    setCarouselLayerStyles((prev: Record<number, TextLayer[]>) => ({ ...prev, [slide.slideNumber]: layers }));
+                  }}
                   onApplyToAll={handleApplyToAll}
-                  onLayersChange={(layers: any) => setCarouselLayerStyles((prev: any) => ({ ...prev, [slide.slideNumber]: layers }))}
+                  showApplyToAll={true}
                 />
-              </motion.div>
+              </div>
             );
           })()}
-
-          {activeEditorSlide === null && (
-            <p className="text-center text-[10px] text-muted-foreground/30 py-4">
-              Clique em um slide para editar
-            </p>
-          )}
         </div>
-      )}
-
-      {carousel.step === "idle" && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center">
-            <GalleryHorizontalEnd className="h-7 w-7 text-primary/20" />
-          </div>
-          <p className="text-xs text-muted-foreground/40">Configure e gere o roteiro</p>
-        </motion.div>
       )}
     </>
   );
