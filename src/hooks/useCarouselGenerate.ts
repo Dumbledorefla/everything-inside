@@ -57,6 +57,8 @@ export function useCarouselGenerate() {
     topic?: string;
     profile: "economy" | "standard" | "quality";
     ratio: string;
+    useCharacter?: boolean;
+    characterImageUrl?: string;
   }) => {
     setStep("generating-storyline");
     setStoryline([]);
@@ -88,6 +90,8 @@ export function useCarouselGenerate() {
     referenceId?: string;
     profile: "economy" | "standard" | "quality";
     ratio: string;
+    useCharacter?: boolean;
+    characterImageUrl?: string;
   }) => {
     if (!storyline.length) return;
     setStep("generating-slides");

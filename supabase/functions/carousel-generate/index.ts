@@ -23,6 +23,8 @@ interface CarouselRequest {
   formula?: Formula;
   approvedStoryline?: SlideStoryline[];
   styleAnchor?: string;
+  useCharacter?: boolean;
+  characterImageUrl?: string;
 }
 
 interface SlideStoryline {
@@ -111,7 +113,7 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: CarouselRequest = await req.json();
-    const { projectId, referenceId, slideCount, topic, profile, ratio, mode, formula, approvedStoryline } = body;
+    const { projectId, referenceId, slideCount, topic, profile, ratio, mode, formula, approvedStoryline, useCharacter, characterImageUrl } = body;
 
     // Fetch project + DNA
     const [{ data: project }, { data: dna }] = await Promise.all([
@@ -147,6 +149,10 @@ ${ref.generated_prompt ? `Direção Visual: ${ref.generated_prompt}` : ""}`;
       const formulaPrompt = FORMULA_PROMPTS[effectiveFormula](slideCount);
       const textModel = TEXT_MODELS[profile] || TEXT_MODELS.standard;
 
+      const characterStorylineContext = useCharacter && characterImageUrl
+        ? `\n\nPERSONAGEM PRINCIPAL DO PROJETO: O carrossel DEVE apresentar o personagem principal do projeto de forma proeminente e consistente em TODOS os slides. A direção visual de cada slide deve incluir este personagem como elemento central da narrativa visual.`
+        : "";
+
       const resp = await fetch(AI_GATEWAY, {
         method: "POST",
         headers: {
@@ -159,7 +165,7 @@ ${ref.generated_prompt ? `Direção Visual: ${ref.generated_prompt}` : ""}`;
             {
               role: "system",
               content: `Você é um Roteirista de Carrosséis de Elite para Instagram/Redes Sociais.
-${dnaContext}
+${dnaContext}${characterStorylineContext}
 
 FÓRMULA SELECIONADA: ${effectiveFormula.toUpperCase()}
 ${formulaPrompt}
@@ -289,6 +295,15 @@ Gere a imagem final para este slide como uma peça única, coesa e com a tipogra
 
         for (const model of imageModels) {
           try {
+            // Build message content - add character reference image if active
+            const userContent: any[] = [{ type: "text", text: imagePrompt }];
+            if (useCharacter && characterImageUrl) {
+              userContent.push({
+                type: "image_url",
+                image_url: { url: characterImageUrl },
+              });
+            }
+
             const imgResp = await fetch(AI_GATEWAY, {
               method: "POST",
               headers: {
@@ -297,7 +312,7 @@ Gere a imagem final para este slide como uma peça única, coesa e com a tipogra
               },
               body: JSON.stringify({
                 model,
-                messages: [{ role: "user", content: imagePrompt }],
+                messages: [{ role: "user", content: userContent }],
                 modalities: ["image", "text"],
               }),
             });

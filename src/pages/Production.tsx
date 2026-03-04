@@ -113,6 +113,7 @@ export default function Production() {
   const [showIdeaGenerator, setShowIdeaGenerator] = useState(false);
   const [showAnimateModal, setShowAnimateModal] = useState(false);
   const [useInfluencer, setUseInfluencer] = useState(false);
+  const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
@@ -404,6 +405,8 @@ export default function Production() {
       topic: carouselTopic || undefined,
       profile: spec.profile,
       ratio: spec.ratio,
+      useCharacter: useInfluencerForCarousel && hasInfluencer,
+      characterImageUrl: mainInfluencerAsset?.final_render_url,
     });
   };
 
@@ -414,6 +417,8 @@ export default function Production() {
       referenceId: selectedReferenceId,
       profile: spec.profile,
       ratio: spec.ratio,
+      useCharacter: useInfluencerForCarousel && hasInfluencer,
+      characterImageUrl: mainInfluencerAsset?.final_render_url,
     });
   };
 
@@ -521,6 +526,26 @@ export default function Production() {
                   </select>
                 </div>
               )}
+              {/* Character toggle for carousel */}
+              {hasInfluencer ? (
+                <label className={cn(
+                  "flex items-center justify-between rounded-xl border px-3 py-2 text-[10px] cursor-pointer transition-all",
+                  useInfluencerForCarousel
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border bg-secondary text-muted-foreground hover:border-primary/15"
+                )}>
+                  <span className="flex items-center gap-1.5">
+                    <User className="h-3 w-3" />
+                    Usar Personagem
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={useInfluencerForCarousel}
+                    onChange={(e) => setUseInfluencerForCarousel(e.target.checked)}
+                    className="accent-primary"
+                  />
+                </label>
+              ) : null}
             </ConfigSection>
           ) : (
             <>
