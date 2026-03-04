@@ -23,7 +23,7 @@ async function generateImageTogether(apiKey: string, prompt: string): Promise<st
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "black-forest-labs/FLUX.1-schnell-Free",
+        model: "black-forest-labs/FLUX.1-schnell",
         prompt,
         width: 1024,
         height: 1024,
