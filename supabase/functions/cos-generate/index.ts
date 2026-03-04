@@ -648,11 +648,14 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       const bodyText = body || "";
       const ctaText = cta || "";
       
+      // Determine if text should be rendered on the image
+      const shouldRenderText = output === "both" && !!(headline || cta);
 
       // Para perfil unrestricted, usar prompt direto sem wrapper de marketing
       const imagePrompt = isUnrestricted
-        ? `${headlineText}${bodyText ? '. ' + bodyText : ''}${ctaText ? '. ' + ctaText : ''}. Photorealistic, high quality, 8k, detailed. Aspect ratio: ${ratio}.`
-        : `Você é um Diretor de Arte e Designer Gráfico de elite, especialista em tipografia e composição para marketing digital. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada, com o texto perfeitamente integrado à imagem.
+        ? `${userPrompt || headlineText}${bodyText ? '. ' + bodyText : ''}. Photorealistic, high quality, 8k, detailed. Aspect ratio: ${ratio}.`
+        : shouldRenderText
+        ? `Você é um Diretor de Arte e Designer Gráfico de elite, especialista em tipografia e composição para marketing digital. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada, com o texto perfeitamente integrado à imagem.
 
 **DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
@@ -674,7 +677,27 @@ ${dnaContext}
 - Estilo de Intensidade: ${intensity === "Agressivo" ? "Cores ousadas, alto contraste, impacto máximo." : intensity === "Suave" ? "Tons suaves, calmos, elegantes e etéreos." : "Visual equilibrado, profissional e limpo."}
 ${qualityImageFinishing}
 
-Gere a imagem final como uma peça única, coesa e com a tipografia perfeitamente renderizada. A qualidade da integração do texto é o fator mais importante.`;
+Gere a imagem final como uma peça única, coesa e com a tipografia perfeitamente renderizada. A qualidade da integração do texto é o fator mais importante.`
+        : `Você é um Diretor de Arte e Fotógrafo de elite, especialista em composição visual para marketing digital. Sua missão é criar uma imagem visual impressionante para um ${pieceType}.
+
+**DNA DO PROJETO (Guia Criativo Obrigatório):**
+${dnaContext}
+
+**CONTEXTO TEMÁTICO:**
+${userPrompt || headlineText || `Crie uma imagem visualmente impactante para o nicho e projeto descrito acima.`}
+
+**INSTRUÇÕES VISUAIS (SEM TEXTO NA IMAGEM):**
+1.  **NÃO RENDERIZE NENHUM TEXTO NA IMAGEM**: A imagem deve ser puramente visual, sem nenhuma palavra, letra, frase ou tipografia. Apenas a fotografia/ilustração.
+2.  **Composição Profissional**: Use regra dos terços, linhas guia e espaço negativo inteligente. A composição deve ser equilibrada e visualmente atraente.
+3.  **Qualidade Fotográfica de Estúdio**: Iluminação cinematográfica, alta definição, resolução 8k, cores ricas e profundidade de campo adequada.
+4.  **Respeito ao DNA Visual**: As cores, mood e estética devem seguir o DNA do projeto.
+
+**REQUERIMENTOS TÉCNICOS:**
+- Aspect Ratio: ${ratio}
+- Estilo de Intensidade: ${intensity === "Agressivo" ? "Cores ousadas, alto contraste, impacto máximo." : intensity === "Suave" ? "Tons suaves, calmos, elegantes e etéreos." : "Visual equilibrado, profissional e limpo."}
+${qualityImageFinishing}
+
+Gere uma imagem profissional puramente visual, SEM nenhum texto renderizado.`;
 
       try {
         console.log(`Tentando gerar imagem com modelo: ${model}`);
