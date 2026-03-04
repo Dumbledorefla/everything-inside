@@ -288,7 +288,7 @@ CRITICAL RULES:
     });
   } catch (error) {
     console.error("persona-generate error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Internal error" }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

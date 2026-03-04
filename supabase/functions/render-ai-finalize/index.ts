@@ -206,7 +206,7 @@ ${textDescription}`;
       credits_cost: 10,
       estimated_usd: 0.10,
       metadata: { layers_count: layers.length, niche, ratio, has_mask: !!maskDataUrl },
-    }).catch((err: any) => console.error("[RENDER-AI-FINALIZE] ledger error:", err));
+    });
 
     await supabase.from("activity_log").insert({
       project_id: projectId,
@@ -214,7 +214,7 @@ ${textDescription}`;
       action: "Renderização IA finalizada",
       entity_type: "render",
       metadata: { layers_count: layers.length, niche, ratio, storage_path: fileName },
-    }).catch((err: any) => console.error("[RENDER-AI-FINALIZE] activity error:", err));
+    });
 
     return new Response(
       JSON.stringify({

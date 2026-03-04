@@ -233,7 +233,7 @@ Retorne APENAS JSON válido (sem markdown, sem backticks):
           slide_count: slideCount,
           has_reference: !!referenceId,
         },
-      }).then(() => {}).catch((err: any) => console.error("carousel storyline ledger error:", err));
+      });
 
       await supabase.from("activity_log").insert({
         project_id: projectId,
@@ -245,7 +245,7 @@ Retorne APENAS JSON válido (sem markdown, sem backticks):
           formula: effectiveFormula,
           has_reference: !!referenceId,
         },
-      }).then(() => {}).catch((err: any) => console.error("carousel storyline activity error:", err));
+      });
 
       return new Response(JSON.stringify({ ...storyline, formula: effectiveFormula }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -409,7 +409,7 @@ Gere a imagem final para este slide como uma peça única, coesa e com a tipogra
           generated_slides: generatedSlides,
           has_reference: !!referenceId,
         },
-      }).then(() => {}).catch((err: any) => console.error("carousel generate ledger error:", err));
+      });
 
       await supabase.from("activity_log").insert({
         project_id: projectId,
@@ -421,7 +421,7 @@ Gere a imagem final para este slide como uma peça única, coesa e com a tipogra
           generated_slides: generatedSlides,
           total_slides: approvedStoryline.length,
         },
-      }).then(() => {}).catch((err: any) => console.error("carousel generate activity error:", err));
+      });
 
       return new Response(JSON.stringify({ slides: results }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

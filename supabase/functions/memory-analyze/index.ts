@@ -179,16 +179,7 @@ Regras:
       category: "system",
       last_analysis_at: new Date().toISOString(),
       confirmed: true,
-    }, { onConflict: "project_id,pattern" }).then(() => {}).catch(() => {
-      // If upsert fails due to no unique constraint, just insert
-      serviceClient.from("project_memory").insert({
-        project_id: projectId,
-        user_id: user.id,
-        pattern: "system:last_analysis",
-        category: "system",
-        confirmed: true,
-      }).then(() => {}).catch(() => {});
-    });
+    }, { onConflict: "project_id,pattern" });
 
     // Log telemetry
     await serviceClient.from("cos_ledger").insert({
@@ -199,7 +190,7 @@ Regras:
       credits_cost: CREDIT_COSTS.memory_analysis.credits,
       estimated_usd: CREDIT_COSTS.memory_analysis.usd,
       metadata: { patterns_found: analysis.patterns?.length || 0, saved: savedCount },
-    }).then(() => {}).catch(() => {});
+    });
 
     return new Response(JSON.stringify({ ...analysis, saved: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
