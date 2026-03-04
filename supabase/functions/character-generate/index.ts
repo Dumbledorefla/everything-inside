@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { extractImageUrl, uploadImageToStorage } from "../_shared/ai-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,43 +90,28 @@ REQUIREMENTS:
 - DO NOT render any text in the image`;
 }
 
-async function generateImage(apiKey: string, prompt: string, referenceImageUrl?: string) {
-  const messages: any[] = [];
-  if (referenceImageUrl) {
-    messages.push({
-      role: "user",
-      content: [
-        { type: "text", text: prompt },
-        { type: "image_url", image_url: { url: referenceImageUrl } },
-      ],
-    });
-  } else {
-    messages.push({ role: "user", content: prompt });
-  }
+function buildEvaluationPrompt(prompt: string, attributes: any, dnaContext: string, variationIndex: number, total: number): string {
+  const attrsBlock = buildAttributesPrompt(attributes);
 
-  const response = await fetch(AI_GATEWAY, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3-pro-image-preview",
-      messages,
-      modalities: ["image", "text"],
-    }),
-  });
+  return `Generate a photorealistic portrait photo of a SATISFIED CUSTOMER for use in a testimonial/review.
 
-  if (!response.ok) {
-    console.error("AI response error:", response.status);
-    return null;
-  }
+BRAND CONTEXT:
+${dnaContext}
 
-  const data = await response.json();
-  return extractImageUrl(data.choices?.[0]?.message);
+CHARACTER DESCRIPTION:
+${prompt}
+
+${attrsBlock}
+
+REQUIREMENTS:
+- High quality, photorealistic, soft natural lighting with warmth
+- Captured with an 85mm f/1.4 lens for cinematic depth
+- The person should look authentic and genuine, NOT like a stock photo
+- Expression should convey genuine satisfaction, trust and warmth
+- The character should look like a real customer of the brand described above
+- Variation ${variationIndex + 1} of ${total} — each variation should be a DIFFERENT person to create a diverse set of "customers"
+- DO NOT render any text in the image`;
 }
-
-// uploadImage is now handled by uploadImageToStorage from _shared/ai-utils.ts
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -161,7 +145,7 @@ serve(async (req) => {
     const dna = await getProjectDNA(supabase, project_id);
     const dnaContext = buildDNAContext(project, dna);
 
-    // ═══ MODE: generate_prompt_suggestion ═══
+    // ═══ MODE: generate_prompt_suggestion (fast, stays synchronous) ═══
     if (mode === "generate_prompt_suggestion") {
       const suggestionPrompt = `You are an AI Photography Director. Your mission is to create an extremely detailed image prompt to generate a character (influencer or customer) that is the face of a project.
 
@@ -217,88 +201,25 @@ Write the description in the same language the brand name suggests (Portuguese i
       });
     }
 
-    const results: any[] = [];
-
-    // ═══ MODE: generate_base / generate_evaluation ═══
-    if (mode === "generate_base" || mode === "generate_evaluation") {
-      const characterType = mode === "generate_base" ? "character_candidate" : "character_evaluation";
-
-      for (let i = 0; i < num_variations; i++) {
-        try {
-          let imagePrompt: string;
-          if (mode === "generate_base") {
-            imagePrompt = buildCharacterPrompt(prompt, character_attributes, dnaContext, i, num_variations);
-          } else {
-            // Evaluation mode: build intelligent prompt with DNA + attributes
-            const attrsBlock = buildAttributesPrompt(character_attributes);
-
-            imagePrompt = `Generate a photorealistic portrait photo of a SATISFIED CUSTOMER for use in a testimonial/review.
-
-BRAND CONTEXT:
-${dnaContext}
-
-CHARACTER DESCRIPTION:
-${prompt}
-
-${attrsBlock}
-
-REQUIREMENTS:
-- High quality, photorealistic, soft natural lighting with warmth
-- Captured with an 85mm f/1.4 lens for cinematic depth
-- The person should look authentic and genuine, NOT like a stock photo
-- Expression should convey genuine satisfaction, trust and warmth
-- The character should look like a real customer of the brand described above
-- Variation ${i + 1} of ${num_variations} — each variation should be a DIFFERENT person to create a diverse set of "customers"
-- DO NOT render any text in the image`;
-          }
-
-          const imageData = await generateImage(LOVABLE_API_KEY, imagePrompt);
-          if (!imageData) continue;
-
-          const path = `characters/${project_id}/${crypto.randomUUID()}.png`;
-          const imageUrl = await uploadImageToStorage(supabase, imageData, "assets", path);
-          if (!imageUrl) continue;
-
-          const { data: asset, error: assetError } = await supabase
-            .from("assets")
-            .insert({
-              project_id,
-              user_id: user.id,
-              title: `${mode === "generate_base" ? "Candidato" : "Personagem"} ${i + 1} - ${prompt.substring(0, 50)}`,
-              output: "image",
-              status: "draft",
-              persona_type: characterType,
-              final_render_url: imageUrl,
-            })
-            .select()
-            .single();
-
-          if (assetError) { console.error("Asset insert error:", assetError); continue; }
-
-          await supabase.from("asset_versions").insert({
-            asset_id: asset.id,
-            image_url: imageUrl,
-            headline: prompt.substring(0, 100),
-            version: 1,
-          });
-
-          results.push({ id: asset.id, imageUrl, title: asset.title, characterType });
-        } catch (err) {
-          console.error(`Error generating variation ${i + 1}:`, err);
-        }
-      }
-    }
-    // ═══ MODE: generate_variation ═══
-    else if (mode === "generate_variation") {
-      if (!reference_image_url) {
+    // ═══ ASYNC JOB CREATION (replaces synchronous generation) ═══
+    if (mode === "generate_base" || mode === "generate_evaluation" || mode === "generate_variation") {
+      if (mode === "generate_variation" && !reference_image_url) {
         return new Response(JSON.stringify({ error: "reference_image_url is required for generate_variation mode" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      const jobsToInsert = [];
       for (let i = 0; i < num_variations; i++) {
-        try {
-          const variationPrompt = `You are given a reference image of a person. Generate a NEW image of THE SAME PERSON in a different scene/context.
+        let imagePrompt: string;
+
+        if (mode === "generate_base") {
+          imagePrompt = buildCharacterPrompt(prompt, character_attributes, dnaContext, i, num_variations);
+        } else if (mode === "generate_evaluation") {
+          imagePrompt = buildEvaluationPrompt(prompt, character_attributes, dnaContext, i, num_variations);
+        } else {
+          // generate_variation
+          imagePrompt = `You are given a reference image of a person. Generate a NEW image of THE SAME PERSON in a different scene/context.
 
 New scene description: ${prompt}
 
@@ -308,68 +229,54 @@ CRITICAL RULES:
 - Maintain photorealistic quality
 - DO NOT render any text in the image
 - Variation ${i + 1} of ${num_variations}`;
-
-          const imageData = await generateImage(LOVABLE_API_KEY, variationPrompt, reference_image_url);
-          if (!imageData) continue;
-
-          const varPath = `characters/${project_id}/variations/${crypto.randomUUID()}.png`;
-          const imageUrl = await uploadImageToStorage(supabase, imageData, "assets", varPath);
-          if (!imageUrl) continue;
-
-          const { data: refAsset } = await supabase
-            .from("assets")
-            .select("id")
-            .eq("final_render_url", reference_image_url)
-            .eq("project_id", project_id)
-            .limit(1)
-            .single();
-
-          const { data: asset, error: assetError } = await supabase
-            .from("assets")
-            .insert({
-              project_id,
-              user_id: user.id,
-              title: `Variação - ${prompt.substring(0, 50)}`,
-              output: "image",
-              status: "draft",
-              persona_type: "character_variation",
-              reference_asset_id: refAsset?.id || null,
-              final_render_url: imageUrl,
-            })
-            .select()
-            .single();
-
-          if (assetError) { console.error("Asset insert error:", assetError); continue; }
-
-          await supabase.from("asset_versions").insert({
-            asset_id: asset.id,
-            image_url: imageUrl,
-            headline: prompt.substring(0, 100),
-            version: 1,
-          });
-
-          results.push({ id: asset.id, imageUrl, title: asset.title, characterType: "character_variation" });
-        } catch (err) {
-          console.error(`Error generating variation ${i + 1}:`, err);
         }
+
+        const characterType = mode === "generate_base" ? "character_candidate"
+          : mode === "generate_evaluation" ? "character_evaluation"
+          : "character_variation";
+
+        jobsToInsert.push({
+          project_id,
+          user_id: user.id,
+          job_type: characterType,
+          status: "pending",
+          prompt: imagePrompt,
+          reference_image_url: mode === "generate_variation" ? reference_image_url : null,
+          metadata: {
+            original_prompt: prompt.substring(0, 200),
+            character_attributes: character_attributes || null,
+            variation_index: i,
+            total_variations: num_variations,
+          },
+        });
       }
-    } else {
-      return new Response(JSON.stringify({ error: "Invalid mode. Use generate_prompt_suggestion, generate_base, generate_variation, or generate_evaluation" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+      const { data: jobs, error: jobsError } = await supabase
+        .from("generation_jobs")
+        .insert(jobsToInsert)
+        .select("id");
+
+      if (jobsError) {
+        console.error("Error creating generation jobs:", jobsError);
+        throw new Error("Failed to create generation jobs.");
+      }
+
+      // Log activity
+      await supabase.from("activity_log").insert({
+        project_id,
+        user_id: user.id,
+        action: `character_${mode}_queued`,
+        entity_type: "character",
+        metadata: { job_count: jobs.length, prompt: prompt.substring(0, 200) },
+      });
+
+      return new Response(JSON.stringify({ job_ids: jobs.map((j: any) => j.id), count: jobs.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Log activity
-    await supabase.from("activity_log").insert({
-      project_id,
-      user_id: user.id,
-      action: `character_${mode}`,
-      entity_type: "character",
-      metadata: { count: results.length, prompt: (prompt || "").substring(0, 200) },
-    });
-
-    return new Response(JSON.stringify({ results, count: results.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: "Invalid mode. Use generate_prompt_suggestion, generate_base, generate_variation, or generate_evaluation" }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("character-generate error:", error);
