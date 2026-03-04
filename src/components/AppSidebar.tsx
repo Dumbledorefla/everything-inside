@@ -153,17 +153,8 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
       "bg-sidebar border-r border-sidebar-border",
       collapsed ? "w-[56px]" : "w-52"
     )}>
-      <div className="flex h-14 items-center px-3 shrink-0">
-        <div className={cn("flex items-center gap-2.5 transition-all", collapsed && "justify-center w-full")}>
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shrink-0">
-            <span className="text-[11px] font-bold text-primary-foreground font-mono-brand">C</span>
-          </div>
-          {!collapsed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <img src={cosLogo} alt="COS" className="h-5 object-contain" />
-            </motion.div>
-          )}
-        </div>
+      <div className={cn("flex items-center shrink-0 px-3", collapsed ? "h-14 justify-center" : "h-16 justify-start")}>
+        <img src={cosLogo} alt="COS" className={cn("object-contain transition-all", collapsed ? "h-6 w-6" : "h-8")} />
       </div>
 
       <button
