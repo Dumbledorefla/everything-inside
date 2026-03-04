@@ -1142,6 +1142,72 @@ export type Database = {
           },
         ]
       }
+      videos: {
+        Row: {
+          aspect_ratio: string | null
+          created_at: string
+          duration: string | null
+          id: string
+          metadata: Json | null
+          project_id: string
+          prompt: string | null
+          source_asset_id: string | null
+          status: string
+          thumbnail_url: string | null
+          title: string | null
+          user_id: string
+          video_type: string
+          video_url: string | null
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          created_at?: string
+          duration?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          prompt?: string | null
+          source_asset_id?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id: string
+          video_type?: string
+          video_url?: string | null
+        }
+        Update: {
+          aspect_ratio?: string | null
+          created_at?: string
+          duration?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          prompt?: string | null
+          source_asset_id?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id?: string
+          video_type?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "videos_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
