@@ -283,10 +283,10 @@ export default function Production() {
     }
     setSelectedResultId(null);
 
-    // If influencer mode is active, use persona-generate variation
+    // If character mode is active, use character-generate variation
     if (useInfluencer && hasInfluencer && mainInfluencerAsset?.final_render_url) {
       try {
-        const { data, error } = await supabase.functions.invoke("persona-generate", {
+        const { data, error } = await supabase.functions.invoke("character-generate", {
           body: {
             mode: "generate_variation",
             project_id: activeProjectId,
@@ -303,7 +303,7 @@ export default function Production() {
             body: "",
             cta: "",
             imageUrl: r.imageUrl,
-            provider: "persona-generate",
+            provider: "character-generate",
             profile: spec.profile,
             status: "draft",
             creditCost: 10,
@@ -573,7 +573,7 @@ export default function Production() {
                     )}>
                       <span className="flex items-center gap-1.5">
                         <User className="h-3 w-3" />
-                        Usar Influencer
+                        Usar Personagem
                       </span>
                       <input
                         type="checkbox"
@@ -583,11 +583,11 @@ export default function Production() {
                       />
                     </label>
                   ) : (
-                    <Link to={`/projects/${activeProjectId}/personas`}>
+                    <Link to={`/project/${activeProjectId}/characters`}>
                       <div className="flex items-center justify-between rounded-xl border border-dashed border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/30 hover:text-primary transition-all">
                         <span className="flex items-center gap-1.5">
                           <User className="h-3 w-3" />
-                          Criar Influencer Virtual
+                          Criar Personagem Virtual
                         </span>
                         <ChevronRight className="h-3 w-3" />
                       </div>
