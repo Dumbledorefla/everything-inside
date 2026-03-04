@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractImageUrlFromResponse } from "../_shared/ai-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -672,36 +673,7 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
         const data = await resp.json();
         console.log(`Resposta do modelo ${model} - keys:`, Object.keys(data));
         
-        // Try multiple response formats
-        const choice = data.choices?.[0]?.message;
-        let extractedUrl: string | null = null;
-        
-        // Format 1: images array with image_url.url
-        if (choice?.images?.[0]?.image_url?.url) {
-          extractedUrl = choice.images[0].image_url.url;
-        }
-        // Format 2: images array with inline base64
-        else if (choice?.images?.[0]?.inline_data) {
-          const img = choice.images[0].inline_data;
-          extractedUrl = `data:${img.mime_type || 'image/png'};base64,${img.data}`;
-        }
-        // Format 3: content array with image parts
-        else if (Array.isArray(choice?.content)) {
-          const imgPart = choice.content.find((p: any) => p.type === "image_url" || p.type === "image");
-          if (imgPart?.image_url?.url) {
-            extractedUrl = imgPart.image_url.url;
-          } else if (imgPart?.inline_data) {
-            extractedUrl = `data:${imgPart.inline_data.mime_type || 'image/png'};base64,${imgPart.inline_data.data}`;
-          }
-        }
-        // Format 4: direct base64 in data field
-        else if (data.data?.[0]?.b64_json) {
-          extractedUrl = `data:image/png;base64,${data.data[0].b64_json}`;
-        }
-        // Format 5: direct url in data field
-        else if (data.data?.[0]?.url) {
-          extractedUrl = data.data[0].url;
-        }
+        const extractedUrl = extractImageUrlFromResponse(data);
 
         if (extractedUrl) {
           imageUrl = extractedUrl;
