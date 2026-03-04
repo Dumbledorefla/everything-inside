@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const FAL_API_BASE = "https://fal.run";
 
 // ── Provider mapping by profile (Nano Banana equivalents) ───────
 const TEXT_MODELS: Record<string, string[]> = {
@@ -18,10 +19,16 @@ const TEXT_MODELS: Record<string, string[]> = {
 };
 
 const IMAGE_MODELS: Record<string, string[]> = {
-  economy: ["google/gemini-2.5-flash-image"],                              // NB 2.5 (economia)
-  standard: ["google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"], // NB 2 (padrão)
-  quality: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],  // NB Pro (qualidade)
+  economy: ["fal-ai/flux/schnell", "google/gemini-2.5-flash-image"],
+  standard: ["fal-ai/flux/dev", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
+  quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
+  text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
 };
+
+// fal.ai model ID mapping (for display → API endpoint)
+const FAL_MODELS = new Set([
+  "fal-ai/flux/schnell", "fal-ai/flux/dev", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2",
+]);
 
 const CREDIT_COSTS: Record<string, number> = {
   "google/gemini-2.5-flash-lite": 1,
@@ -30,6 +37,10 @@ const CREDIT_COSTS: Record<string, number> = {
   "google/gemini-2.5-pro": 8,
   "google/gemini-2.5-flash-image": 3,
   "google/gemini-3-pro-image-preview": 10,
+  "fal-ai/flux/schnell": 2,
+  "fal-ai/flux/dev": 4,
+  "fal-ai/flux-pro/v1.1": 12,
+  "fal-ai/ideogram/v2": 8,
 };
 
 const PIECE_PROMPTS: Record<string, string> = {
@@ -646,18 +657,49 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
 
       try {
         console.log(`Tentando gerar imagem com modelo: ${model}`);
-        const resp = await fetch(AI_GATEWAY, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: "user", content: imagePrompt }],
-            modalities: ["image", "text"],
-          }),
-        });
+
+        let resp: Response;
+        const isFalModel = FAL_MODELS.has(model);
+
+        if (isFalModel) {
+          // ── fal.ai API call ──
+          const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
+          if (!FAL_API_KEY) {
+            const event = `Imagem: FAL_API_KEY não configurada, pulando ${model}`;
+            console.error(event);
+            fallbackEvents.push(event);
+            fallbackLog.push(event);
+            usedFallback = true;
+            continue;
+          }
+          const falEndpoint = `${FAL_API_BASE}/${model}`;
+          resp = await fetch(falEndpoint, {
+            method: "POST",
+            headers: {
+              Authorization: `Key ${FAL_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              prompt: imagePrompt,
+              image_size: ratio === "1:1" ? "square_hd" : ratio === "9:16" ? "portrait_16_9" : "landscape_16_9",
+              num_images: 1,
+            }),
+          });
+        } else {
+          // ── Lovable AI Gateway call ──
+          resp = await fetch(AI_GATEWAY, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: "user", content: imagePrompt }],
+              modalities: ["image", "text"],
+            }),
+          });
+        }
 
         if (!resp.ok) {
           if (resp.status === 429 || resp.status === 402) throw new Error(`${resp.status}`);
@@ -672,8 +714,14 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
 
         const data = await resp.json();
         console.log(`Resposta do modelo ${model} - keys:`, Object.keys(data));
-        
-        const extractedUrl = extractImageUrlFromResponse(data);
+
+        // fal.ai returns { images: [{ url, content_type }] }
+        let extractedUrl: string | null = null;
+        if (isFalModel && data.images?.[0]?.url) {
+          extractedUrl = data.images[0].url;
+        } else {
+          extractedUrl = extractImageUrlFromResponse(data);
+        }
 
         if (extractedUrl) {
           imageUrl = extractedUrl;
