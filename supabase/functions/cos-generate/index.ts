@@ -10,6 +10,7 @@ const corsHeaders = {
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const FAL_API_BASE = "https://fal.run";
+const TOGETHER_API_BASE = "https://api.together.xyz/v1/images/generations";
 
 // ── Provider mapping by profile (Nano Banana equivalents) ───────
 const TEXT_MODELS: Record<string, string[]> = {
@@ -23,11 +24,18 @@ const IMAGE_MODELS: Record<string, string[]> = {
   standard: ["fal-ai/flux/dev", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
   quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
   text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
+  unrestricted: ["together/black-forest-labs/FLUX.1-dev", "fal-ai/flux/dev"],
 };
 
 // fal.ai model ID mapping (for display → API endpoint)
 const FAL_MODELS = new Set([
   "fal-ai/flux/schnell", "fal-ai/flux/dev", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2",
+]);
+
+// together.ai model ID mapping (prefix: together/)
+const TOGETHER_MODELS = new Set([
+  "together/black-forest-labs/FLUX.1-dev",
+  "together/black-forest-labs/FLUX.1-schnell",
 ]);
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -41,6 +49,8 @@ const CREDIT_COSTS: Record<string, number> = {
   "fal-ai/flux/dev": 4,
   "fal-ai/flux-pro/v1.1": 12,
   "fal-ai/ideogram/v2": 8,
+  "together/black-forest-labs/FLUX.1-dev": 5,
+  "together/black-forest-labs/FLUX.1-schnell": 3,
 };
 
 const PIECE_PROMPTS: Record<string, string> = {
@@ -223,8 +233,10 @@ serve(async (req) => {
     const fallbackLog: string[] = [];
 
     for (let i = 0; i < quantity; i++) {
+      const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
       const variation = await generateSingleAsset({
         LOVABLE_API_KEY,
+        TOGETHER_API_KEY,
         dnaContext,
         output,
         pieceType,
@@ -460,6 +472,7 @@ function buildDeepPerceptionContext(ref: any): string {
 // ── Single Asset Generator with Fallback Logging ────────────────
 async function generateSingleAsset(opts: {
   LOVABLE_API_KEY: string;
+  TOGETHER_API_KEY?: string;
   dnaContext: string;
   output: string;
   pieceType: string;
@@ -475,7 +488,7 @@ async function generateSingleAsset(opts: {
   fallbackLog: string[];
 }) {
   const {
-    LOVABLE_API_KEY, dnaContext, output, pieceType, profile,
+    LOVABLE_API_KEY, TOGETHER_API_KEY, dnaContext, output, pieceType, profile,
     provider, ratio, destination, intensity, userPrompt,
     originalAsset, variationIndex, totalAttempts, fallbackLog,
   } = opts;
@@ -612,11 +625,14 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       ? [provider]
       : IMAGE_MODELS[profile] || IMAGE_MODELS.standard;
 
-    // Priorizar modelo de alta qualidade quando há texto para integrar
+    // Para perfil unrestricted, não priorizar modelos do Gemini (que têm filtros)
+    const isUnrestricted = profile === "unrestricted";
+
+    // Priorizar modelo de alta qualidade quando há texto para integrar (exceto perfil unrestricted)
     const hasTextToIntegrate = !!(headline || userPrompt);
-    if (hasTextToIntegrate && !models.includes("google/gemini-3-pro-image-preview")) {
+    if (!isUnrestricted && hasTextToIntegrate && !models.includes("google/gemini-3-pro-image-preview")) {
       models = ["google/gemini-3-pro-image-preview", ...models];
-    } else if (hasTextToIntegrate && models[0] !== "google/gemini-3-pro-image-preview") {
+    } else if (!isUnrestricted && hasTextToIntegrate && models[0] !== "google/gemini-3-pro-image-preview") {
       models = ["google/gemini-3-pro-image-preview", ...models.filter(m => m !== "google/gemini-3-pro-image-preview")];
     }
 
@@ -661,8 +677,39 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
 
         let resp: Response;
         const isFalModel = FAL_MODELS.has(model);
+        const isTogetherModel = TOGETHER_MODELS.has(model);
 
-        if (isFalModel) {
+        if (isTogetherModel) {
+          // ── together.ai API call (sem filtros de conteúdo) ──
+          if (!TOGETHER_API_KEY) {
+            const event = `Imagem: TOGETHER_API_KEY não configurada, pulando ${model}`;
+            console.error(event);
+            fallbackEvents.push(event);
+            fallbackLog.push(event);
+            usedFallback = true;
+            continue;
+          }
+          // Remove o prefixo "together/" para obter o model ID real
+          const togetherModelId = model.replace("together/", "");
+          const togetherRatio = ratio === "1:1" ? { width: 1024, height: 1024 }
+            : ratio === "9:16" ? { width: 768, height: 1344 }
+            : { width: 1344, height: 768 };
+          resp = await fetch(TOGETHER_API_BASE, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${TOGETHER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: togetherModelId,
+              prompt: imagePrompt,
+              n: 1,
+              steps: 28,
+              ...togetherRatio,
+              disable_safety_checker: true,
+            }),
+          });
+        } else if (isFalModel) {
           // ── fal.ai API call ──
           const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
           if (!FAL_API_KEY) {
@@ -684,6 +731,8 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
               prompt: imagePrompt,
               image_size: ratio === "1:1" ? "square_hd" : ratio === "9:16" ? "portrait_16_9" : "landscape_16_9",
               num_images: 1,
+              // Desativa o filtro de conteúdo para perfis que necessitam
+              enable_safety_checker: !isUnrestricted,
             }),
           });
         } else {
@@ -717,9 +766,12 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
         console.log(`Resposta do modelo ${model} - keys:`, Object.keys(data));
 
         // fal.ai returns { images: [{ url, content_type }] }
+        // together.ai returns { data: [{ url }] }
         let extractedUrl: string | null = null;
         if (isFalModel && data.images?.[0]?.url) {
           extractedUrl = data.images[0].url;
+        } else if (isTogetherModel && data.data?.[0]?.url) {
+          extractedUrl = data.data[0].url;
         } else {
           extractedUrl = extractImageUrlFromResponse(data);
         }
