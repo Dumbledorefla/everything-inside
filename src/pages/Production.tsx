@@ -40,14 +40,13 @@ const PIECE_ICONS: Record<string, React.ElementType> = {
 };
 
 const profileLabels: Record<string, string> = {
-  economy: "Economia", standard: "Padrão", quality: "Qualidade", unrestricted: "Sem Restrições",
+  economy: "Economia", standard: "Padrão", quality: "Qualidade",
 };
 
 const profileColors: Record<string, string> = {
   economy: "bg-cos-warning/10 text-cos-warning border-cos-warning/20",
   standard: "bg-primary/10 text-primary border-primary/20",
   quality: "bg-cos-purple/10 text-cos-purple border-cos-purple/20",
-  unrestricted: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const roleLabels: Record<string, string> = {
@@ -634,12 +633,12 @@ export default function Production() {
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Perfil</label>
                   <div className="flex flex-wrap gap-1 rounded-xl bg-secondary p-0.5">
-                    {(["economy", "standard", "quality", "unrestricted"] as const).map((p) => (
+                    {(["economy", "standard", "quality"] as const).map((p) => (
                       <button key={p} onClick={() => setSpec({ profile: p as any })}
                         className={cn(
                           "flex-1 rounded-lg py-1.5 text-[10px] transition-all min-w-[60px]",
                           spec.profile === (p as any)
-                            ? p === "unrestricted" ? "bg-destructive/15 text-destructive font-medium" : "bg-primary/15 text-primary font-medium"
+                            ? "bg-primary/15 text-primary font-medium"
                             : "text-muted-foreground hover:text-foreground"
                         )}>
                         {profileLabels[p]}
