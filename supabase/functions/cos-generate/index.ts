@@ -131,6 +131,7 @@ interface GenerateRequest {
   operationMode?: string; // foundation | social | performance
   formatLabel?: string;   // human-readable format tag
   referencePhotoUrl?: string; // URL of reference photo for IP-Adapter face preservation
+  copyTone?: string; // auto | professional | fun | informative | salesy
 }
 
 serve(async (req) => {
@@ -162,7 +163,7 @@ serve(async (req) => {
       projectId, mode, output, pieceType, quantity, profile,
       provider, destination, ratio, intensity, userPrompt,
       regenerateAssetId, pipelineMode = "simple", referenceId,
-      operationMode, formatLabel, referencePhotoUrl,
+      operationMode, formatLabel, referencePhotoUrl, copyTone,
     } = body;
 
     // ── 1. Fetch Project DNA (latest version) ───────────────────
@@ -280,6 +281,61 @@ serve(async (req) => {
         .single();
 
       if (savedAsset) {
+        // ── Generate copy_text (caption/description) ──────────
+        let copyText: string | null = null;
+        try {
+          const toneMap: Record<string, string> = {
+            auto: "Use o tom de voz definido no DNA do projeto.",
+            professional: "Tom profissional, corporativo e confiável.",
+            fun: "Tom divertido, leve e descontraído.",
+            informative: "Tom informativo, educacional e objetivo.",
+            salesy: "Tom vendedor, persuasivo com gatilhos mentais e urgência.",
+          };
+          const toneInstruction = toneMap[copyTone || "auto"] || toneMap["auto"];
+
+          const copyPrompt = `Você é um social media copywriter especialista. Gere uma legenda/descrição para um post de rede social.
+
+CONTEXTO DO PROJETO:
+${dnaContext}
+
+CONTEÚDO DO ATIVO:
+- Headline: ${variation.headline || "N/A"}
+- Body: ${variation.body || "N/A"}
+- CTA: ${variation.cta || "N/A"}
+- Tipo: ${pieceType}
+
+INSTRUÇÃO DE TOM: ${toneInstruction}
+
+REGRAS:
+- Escreva em português brasileiro
+- Use emojis de forma moderada e estratégica
+- Inclua hashtags relevantes ao final (3-5)
+- Máximo de 300 palavras
+- Não use jargões técnicos de marketing
+- A legenda deve complementar o visual, não repetir exatamente o headline
+
+Responda APENAS com a legenda pronta, sem explicações.`;
+
+          const copyResp = await fetch(AI_GATEWAY, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [{ role: "user", content: copyPrompt }],
+            }),
+          });
+
+          if (copyResp.ok) {
+            const copyData = await copyResp.json();
+            copyText = copyData.choices?.[0]?.message?.content?.trim() || null;
+          }
+        } catch (copyErr) {
+          console.error("Copy generation failed (non-blocking):", copyErr);
+        }
+
         await supabase.from("asset_versions").insert({
           asset_id: savedAsset.id,
           version: 1,
@@ -287,6 +343,7 @@ serve(async (req) => {
           body: variation.body,
           cta: variation.cta,
           image_url: variation.imageUrl,
+          copy_text: copyText,
           generation_metadata: {
             model_text: variation.textModel,
             model_image: variation.imageModel,
@@ -355,6 +412,7 @@ serve(async (req) => {
           creditCost,
           dnaVersionId,
           fallbackEvents: variation.fallbackEvents,
+          copyText,
         });
       }
     }

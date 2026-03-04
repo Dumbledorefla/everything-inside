@@ -1,0 +1,1 @@
+ALTER TABLE public.asset_versions ADD COLUMN copy_text TEXT;

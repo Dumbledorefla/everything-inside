@@ -16,6 +16,7 @@ export interface BatchResult {
   status: string;
   creditCost: number;
   fallbackEvents?: string[];
+  copyText?: string | null;
 }
 
 export interface BatchProgress {
@@ -41,6 +42,7 @@ interface BatchGenerateParams {
   userPrompt?: string;
   operationMode?: string;
   formatLabel?: string;
+  copyTone?: string;
 }
 
 export function useBatchGenerate() {
