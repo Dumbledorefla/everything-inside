@@ -227,13 +227,36 @@ Write the description in a single paragraph, in the same language the brand name
 
       for (let i = 0; i < num_variations; i++) {
         try {
-          const imagePrompt = mode === "generate_base"
-            ? buildCharacterPrompt(prompt, character_attributes, dnaContext, i, num_variations)
-            : `Generate a photorealistic portrait photo of a person for a testimonial/review.
-Description: ${prompt}
-Requirements: High quality, photorealistic, professional lighting, natural look.
-Variation ${i + 1} of ${num_variations} - slightly different expression or angle.
-DO NOT render any text in the image.`;
+          let imagePrompt: string;
+          if (mode === "generate_base") {
+            imagePrompt = buildCharacterPrompt(prompt, character_attributes, dnaContext, i, num_variations);
+          } else {
+            // Evaluation mode: build intelligent prompt with DNA + attributes
+            const attrParts: string[] = [];
+            if (character_attributes?.ethnicity) attrParts.push(`Ethnicity: ${character_attributes.ethnicity}`);
+            if (character_attributes?.apparentAge) attrParts.push(`Apparent age: ${character_attributes.apparentAge}`);
+            if (character_attributes?.hairColor) attrParts.push(`Hair color: ${character_attributes.hairColor}`);
+            if (character_attributes?.hairStyle) attrParts.push(`Hair style: ${character_attributes.hairStyle}`);
+            if (character_attributes?.clothingStyle) attrParts.push(`Clothing style: ${character_attributes.clothingStyle}`);
+
+            imagePrompt = `Generate a photorealistic portrait photo of a SATISFIED CUSTOMER for use in a testimonial/review.
+
+BRAND CONTEXT:
+${dnaContext}
+
+CHARACTER DESCRIPTION:
+${prompt}
+
+${attrParts.length > 0 ? `PHYSICAL ATTRIBUTES:\n${attrParts.join("\n")}` : ""}
+
+REQUIREMENTS:
+- High quality, photorealistic, natural lighting
+- The person should look authentic and genuine, NOT like a stock photo
+- Expression should convey genuine satisfaction and trust
+- The character should look like a real customer of the brand described above
+- Variation ${i + 1} of ${num_variations} — each variation should be a DIFFERENT person to create a diverse set of "customers"
+- DO NOT render any text in the image`;
+          }
 
           const imageData = await generateImage(LOVABLE_API_KEY, imagePrompt);
           if (!imageData) continue;
