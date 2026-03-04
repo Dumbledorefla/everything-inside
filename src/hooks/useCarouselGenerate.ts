@@ -55,7 +55,7 @@ export function useCarouselGenerate() {
     referenceId?: string;
     slideCount: number;
     topic?: string;
-    profile: "economy" | "standard" | "quality";
+    profile: "economy" | "standard" | "quality" | "unrestricted";
     ratio: string;
     useCharacter?: boolean;
     characterImageUrl?: string;
@@ -88,7 +88,7 @@ export function useCarouselGenerate() {
   const generateSlides = useCallback(async (params: {
     projectId: string;
     referenceId?: string;
-    profile: "economy" | "standard" | "quality";
+    profile: "economy" | "standard" | "quality" | "unrestricted";
     ratio: string;
     useCharacter?: boolean;
     characterImageUrl?: string;
