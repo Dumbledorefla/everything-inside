@@ -57,7 +57,7 @@ export default function GlobalContextSearch() {
 
       const { data: assetResults } = await supabase
         .from("assets")
-        .select("id, title, tags, project_id, projects(name, niche)")
+        .select("id, title, tags, project_id, projects!assets_project_id_fkey(name, niche)")
         .ilike("title", term)
         .limit(10);
 

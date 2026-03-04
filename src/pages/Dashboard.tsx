@@ -110,7 +110,7 @@ export default function Dashboard() {
       const { count: officialCount } = await supabase.from("assets").select("*", { count: "exact", head: true }).eq("status", "official");
       const { data: recentAssets } = await supabase
         .from("assets")
-        .select("id, title, status, output, created_at, project_id, projects(name, niche)")
+        .select("id, title, status, output, created_at, project_id, projects!assets_project_id_fkey(name, niche)")
         .order("created_at", { ascending: false })
         .limit(10);
       return { drafts: draftCount || 0, official: officialCount || 0, recent: recentAssets || [] };
