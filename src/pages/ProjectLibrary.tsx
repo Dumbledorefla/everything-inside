@@ -66,11 +66,15 @@ export default function ProjectLibrary() {
     queryFn: async () => {
       let q = supabase
         .from("assets")
-        .select("id, title, status, output, provider_used, profile_used, created_at, asset_type")
+        .select("id, title, status, output, provider_used, profile_used, created_at, persona_type, format_label")
         .eq("project_id", projectId!)
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
-      if (categoryFilter !== "all") q = q.eq("asset_type", categoryFilter);
+      if (categoryFilter === "character") q = q.not("persona_type", "is", null);
+      else if (categoryFilter === "video") q = q.eq("output", "video");
+      else if (categoryFilter === "feed_post") q = q.in("format_label", ["feed", "feed_post", "single"]);
+      else if (categoryFilter === "carousel") q = q.in("format_label", ["carousel", "carrossel"]);
+      else if (categoryFilter === "text") q = q.eq("output", "text");
 
       const { data: baseAssets, error: assetsError } = await q.limit(24);
       if (assetsError) throw assetsError;
