@@ -5,7 +5,7 @@ import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
   Check, RotateCcw, ChevronRight, ChevronDown, Lightbulb, Film,
-  Minus, Plus, User,
+  Minus, Plus, User, Copy, MessageSquareText,
 } from "lucide-react";
 import { AnimateVideoModal } from "@/components/creative/AnimateVideoModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -116,6 +116,7 @@ export default function Production() {
   const [useInfluencer, setUseInfluencer] = useState(false);
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
   const [showCarouselIdeaGenerator, setShowCarouselIdeaGenerator] = useState(false);
+  const [copyTone, setCopyTone] = useState("auto");
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
@@ -399,6 +400,7 @@ export default function Production() {
       userPrompt: userPrompt || undefined,
       operationMode,
       formatLabel: currentPieceLabel,
+      copyTone,
     } as any);
   };
 
@@ -704,6 +706,21 @@ export default function Production() {
                 </div>
               </ConfigSection>
 
+              {/* ── Section: Copy Tone ── */}
+              <ConfigSection title="Tom da Legenda" defaultOpen={false}>
+                <div>
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Tom da Copy</label>
+                  <select value={copyTone} onChange={(e) => setCopyTone(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
+                    <option value="auto">Automático (DNA do Projeto)</option>
+                    <option value="professional">Profissional</option>
+                    <option value="fun">Divertido</option>
+                    <option value="informative">Informativo</option>
+                    <option value="salesy">Vendedor</option>
+                  </select>
+                </div>
+              </ConfigSection>
+
               {/* ── Section: Prompt & Generation ── */}
               <ConfigSection title="Prompt e Geração" defaultOpen={true}>
                 {/* Idea Generator - opens as modal via button */}
@@ -922,6 +939,30 @@ export default function Production() {
                   <h3 className="text-sm font-semibold">{selectedResult.headline}</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">{selectedResult.body}</p>
                   {selectedResult.cta && <p className="text-xs font-medium text-primary">{selectedResult.cta}</p>}
+                </motion.div>
+              )}
+              {/* Copy text display */}
+              {selectedResult?.copyText && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-[600px] mx-auto mt-4 rounded-2xl border border-border bg-card p-4 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <MessageSquareText className="h-3.5 w-3.5" /> Legenda / Descrição
+                    </h3>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedResult.copyText || "");
+                        toast.success("Legenda copiada!");
+                      }}
+                      className="flex items-center gap-1 text-[10px] text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Copy className="h-3 w-3" /> Copiar
+                    </button>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{selectedResult.copyText}</p>
                 </motion.div>
               )}
               {selectedResult?.fallbackEvents && selectedResult.fallbackEvents.length > 0 && (

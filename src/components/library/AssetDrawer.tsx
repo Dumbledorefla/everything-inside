@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Clock, Cpu, Palette, FileText, Hash, CreditCard, ChevronRight, Check, RefreshCw } from "lucide-react";
+import { X, Clock, Cpu, Palette, FileText, Hash, CreditCard, ChevronRight, Check, RefreshCw, Copy, MessageSquareText } from "lucide-react";
 import AssetRating from "./AssetRating";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +96,11 @@ export default function AssetDrawer({ asset, onClose, onApprove }: AssetDrawerPr
                 </div>
               )}
 
+              {/* Copy / Caption */}
+              {version?.copy_text && (
+                <CopyTextSection initialText={version.copy_text} />
+              )}
+
               {/* Metadata Grid */}
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -162,6 +168,34 @@ export default function AssetDrawer({ asset, onClose, onApprove }: AssetDrawerPr
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function CopyTextSection({ initialText }: { initialText: string }) {
+  const [text, setText] = useState(initialText);
+  return (
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+        <MessageSquareText className="h-3.5 w-3.5" /> Legenda / Descrição
+      </h3>
+      <div className="relative">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={5}
+          className="w-full rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground leading-relaxed resize-none focus:border-primary/40 focus:outline-none"
+        />
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(text);
+            import("sonner").then(({ toast }) => toast.success("Legenda copiada!"));
+          }}
+          className="absolute top-2 right-2 flex items-center gap-1 rounded-lg bg-primary/10 text-primary px-2 py-1 text-[10px] font-medium hover:bg-primary/20 transition-colors"
+        >
+          <Copy className="h-3 w-3" /> Copiar
+        </button>
+      </div>
+    </div>
   );
 }
 

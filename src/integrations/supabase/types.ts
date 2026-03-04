@@ -118,6 +118,7 @@ export type Database = {
         Row: {
           asset_id: string
           body: string | null
+          copy_text: string | null
           created_at: string
           cta: string | null
           generation_metadata: Json | null
@@ -131,6 +132,7 @@ export type Database = {
         Insert: {
           asset_id: string
           body?: string | null
+          copy_text?: string | null
           created_at?: string
           cta?: string | null
           generation_metadata?: Json | null
@@ -144,6 +146,7 @@ export type Database = {
         Update: {
           asset_id?: string
           body?: string | null
+          copy_text?: string | null
           created_at?: string
           cta?: string | null
           generation_metadata?: Json | null
