@@ -81,35 +81,35 @@
      RAINY MODE — Light Studio
      ═══════════════════════════════════════════════ */
   .rainy {
-    --background: 220 14% 96%;
-    --foreground: 220 15% 10%;
+    --background: 210 17% 97%;
+    --foreground: 210 24% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 10%;
+    --card-foreground: 210 24% 16%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 10%;
+    --popover-foreground: 210 24% 16%;
     --primary: 187 80% 34%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 10% 91%;
-    --secondary-foreground: 220 12% 22%;
-    --muted: 220 10% 92%;
-    --muted-foreground: 220 8% 46%;
-    --accent: 220 10% 93%;
-    --accent-foreground: 220 15% 10%;
+    --secondary: 210 14% 93%;
+    --secondary-foreground: 210 18% 22%;
+    --muted: 210 14% 93%;
+    --muted-foreground: 210 11% 42%;
+    --accent: 210 14% 94%;
+    --accent-foreground: 210 24% 16%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 10% 85%;
-    --input: 220 10% 87%;
+    --border: 210 14% 83%;
+    --input: 210 14% 85%;
     --ring: 187 80% 34%;
 
-    --surface-0: 220 14% 96%;
+    --surface-0: 210 17% 97%;
     --surface-1: 0 0% 100%;
-    --surface-2: 220 12% 96%;
-    --surface-3: 220 10% 93%;
+    --surface-2: 210 14% 96%;
+    --surface-3: 210 14% 93%;
 
-    --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 8px -2px rgba(0,0,0,0.08);
-    --shadow-lg: 0 8px 20px -4px rgba(0,0,0,0.1);
-    --shadow-xl: 0 20px 40px -12px rgba(0,0,0,0.12);
+    --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px -2px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px -4px rgba(0,0,0,0.1);
+    --shadow-xl: 0 20px 48px -12px rgba(0,0,0,0.12);
     --shadow-glow: 0 0 16px -4px hsl(187 80% 34% / 0.15);
     --shadow-clay: 0 4px 16px -4px rgba(0,0,0,0.06);
 
@@ -122,16 +122,16 @@
     --cos-orange: 30 90% 50%;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 12% 20%;
+    --sidebar-foreground: 210 18% 20%;
     --sidebar-primary: 187 80% 34%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 10% 95%;
-    --sidebar-accent-foreground: 220 12% 15%;
-    --sidebar-border: 220 10% 88%;
+    --sidebar-accent: 210 14% 95%;
+    --sidebar-accent-foreground: 210 18% 15%;
+    --sidebar-border: 210 14% 86%;
     --sidebar-ring: 187 80% 34%;
 
     --glass-bg: 0 0% 100% / 0.95;
-    --glass-border: 220 10% 85%;
+    --glass-border: 210 14% 85%;
 
     --star-color: 0 0% 30%;
     --star-color-alt: 187 60% 30%;

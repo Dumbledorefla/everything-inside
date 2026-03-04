@@ -184,25 +184,25 @@ export default function Sprints() {
         })}
         {!isLoading && (!sprints || sprints.length === 0) && (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="rounded-2xl border border-dashed border-border bg-card p-16 text-center">
+            className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
             <motion.div
-              animate={{ y: [0, -8, 0] }}
+              animate={{ y: [0, -6, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="w-20 h-20 mx-auto rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-5"
+              className="w-14 h-14 mx-auto rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-4"
             >
-              <Rocket className="h-10 w-10 text-primary/30" />
+              <Rocket className="h-7 w-7 text-primary/30" />
             </motion.div>
-            <h3 className="text-base font-semibold font-mono-brand mb-2">Nenhum sprint criado</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed mb-5">
-              Sprints permitem produzir conteúdo em escala com um budget controlado. Crie seu primeiro sprint para começar.
+            <h3 className="text-sm font-semibold font-mono-brand mb-1.5">Nenhum sprint criado</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed mb-4">
+              Sprints permitem produzir conteúdo em escala com budget controlado.
             </p>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowCreate(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground"
             >
-              <Plus className="h-4 w-4" /> Criar Primeiro Sprint
+              <Plus className="h-3.5 w-3.5" /> Criar Primeiro Sprint
             </motion.button>
           </motion.div>
         )}

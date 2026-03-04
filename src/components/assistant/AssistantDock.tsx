@@ -1,6 +1,6 @@
 import { useAssistant } from "@/contexts/AssistantContext";
 import { AnimatePresence, motion } from "framer-motion";
-import ChatThread from "./ChatThread";
+import DirectorPanel from "./DirectorPanel";
 import ContextPanel from "./ContextPanel";
 import QuickActions from "./QuickActions";
 import AdaptiveMemoryObserver from "./AdaptiveMemoryObserver";
@@ -200,7 +200,7 @@ export default function AssistantDock() {
 
           {/* Content */}
           <div className="flex-1 overflow-hidden">
-            {activeTab === "chat" && <ChatThread />}
+            {activeTab === "chat" && <DirectorPanel />}
             {activeTab === "context" && agentMode === "project" && <ContextPanel />}
             {activeTab === "actions" && agentMode === "project" && <QuickActions />}
           </div>

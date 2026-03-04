@@ -310,9 +310,9 @@ export default function Production() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
-      {/* ═══════ LEFT PANEL — Config ═══════ */}
-      <div className="w-[280px] shrink-0 border-r border-border bg-card overflow-y-auto">
-        <div className="p-4 space-y-5">
+      {/* ═══════ LEFT PANEL — Config (sticky with internal scroll) ═══════ */}
+      <div className="w-[280px] shrink-0 border-r border-border bg-card flex flex-col" style={{ maxHeight: "100%" }}>
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {/* Mode selector */}
           <OperationModeSelector mode={operationMode} onChange={setOperationMode} />
 
@@ -548,8 +548,10 @@ export default function Production() {
               </ConfigSection>
             </>
           )}
+        </div>
 
-          {/* Generate button */}
+        {/* ═══ Fixed Generate button at bottom ═══ */}
+        <div className="shrink-0 border-t border-border p-3 bg-card">
           {isCarousel ? (
             <div className="space-y-2">
               {carousel.step === "idle" && (
@@ -602,22 +604,23 @@ export default function Production() {
 
       {/* ═══════ CENTER PANEL — Canvas ═══════ */}
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        {/* Toolbar */}
-        <div className="shrink-0 h-10 border-b border-border flex items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
+        {/* Toolbar — bigger tabs with better contrast */}
+        <div className="shrink-0 h-12 border-b border-border flex items-center justify-between px-4 bg-card/50">
+          <div className="flex items-center gap-1">
+            <span className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-semibold font-mono-brand uppercase tracking-wider text-primary">
               {MODE_LABELS[operationMode]}
             </span>
-            <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
-            <span className="text-[10px] font-mono-brand text-foreground">{currentPieceLabel}</span>
-            <span className="text-[10px] font-mono-brand text-muted-foreground ml-1">{spec.ratio}</span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
+            <span className="rounded-lg bg-secondary border border-border px-3 py-1.5 text-xs font-semibold font-mono-brand text-foreground">
+              {currentPieceLabel} {spec.ratio}
+            </span>
           </div>
           {selectedResult && (
             <div className="flex items-center gap-2">
-              <span className={cn("rounded-lg border px-2 py-0.5 text-[9px] font-mono-brand", profileColors[selectedResult.profile] || "")}>
+              <span className={cn("rounded-lg border px-2.5 py-1 text-[10px] font-mono-brand font-medium", profileColors[selectedResult.profile] || "")}>
                 {profileLabels[selectedResult.profile] || selectedResult.profile}
               </span>
-              <span className="text-[9px] font-mono-brand text-muted-foreground">{selectedResult.creditCost}cr</span>
+              <span className="text-[10px] font-mono-brand text-muted-foreground">{selectedResult.creditCost}cr</span>
             </div>
           )}
         </div>

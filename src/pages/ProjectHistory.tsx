@@ -1,8 +1,29 @@
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Clock, Loader2 } from "lucide-react";
+import { Clock, Loader2, Zap, Image, FileText, Check, Archive, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+
+const actionIcons: Record<string, { icon: React.ElementType; color: string }> = {
+  generate: { icon: Zap, color: "text-primary bg-primary/10" },
+  approve: { icon: Check, color: "text-cos-success bg-cos-success/10" },
+  archive: { icon: Archive, color: "text-muted-foreground bg-muted" },
+  promote: { icon: Image, color: "text-cos-purple bg-cos-purple/10" },
+  create: { icon: FileText, color: "text-cos-warning bg-cos-warning/10" },
+  regenerate: { icon: RefreshCw, color: "text-cos-orange bg-cos-orange/10" },
+};
+
+function getActionConfig(action: string) {
+  const lower = action.toLowerCase();
+  if (lower.includes("gera") || lower.includes("gen")) return actionIcons.generate;
+  if (lower.includes("aprov")) return actionIcons.approve;
+  if (lower.includes("arquiv")) return actionIcons.archive;
+  if (lower.includes("promov") || lower.includes("oficial")) return actionIcons.promote;
+  if (lower.includes("cri")) return actionIcons.create;
+  if (lower.includes("regen") || lower.includes("refaz")) return actionIcons.regenerate;
+  return { icon: Clock, color: "text-muted-foreground bg-muted" };
+}
 
 export default function ProjectHistory() {
   const { projectId } = useParams();
@@ -39,16 +60,26 @@ export default function ProjectHistory() {
       )}
 
       <div className="space-y-2">
-        {logs?.map((log, i) => (
-          <motion.div key={log.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }} className="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3">
-            <div className="mt-0.5 rounded-full bg-secondary p-1.5"><Clock className="h-3 w-3 text-muted-foreground" /></div>
-            <div className="flex-1">
-              <p className="text-sm">{log.action}</p>
-              {log.entity_type && <p className="text-[10px] font-mono text-muted-foreground">{log.entity_type} · {log.entity_id?.slice(0, 8)}</p>}
-            </div>
-            <span className="text-[10px] text-muted-foreground shrink-0">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
-          </motion.div>
-        ))}
+        {logs?.map((log, i) => {
+          const config = getActionConfig(log.action);
+          const Icon = config.icon;
+          return (
+            <motion.div key={log.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }} className="flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3">
+              <div className={cn("mt-0.5 rounded-full p-1.5", config.color)}>
+                <Icon className="h-3 w-3" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-foreground">{log.action}</p>
+                {log.entity_type && (
+                  <p className="text-[10px] font-mono text-muted-foreground">
+                    {log.entity_type} · <span className="text-foreground/70 font-semibold">{log.entity_id?.slice(0, 8)}</span>
+                  </p>
+                )}
+              </div>
+              <span className="text-[10px] text-muted-foreground shrink-0">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
