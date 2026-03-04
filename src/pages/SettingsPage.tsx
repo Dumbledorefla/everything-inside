@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const roleColors: Record<string, string> = {
   economy: "bg-cos-warning/10 text-cos-warning",
-  standard: "bg-cos-cyan/10 text-cos-cyan",
+  standard: "bg-primary/10 text-primary",
   quality: "bg-cos-purple/10 text-cos-purple",
 };
 
@@ -67,22 +69,25 @@ export default function SettingsPage() {
   const textProviders = providers?.filter((p) => p.provider_type === "text") || [];
 
   const renderProviders = (list: typeof providers) => (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {list && list.length === 0 && (
-        <p className="text-sm text-muted-foreground">Nenhum provedor configurado. Os provedores padrão do sistema serão usados.</p>
+        <p className="text-sm text-muted-foreground py-4">Nenhum provedor configurado. Os provedores padrão do sistema serão usados.</p>
       )}
       {list?.map((p, i) => (
-        <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-lg border border-border bg-card p-4 flex items-center justify-between">
+        <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+          className="rounded-xl border border-border bg-card p-4 flex items-center justify-between hover:border-primary/15 transition-all"
+        >
           <div className="flex items-center gap-4">
-            <div className={`h-2 w-2 rounded-full ${p.is_active ? "bg-cos-success" : "bg-muted-foreground"}`} />
+            <div className={cn("h-2.5 w-2.5 rounded-full", p.is_active ? "bg-cos-success" : "bg-muted-foreground/30")} />
             <div>
               <p className="text-sm font-medium">{p.name}</p>
-              {p.model_name && <p className="text-[10px] font-mono text-muted-foreground">{p.model_name}</p>}
+              {p.model_name && <p className="text-[10px] font-mono-brand text-muted-foreground">{p.model_name}</p>}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono ${roleColors[p.profile_level] || "bg-secondary text-muted-foreground"}`}>{roleLabels[p.profile_level] || p.profile_level}</span>
-            <button onClick={() => toggleProvider.mutate({ id: p.id, active: !p.is_active })} className={`text-[10px] font-mono ${p.is_active ? "text-cos-success" : "text-muted-foreground"}`}>
+            <span className={cn("rounded-lg px-2.5 py-0.5 text-[10px] font-mono-brand", roleColors[p.profile_level] || "bg-secondary text-muted-foreground")}>{roleLabels[p.profile_level] || p.profile_level}</span>
+            <button onClick={() => toggleProvider.mutate({ id: p.id, active: !p.is_active })}
+              className={cn("text-[10px] font-mono-brand px-2.5 py-1 rounded-lg border transition-all", p.is_active ? "text-cos-success border-cos-success/20 bg-cos-success/5" : "text-muted-foreground border-border hover:text-foreground")}>
               {p.is_active ? "Ativo" : "Inativo"}
             </button>
           </div>
@@ -92,47 +97,91 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold tracking-tight mb-6">Configurações</h1>
+    <div className="p-6 max-w-5xl">
+      <div className="mb-8 flex items-center gap-3">
+        <div className="rounded-xl bg-primary/10 border border-primary/20 p-2.5">
+          <Settings2 className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight font-mono-brand">Configurações</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Provedores, budget e monitoramento</p>
+        </div>
+      </div>
+
       <div className="flex gap-6">
-        <div className="w-48 shrink-0 space-y-1">
+        <div className="w-52 shrink-0 space-y-1">
           {tabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-xs text-left transition-colors ${activeTab === tab.id ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
-              <tab.icon className="h-3.5 w-3.5" />{tab.label}
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "w-full flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs text-left transition-all",
+                activeTab === tab.id
+                  ? "bg-primary/10 text-primary font-medium border border-primary/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground border border-transparent"
+              )}>
+              <tab.icon className="h-4 w-4" />{tab.label}
             </button>
           ))}
         </div>
+
         <div className="flex-1">
-          {activeTab === "image" && (<><h2 className="text-sm font-semibold mb-4">Provedores de Imagem</h2>{renderProviders(imageProviders)}</>)}
-          {activeTab === "text" && (<><h2 className="text-sm font-semibold mb-4">Provedores de Texto</h2>{renderProviders(textProviders)}</>)}
+          {activeTab === "image" && (
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-mono-brand">Provedores de Imagem</CardTitle>
+              </CardHeader>
+              <CardContent>{renderProviders(imageProviders)}</CardContent>
+            </Card>
+          )}
+          {activeTab === "text" && (
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-mono-brand">Provedores de Texto</CardTitle>
+              </CardHeader>
+              <CardContent>{renderProviders(textProviders)}</CardContent>
+            </Card>
+          )}
           {activeTab === "budget" && (
-            <div className="space-y-4">
-              <h2 className="text-sm font-semibold mb-4">COS Credits</h2>
-              <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="text-xs font-semibold mb-3">Saldo atual</h3>
-                <p className="text-3xl font-bold font-mono">{credits?.toFixed(0) || "0"}</p>
-                <p className="text-xs text-muted-foreground mt-1">créditos consumidos</p>
-              </div>
-            </div>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-mono-brand">COS Credits</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-xl border border-border bg-secondary p-6">
+                  <p className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-2">Saldo atual</p>
+                  <p className="text-4xl font-bold font-mono-brand text-foreground">{credits?.toFixed(0) || "0"}</p>
+                  <p className="text-xs text-muted-foreground mt-1">créditos consumidos</p>
+                </div>
+              </CardContent>
+            </Card>
           )}
           {activeTab === "logs" && (
-            <div className="space-y-4">
-              <h2 className="text-sm font-semibold mb-4">Logs de Uso</h2>
-              <div className="rounded-lg border border-border bg-card overflow-hidden">
-                <div className="divide-y divide-border">
-                  {recentLogs?.map((log) => (
-                    <div key={log.id} className="px-4 py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs">{log.description || "Operação"}</p>
-                        <p className="text-[10px] text-muted-foreground">{new Date(log.created_at).toLocaleString("pt-BR")}</p>
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-sm font-mono-brand">Logs de Uso</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <div className="divide-y divide-border">
+                    {recentLogs?.map((log) => (
+                      <div key={log.id} className="px-4 py-3 flex items-center justify-between hover:bg-accent/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "h-2 w-2 rounded-full",
+                            Number(log.amount) < 0 ? "bg-destructive" : "bg-cos-success"
+                          )} />
+                          <div>
+                            <p className="text-xs text-foreground">{log.description || "Operação"}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono-brand">{new Date(log.created_at).toLocaleString("pt-BR")}</p>
+                          </div>
+                        </div>
+                        <span className={cn("text-xs font-mono-brand font-medium", Number(log.amount) < 0 ? "text-destructive" : "text-cos-success")}>{Number(log.amount) > 0 ? "+" : ""}{log.amount}</span>
                       </div>
-                      <span className={`text-xs font-mono ${Number(log.amount) < 0 ? "text-destructive" : "text-cos-success"}`}>{Number(log.amount) > 0 ? "+" : ""}{log.amount}</span>
-                    </div>
-                  ))}
-                  {(!recentLogs || recentLogs.length === 0) && <p className="px-4 py-6 text-sm text-muted-foreground text-center">Sem logs ainda</p>}
+                    ))}
+                    {(!recentLogs || recentLogs.length === 0) && <p className="px-4 py-8 text-sm text-muted-foreground text-center">Sem logs ainda</p>}
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>

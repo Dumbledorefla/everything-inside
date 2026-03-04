@@ -142,12 +142,8 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Auto-open dock in project, keep available globally
-  useEffect(() => {
-    if (isInProject) {
-      setDockOpen(true);
-    }
-  }, [isInProject]);
+  // Dock starts closed by default — user opens it manually
+  // No auto-open behavior
 
   // ── DB: Load or create thread when context changes ──
   useEffect(() => {

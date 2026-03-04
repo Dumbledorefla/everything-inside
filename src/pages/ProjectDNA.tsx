@@ -10,6 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface DNAForm {
   identity: { nome: string; nicho: string; produto: string; slogan: string; tom: string; personalidade: string; instagram: string; website: string; whatsapp: string };
@@ -39,6 +44,29 @@ const DEFAULT_DNA: DNAForm = {
   },
 };
 
+/* Collapsible DNA Section */
+function DNASection({ title, icon: Icon, defaultOpen = false, children }: { title: string; icon: React.ElementType; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-4 hover:bg-accent/50 transition-colors">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold font-mono-brand">{title}</h2>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-6 pb-6 space-y-3">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
 export default function ProjectDNA() {
   const { projectId } = useParams();
   const { user } = useAuth();
@@ -51,7 +79,6 @@ export default function ProjectDNA() {
   const [includeMarketResearch, setIncludeMarketResearch] = useState(true);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [marketInsights, setMarketInsights] = useState<string | null>(null);
-  const [showSections, setShowSections] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: project } = useQuery({
@@ -82,7 +109,6 @@ export default function ProjectDNA() {
         strategy: { ...DEFAULT_DNA.strategy, ...(latestDNA.strategy as any || {}) },
         visual: { ...DEFAULT_DNA.visual, ...(latestDNA.visual as any || {}), references: (latestDNA.visual as any)?.references || [] },
       });
-      if ((latestDNA.identity as any)?.nome) setShowSections(true);
     } else if (project) {
       setForm((f) => ({ ...f, identity: { ...f.identity, nome: project.name || "", nicho: project.niche || "", produto: project.product || "" } }));
     }
@@ -137,7 +163,6 @@ export default function ProjectDNA() {
         },
       }));
       if (data.marketInsights) setMarketInsights(data.marketInsights);
-      setShowSections(true);
       toast.success("DNA preenchido pela IA! Revise e salve.");
     } catch (e: any) {
       console.error(e);
@@ -152,16 +177,16 @@ export default function ProjectDNA() {
   };
 
   const sections = [
-    { key: "identity" as const, title: "Identidade", fields: [
+    { key: "identity" as const, title: "Identidade", icon: Dna, fields: [
       { k: "nome", label: "Nome do Projeto" }, { k: "nicho", label: "Nicho" }, { k: "produto", label: "Produto" },
       { k: "slogan", label: "Slogan" }, { k: "tom", label: "Tom de Voz" }, { k: "personalidade", label: "Personalidade" },
       { k: "instagram", label: "@ Instagram" }, { k: "website", label: "Website" }, { k: "whatsapp", label: "WhatsApp" },
     ]},
-    { key: "audience" as const, title: "Público e Voz", fields: [
+    { key: "audience" as const, title: "Público e Voz", icon: Brain, fields: [
       { k: "perfil", label: "Público Principal" }, { k: "dor_principal", label: "Dor Principal" }, { k: "desejo_principal", label: "Desejo Principal" },
       { k: "objecoes", label: "Objeções" }, { k: "provas", label: "Provas Sociais" },
     ]},
-    { key: "strategy" as const, title: "Estratégia", fields: [
+    { key: "strategy" as const, title: "Estratégia", icon: Sparkles, fields: [
       { k: "promessa", label: "Promessa" }, { k: "diferencial", label: "Diferencial" }, { k: "mecanismo", label: "Mecanismo" },
       { k: "cta_padrao", label: "CTA Padrão" }, { k: "palavras_proibidas", label: "Palavras Proibidas" }, { k: "pilares", label: "Pilares de Conteúdo" },
     ]},
@@ -172,25 +197,25 @@ export default function ProjectDNA() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-primary/20 to-cos-purple/10 p-2.5">
+          <div className="rounded-xl bg-primary/10 border border-primary/20 p-2.5">
             <Dna className="h-5 w-5 text-primary" />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight font-mono-brand">DNA do Projeto</h1>
-            <p className="text-xs text-muted-foreground/60 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Identidade estratégica e visual — <span className="text-primary font-medium">v{latestDNA?.version || 1}</span>
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center gap-2 rounded-xl border border-border/20 bg-card/30 px-3.5 py-2.5 text-xs text-muted-foreground/60 hover:bg-card/50 hover:text-foreground transition-all">
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-all">
             <History className="h-3.5 w-3.5" />
             Histórico ({dnaVersions?.length || 0})
           </button>
           <motion.button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all shadow-sm shadow-primary/20">
+            className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-all">
             {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Salvar
           </motion.button>
@@ -200,7 +225,7 @@ export default function ProjectDNA() {
       {/* History panel */}
       {showHistory && dnaVersions && dnaVersions.length > 0 && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-          className="mb-6 rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm p-5">
+          className="mb-6 rounded-2xl border border-border bg-card p-5">
           <h3 className="text-xs font-semibold font-mono-brand mb-3">Versões</h3>
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {dnaVersions.map((v) => (
@@ -211,10 +236,9 @@ export default function ProjectDNA() {
                   strategy: { ...DEFAULT_DNA.strategy, ...(v.strategy as any || {}) },
                   visual: { ...DEFAULT_DNA.visual, ...(v.visual as any || {}), references: (v.visual as any)?.references || [] },
                 });
-                setShowSections(true);
-              }} className="w-full flex justify-between items-center rounded-xl px-3.5 py-2 text-xs hover:bg-card/50 transition-all">
+              }} className="w-full flex justify-between items-center rounded-xl px-3.5 py-2 text-xs hover:bg-accent transition-all">
                 <span className="font-mono-brand text-primary">v{v.version}</span>
-                <span className="text-muted-foreground/40 font-mono-brand">{new Date(v.created_at).toLocaleDateString("pt-BR")}</span>
+                <span className="text-muted-foreground font-mono-brand">{new Date(v.created_at).toLocaleDateString("pt-BR")}</span>
               </button>
             ))}
           </div>
@@ -223,40 +247,40 @@ export default function ProjectDNA() {
 
       {/* AI Context Section */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-        className="mb-6 rounded-2xl border border-primary/20 bg-card/30 backdrop-blur-sm p-6">
+        className="mb-6 rounded-2xl border border-primary/20 bg-card p-6">
         <div className="flex items-center gap-2 mb-1">
           <Brain className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold font-mono-brand">Contexto Inteligente</h2>
         </div>
-        <p className="text-xs text-muted-foreground/50 mb-5">
+        <p className="text-xs text-muted-foreground mb-5">
           Descreva seu projeto livremente, adicione referências visuais e deixe a IA preencher todo o DNA automaticamente.
         </p>
 
         {/* General context */}
         <div className="mb-4">
-          <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-1.5 block">
+          <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
             Contexto Geral do Projeto
           </label>
           <textarea value={generalContext} onChange={(e) => setGeneralContext(e.target.value)}
             placeholder="Ex: Meu projeto é sobre tarô terapêutico. Trabalho com leituras online para mulheres 25-45 anos..."
             rows={5}
-            className="w-full rounded-xl border border-border/20 bg-background/40 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
+            className="w-full rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
         </div>
 
         {/* Visual References */}
         <div className="mb-4">
-          <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/60 mb-1.5 block">
+          <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
             Referências Visuais
           </label>
           <div className="flex gap-2 mb-2">
             <div className="relative flex-1">
               <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
               <input type="url" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} placeholder="https://exemplo.com/referencia.jpg"
-                className="w-full rounded-xl border border-border/20 bg-background/40 pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+                className="w-full rounded-xl border border-border bg-secondary pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
             </div>
             <button onClick={() => { if (!refUrl.trim()) return; setForm((f) => ({ ...f, visual: { ...f.visual, references: [...f.visual.references, refUrl.trim()] } })); setRefUrl(""); toast.success("Referência adicionada"); }}
               disabled={!refUrl.trim()}
-              className="rounded-xl bg-card/50 border border-border/20 px-3.5 py-2.5 text-xs font-medium text-foreground hover:bg-card/80 disabled:opacity-40 transition-all">
+              className="rounded-xl bg-card border border-border px-3.5 py-2.5 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-40 transition-all">
               <Link className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -288,11 +312,11 @@ export default function ProjectDNA() {
             }}
           />
           <button onClick={() => fileInputRef.current?.click()} disabled={uploadingRef}
-            className="w-full rounded-xl border border-dashed border-border/20 p-3.5 text-center hover:bg-card/30 hover:border-primary/20 transition-all">
+            className="w-full rounded-xl border border-dashed border-border p-3.5 text-center hover:bg-accent hover:border-primary/20 transition-all">
             {uploadingRef ? (
-              <Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground/50" />
+              <Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
-              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/50">
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <Upload className="h-3.5 w-3.5" />
                 <span>Upload de imagens de referência</span>
               </div>
@@ -303,7 +327,7 @@ export default function ProjectDNA() {
           {form.visual.references.length > 0 && (
             <div className="flex gap-2 mt-3 flex-wrap">
               {form.visual.references.map((url, i) => (
-                <div key={i} className="group relative rounded-xl border border-border/20 overflow-hidden w-16 h-16 bg-card/30 shrink-0">
+                <div key={i} className="group relative rounded-xl border border-border overflow-hidden w-16 h-16 bg-card shrink-0">
                   <img src={url} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
                   <button onClick={() => setForm((f) => ({ ...f, visual: { ...f.visual, references: f.visual.references.filter((_, idx) => idx !== i) } }))}
                     className="absolute inset-0 bg-destructive/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -316,7 +340,7 @@ export default function ProjectDNA() {
         </div>
 
         {/* Market research toggle */}
-        <label className="flex items-center gap-2 rounded-xl border border-border/20 bg-background/40 px-3.5 py-2.5 text-xs text-muted-foreground/60 cursor-pointer hover:border-primary/20 hover:bg-card/30 transition-all mb-4">
+        <label className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-3.5 py-2.5 text-xs text-muted-foreground cursor-pointer hover:border-primary/20 hover:bg-accent transition-all mb-4">
           <Search className="h-3.5 w-3.5" />
           <span className="flex-1">Incluir pesquisa de mercado do nicho</span>
           <input type="checkbox" checked={includeMarketResearch} onChange={(e) => setIncludeMarketResearch(e.target.checked)} className="accent-primary" />
@@ -334,7 +358,7 @@ export default function ProjectDNA() {
         </motion.button>
 
         {includeMarketResearch && (
-          <p className="text-[10px] text-muted-foreground/40 text-center mt-2 font-mono-brand">
+          <p className="text-[10px] text-muted-foreground text-center mt-2 font-mono-brand">
             {includeMarketResearch ? "15 créditos" : "8 créditos"} · Contexto + referências{includeMarketResearch ? " + pesquisa" : ""}
           </p>
         )}
@@ -343,80 +367,63 @@ export default function ProjectDNA() {
       {/* Market insights */}
       {marketInsights && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="mb-6 rounded-2xl border border-primary/15 bg-primary/5 backdrop-blur-sm p-5">
+          className="mb-6 rounded-2xl border border-primary/15 bg-primary/5 p-5">
           <div className="flex items-center gap-2 mb-2">
             <Search className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold font-mono-brand">Insights de Mercado</h3>
           </div>
-          <p className="text-xs text-muted-foreground/70 whitespace-pre-wrap leading-relaxed">{marketInsights}</p>
+          <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{marketInsights}</p>
         </motion.div>
       )}
 
-      {/* Toggle sections */}
-      <button onClick={() => setShowSections(!showSections)}
-        className="w-full flex items-center justify-center gap-2 rounded-xl border border-border/20 bg-card/20 py-2.5 text-xs text-muted-foreground/50 hover:bg-card/40 hover:text-foreground transition-all mb-6">
-        {showSections ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        {showSections ? "Ocultar campos detalhados" : "Ver/editar campos detalhados"}
-      </button>
+      {/* ── Collapsible DNA Sections ── */}
+      <div className="space-y-3">
+        {sections.map((section) => (
+          <DNASection key={section.key} title={section.title} icon={section.icon} defaultOpen={!!latestDNA}>
+            {section.fields.map((f) => (
+              <div key={f.k}>
+                <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">{f.label}</label>
+                <input type="text" value={(form[section.key] as any)[f.k] || ""} onChange={(e) => update(section.key, f.k, e.target.value)}
+                  className="w-full rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+              </div>
+            ))}
+          </DNASection>
+        ))}
 
-      {showSections && (
-        <>
-          {sections.map((section, si) => (
-            <motion.div key={section.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: si * 0.1 }}
-              className="mb-4 rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm p-6">
-              <h2 className="text-sm font-semibold font-mono-brand mb-4">{section.title}</h2>
-              <div className="space-y-3">
-                {section.fields.map((f) => (
-                  <div key={f.k}>
-                    <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-1.5 block">{f.label}</label>
-                    <input type="text" value={(form[section.key] as any)[f.k] || ""} onChange={(e) => update(section.key, f.k, e.target.value)}
-                      className="w-full rounded-xl border border-border/20 bg-background/40 px-4 py-2.5 text-sm text-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-
-          {/* Design tokens */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-            className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Palette className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold font-mono-brand">Design Tokens</h2>
+        {/* Design tokens */}
+        <DNASection title="Design Tokens" icon={Palette} defaultOpen={!!latestDNA}>
+          <div className="mb-4">
+            <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-3 block">Cores</label>
+            <div className="flex gap-4">
+              {form.visual.colors.map((c, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <input type="color" value={c.hex} onChange={(e) => {
+                    const newColors = [...form.visual.colors];
+                    newColors[i] = { ...c, hex: e.target.value };
+                    setForm((f) => ({ ...f, visual: { ...f.visual, colors: newColors } }));
+                  }} className="h-11 w-11 rounded-xl border border-border cursor-pointer" />
+                  <span className="text-[10px] text-muted-foreground">{c.name}</span>
+                  <span className="text-[9px] font-mono-brand text-muted-foreground/60">{c.hex}</span>
+                </div>
+              ))}
             </div>
-            <div className="mb-6">
-              <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-3 block">Cores</label>
-              <div className="flex gap-4">
-                {form.visual.colors.map((c, i) => (
-                  <div key={i} className="flex flex-col items-center gap-2">
-                    <input type="color" value={c.hex} onChange={(e) => {
-                      const newColors = [...form.visual.colors];
-                      newColors[i] = { ...c, hex: e.target.value };
-                      setForm((f) => ({ ...f, visual: { ...f.visual, colors: newColors } }));
-                    }} className="h-11 w-11 rounded-xl border border-border/20 cursor-pointer" />
-                    <span className="text-[10px] text-muted-foreground/60">{c.name}</span>
-                    <span className="text-[9px] font-mono-brand text-muted-foreground/40">{c.hex}</span>
+          </div>
+          <div>
+            <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-3 block">Tipografia</label>
+            <div className="space-y-2">
+              {form.visual.fonts.map((f, i) => (
+                <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-secondary px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <Type className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-medium">{f.role}</span>
                   </div>
-                ))}
-              </div>
+                  <span className="text-[11px] font-mono-brand text-muted-foreground">{f.family} · {f.weight} · {f.size}</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="text-[10px] font-mono-brand uppercase tracking-[0.15em] text-muted-foreground/50 mb-3 block">Tipografia</label>
-              <div className="space-y-2">
-                {form.visual.fonts.map((f, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-xl border border-border/20 bg-background/40 px-4 py-2.5">
-                    <div className="flex items-center gap-3">
-                      <Type className="h-3.5 w-3.5 text-muted-foreground/40" />
-                      <span className="text-xs font-medium">{f.role}</span>
-                    </div>
-                    <span className="text-[11px] font-mono-brand text-muted-foreground/50">{f.family} · {f.weight} · {f.size}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
+          </div>
+        </DNASection>
+      </div>
     </div>
   );
 }
