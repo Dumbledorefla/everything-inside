@@ -44,20 +44,20 @@ const CREDIT_COSTS: Record<string, number> = {
 };
 
 const PIECE_PROMPTS: Record<string, string> = {
-  post: "Crie um post para redes sociais com headline impactante, body persuasivo e CTA direto.",
-  banner: "Crie um banner publicitário com headline curta e impactante, subtítulo de apoio e CTA.",
-  story: "Crie um story para Instagram com texto curto, direto e envolvente, adequado para formato vertical.",
-  ad: "Crie um anúncio pago com headline que gera curiosidade, body que aborda dor/desejo e CTA urgente.",
-  thumbnail: "Crie um texto para thumbnail de vídeo: título curto e chamativo que gere clique.",
-  vsl: "Crie um roteiro de VSL (Video Sales Letter) com gancho, problema, solução, prova e CTA.",
-  logo: "Descreva um conceito de logo: limpo, escalável, memorável. Funciona em P&B e 32px.",
-  palette: "Defina paleta de cores: primária, secundária, accent e neutras, justificando cada escolha.",
-  typography: "Sugira combinação tipográfica: display, body e accent. Justifique.",
-  brand_manual: "Crie diretrizes de uso da marca: espaçamento, versões, cores proibidas, tom de voz.",
-  highlight: "Crie capa de destaque para Instagram: ícone minimalista com fundo sólido na cor da marca.",
-  hero_banner: "Crie hero banner: composição lateral, 60% respiro para texto. Produto no terço direito.",
-  ecommerce_banner: "Crie banner e-commerce: produto centralizado, fundo clean, badge de desconto.",
-  lp_section: "Crie imagem para seção de LP: suporte a sobreposição de texto, alto contraste.",
+  post: "O objetivo é engajar o público nas redes sociais com conteúdo relevante e uma chamada para ação clara.",
+  banner: "O objetivo é criar um banner publicitário para atrair cliques com uma mensagem curta e impactante.",
+  story: "O objetivo é criar um story para Instagram que seja rápido, envolvente e otimizado para o formato vertical.",
+  ad: "O objetivo é criar um anúncio pago focado em conversão, despertando curiosidade e urgência.",
+  thumbnail: "O objetivo é criar um texto para a capa de um vídeo que maximize a taxa de cliques.",
+  vsl: "O objetivo é criar um roteiro para um vídeo de vendas que convença o espectador a tomar uma ação.",
+  logo: "O objetivo é criar um conceito de logo que seja memorável e represente a marca.",
+  palette: "O objetivo é definir uma paleta de cores que transmita a personalidade da marca.",
+  typography: "O objetivo é sugerir uma combinação de fontes que seja legível e alinhada à identidade visual.",
+  brand_manual: "O objetivo é criar um guia de estilo para garantir a consistência da marca.",
+  highlight: "O objetivo é criar uma capa de destaque para o Instagram que seja icônica e informativa.",
+  hero_banner: "O objetivo é criar a imagem principal para o topo de um site.",
+  ecommerce_banner: "O objetivo é criar um banner para uma loja virtual, destacando um produto ou promoção.",
+  lp_section: "O objetivo é criar uma imagem de suporte para uma seção de uma página de vendas.",
 };
 
 // ── Mode-specific system prompts ────────────────────────────────
@@ -527,6 +527,7 @@ REGRAS:
 - ${pieceInstruction}
 - Destino: ${destination}
 - ${intensityMap[intensity] || intensityMap.Equilibrado}
+- NUNCA use jargões de marketing como 'CTA', 'headline' ou 'body' no texto final. A linguagem deve ser 100% natural para o cliente.
 ${qualityFinishing}
 ${regenerateNote}
 ${variationNote}
