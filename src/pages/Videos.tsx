@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Video, Sparkles, Megaphone, MessageCircle, Star, Loader2, Download, Play, Image, FileText } from "lucide-react";
@@ -37,7 +37,6 @@ export default function Videos() {
 
   // Avatar state
   const [avatarAssetId, setAvatarAssetId] = useState("");
-  const [avatarAutoSet, setAvatarAutoSet] = useState(false);
   const [avatarScript, setAvatarScript] = useState("");
   const [avatarVoice, setAvatarVoice] = useState("Bella");
 
@@ -45,16 +44,6 @@ export default function Videos() {
   const [testAssetId, setTestAssetId] = useState("");
   const [testScript, setTestScript] = useState("");
   const [testVoice, setTestVoice] = useState("Rachel");
-
-  // Fetch project data for main influencer
-  const { data: projectData } = useQuery({
-    queryKey: ["project-for-video", projectId],
-    queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, main_influencer_asset_id").eq("id", projectId!).single();
-      return data;
-    },
-    enabled: !!projectId,
-  });
 
   // Fetch project assets for selectors
   const { data: projectAssets = [] } = useQuery({
@@ -89,16 +78,6 @@ export default function Videos() {
   const characterAssets = projectAssets.filter((a: any) => a.persona_type === "influencer" || a.persona_type === "character");
   const evalAssets = projectAssets.filter((a: any) => a.persona_type === "evaluation");
 
-  // Auto-select main influencer for avatar tab
-  useEffect(() => {
-    if (!avatarAutoSet && projectData?.main_influencer_asset_id && characterAssets.length > 0) {
-      const mainChar = characterAssets.find((a: any) => a.id === projectData.main_influencer_asset_id);
-      if (mainChar) {
-        setAvatarAssetId(mainChar.id);
-        setAvatarAutoSet(true);
-      }
-    }
-  }, [avatarAutoSet, projectData?.main_influencer_asset_id, characterAssets]);
 
   const generateMutation = useMutation({
     mutationFn: async (payload: any) => {
