@@ -37,14 +37,28 @@ async function generateIPAdapter(apiKey: string, modelId: string, prompt: string
 
 async function generateControlNet(apiKey: string, modelId: string, prompt: string, referenceUrl: string, ratio: string): Promise<string | null> {
   const imageSize = ratio === "9:16" ? "portrait_16_9" : ratio === "16:9" ? "landscape_16_9" : "square_hd";
-  const resp = await fetch(`https://fal.run/${modelId}`, {
-    method: "POST",
-    headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, control_image_url: referenceUrl, image_size: imageSize, num_inference_steps: 28, enable_safety_checker: false, controlnet_conditioning_scale: 0.8 }),
-  });
-  if (!resp.ok) { console.error("fal controlnet error:", resp.status, await resp.text()); return null; }
-  const data = await resp.json();
-  return data?.images?.[0]?.url ?? null;
+  const endpoint = modelId === "fal-ai/controlnet-union-sdxl" ? modelId : "fal-ai/flux-general";
+  const body = modelId === "fal-ai/controlnet-union-sdxl"
+    ? { prompt, control_image_url: referenceUrl, image_size: imageSize, num_inference_steps: 28, enable_safety_checker: false, controlnet_conditioning_scale: 0.8 }
+    : { prompt, controlnet_image_url: referenceUrl, image_size: imageSize, num_inference_steps: 28, enable_safety_checker: false };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55000);
+  try {
+    const resp = await fetch(`https://fal.run/${endpoint}`, {
+      method: "POST",
+      headers: { Authorization: `Key ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) { console.error("fal controlnet error:", resp.status, await resp.text()); return null; }
+    const data = await resp.json();
+    return data?.images?.[0]?.url ?? null;
+  } catch (err) {
+    clearTimeout(timeout);
+    console.error("fal controlnet error:", err);
+    return null;
+  }
 }
 
 async function generateLoRA(apiKey: string, prompt: string, loraModelId: string, ratio: string): Promise<string | null> {

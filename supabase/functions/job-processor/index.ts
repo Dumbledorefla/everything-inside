@@ -47,7 +47,12 @@ async function generateImageTogether(apiKey: string, prompt: string): Promise<st
     const imgResp = await fetch(url);
     if (!imgResp.ok) return null;
     const buffer = await imgResp.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
     return base64;
   } catch (err) {
     console.error("together.ai exception:", err);
@@ -87,7 +92,12 @@ async function generateImageFal(apiKey: string, prompt: string): Promise<string 
     const imgResp = await fetch(url);
     if (!imgResp.ok) return null;
     const buffer = await imgResp.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
     return base64;
   } catch (err) {
     console.error("fal.ai exception:", err);
