@@ -328,7 +328,7 @@ serve(async (req) => {
             image_model: variation.imageModel,
             fallback_events: variation.fallbackEvents,
           },
-        }).then(() => {}).catch((err: any) => console.error("cos_ledger insert error:", err));
+        });
 
         // ── 7c. Log to activity_log ───────────────────────────
         await supabase.from("activity_log").insert({
@@ -338,7 +338,7 @@ serve(async (req) => {
           entity_type: "asset",
           entity_id: savedAsset.id,
           metadata: { output, provider: variation.providerUsed, credit_cost: creditCost },
-        }).then(() => {}).catch((err: any) => console.error("activity_log insert error:", err));
+        });
 
         results.push({
           id: savedAsset.id,

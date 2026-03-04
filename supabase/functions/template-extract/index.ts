@@ -135,7 +135,7 @@ Retorne a estrutura abstrata do template.`;
 
   } catch (e) {
     console.error("Template extract error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

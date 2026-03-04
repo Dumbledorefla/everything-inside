@@ -228,7 +228,7 @@ ${pageMarkdown}
       entity_type: "page",
       entity_id: page.id,
       metadata: { source_url: sourceUrl, sections_count: sectionsToInsert.length, rewrite_intensity: rewriteIntensity },
-    }).catch(() => {});
+    });
 
     return new Response(JSON.stringify({
       success: true,

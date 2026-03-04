@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
           credits_cost: CREDIT_COSTS.intent_classify.credits,
           estimated_usd: CREDIT_COSTS.intent_classify.usd,
           metadata: { intent: intent.intent },
-        }).then(() => {}).catch(() => {});
+        });
       }
 
       // ═══ PHASE 2: EXECUTE COMMANDS ═══
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
             provider_used: "cos-system", operation_type: opType,
             credits_cost: cost.credits, estimated_usd: cost.usd,
             metadata: { intent: intent.intent, params: intent.params },
-          }).then(() => {}).catch(() => {});
+          });
         }
 
         return new Response(JSON.stringify(result), {
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
         provider_used: "gemini-3-flash-preview", operation_type: "CHAT",
         credits_cost: CREDIT_COSTS.chat_message.credits,
         estimated_usd: CREDIT_COSTS.chat_message.usd,
-      }).then(() => {}).catch(() => {});
+      });
     }
 
     const response = await fetch(AI_GATEWAY, {
