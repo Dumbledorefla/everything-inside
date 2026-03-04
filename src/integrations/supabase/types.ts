@@ -166,6 +166,7 @@ export type Database = {
       }
       assets: {
         Row: {
+          asset_type: string | null
           attempts: number | null
           created_at: string
           destination: string | null
@@ -198,6 +199,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asset_type?: string | null
           attempts?: number | null
           created_at?: string
           destination?: string | null
@@ -230,6 +232,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asset_type?: string | null
           attempts?: number | null
           created_at?: string
           destination?: string | null
