@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useAssistant } from "@/contexts/AssistantContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -109,6 +110,7 @@ function ResultCard({ url, onDownload }: { url: string; onDownload: (url: string
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function AdultStudio() {
   const { user } = useAuth();
+  const { activeProjectId } = useAssistant();
   const queryClient = useQueryClient();
 
   // Estado global
@@ -127,9 +129,6 @@ export default function AdultStudio() {
 
   // LoRA
   const [loraModelId, setLoraModelId] = useState("");
-
-  // Projeto ativo
-  const activeProjectId = localStorage.getItem("activeProjectId");
 
   // Quando muda de modo, seleciona o primeiro modelo do novo modo
   const handleModeChange = (mode: StudioMode) => {
