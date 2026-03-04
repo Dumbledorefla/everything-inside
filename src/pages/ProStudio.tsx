@@ -30,7 +30,6 @@ interface ModelOption {
 const MODELS: Record<StudioMode, ModelOption[]> = {
   text2img: [
     { id: "together/black-forest-labs/FLUX.1-schnell", name: "FLUX.1 Schnell", provider: "together", cost: "pago", quality: "boa", description: "Rápido, sem filtros. Ideal para testes e iterações rápidas." },
-    { id: "together/black-forest-labs/FLUX.1-krea-dev", name: "FLUX.1 Krea Dev", provider: "together", cost: "pago", quality: "ótima", description: "Mais detalhado e realista. Melhor equilíbrio custo/qualidade." },
     { id: "together/black-forest-labs/FLUX.2-dev", name: "FLUX.2 Dev", provider: "together", cost: "premium", quality: "máxima", description: "Última geração FLUX. Qualidade máxima, sem nenhum filtro." },
   ],
   ip_adapter: [
@@ -38,7 +37,7 @@ const MODELS: Record<StudioMode, ModelOption[]> = {
     { id: "fal-ai/flux/dev/image-to-image", name: "FLUX img2img", provider: "fal", cost: "pago", quality: "boa", description: "Usa sua foto como base e transforma a cena mantendo elementos visuais." },
   ],
   controlnet: [
-    { id: "fal-ai/flux-controlnet", name: "FLUX ControlNet", provider: "fal", cost: "pago", quality: "ótima", description: "FLUX com preservação de pose. Replica a posição do corpo com alta qualidade." },
+    { id: "fal-ai/flux-general", name: "FLUX General (ControlNet)", provider: "fal", cost: "pago", quality: "ótima", description: "FLUX com ControlNet, LoRA e IP-Adapter. Endpoint versátil e atualizado." },
     { id: "fal-ai/controlnet-union-sdxl", name: "ControlNet SDXL", provider: "fal", cost: "pago", quality: "boa", description: "Preserva a pose do corpo. Boa opção para replicar posições específicas." },
   ],
   lora: [
@@ -121,7 +120,8 @@ export default function ProStudio() {
 
   const handleModeChange = (mode: StudioMode) => {
     setActiveMode(mode);
-    setSelectedModel(MODELS[mode][0].id);
+    const firstModel = MODELS[mode][0];
+    setSelectedModel(firstModel.id);
     setResults([]);
   };
 

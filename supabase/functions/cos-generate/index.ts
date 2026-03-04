@@ -24,19 +24,19 @@ const IMAGE_MODELS: Record<string, string[]> = {
   standard: ["fal-ai/flux/dev", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
   quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
   text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
-  unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/black-forest-labs/FLUX.1-krea-dev", "fal-ai/flux/dev"],
+  unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/black-forest-labs/FLUX.2-dev", "fal-ai/flux/dev"],
 };
 
 // fal.ai model ID mapping (for display → API endpoint)
 const FAL_MODELS = new Set([
-  "fal-ai/flux/schnell", "fal-ai/flux/dev", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2",
+  "fal-ai/flux/schnell", "fal-ai/flux/dev", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "fal-ai/ip-adapter-face-id",
 ]);
 
 // together.ai model ID mapping (prefix: together/)
 // IDs reais: remover prefixo "together/" antes de chamar a API
 const TOGETHER_MODELS = new Set([
   "together/black-forest-labs/FLUX.1-schnell",
-  "together/black-forest-labs/FLUX.1-krea-dev",
+  "together/black-forest-labs/FLUX.2-dev",
 ]);
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -50,8 +50,9 @@ const CREDIT_COSTS: Record<string, number> = {
   "fal-ai/flux/dev": 4,
   "fal-ai/flux-pro/v1.1": 12,
   "fal-ai/ideogram/v2": 8,
+  "fal-ai/ip-adapter-face-id": 5,
   "together/black-forest-labs/FLUX.1-schnell": 3,
-  "together/black-forest-labs/FLUX.1-krea-dev": 4,
+  "together/black-forest-labs/FLUX.2-dev": 6,
 };
 
 const PIECE_PROMPTS: Record<string, string> = {
@@ -129,6 +130,7 @@ interface GenerateRequest {
   referenceId?: string;
   operationMode?: string; // foundation | social | performance
   formatLabel?: string;   // human-readable format tag
+  referencePhotoUrl?: string; // URL of reference photo for IP-Adapter face preservation
 }
 
 serve(async (req) => {
@@ -160,7 +162,7 @@ serve(async (req) => {
       projectId, mode, output, pieceType, quantity, profile,
       provider, destination, ratio, intensity, userPrompt,
       regenerateAssetId, pipelineMode = "simple", referenceId,
-      operationMode, formatLabel,
+      operationMode, formatLabel, referencePhotoUrl,
     } = body;
 
     // ── 1. Fetch Project DNA (latest version) ───────────────────
@@ -251,6 +253,7 @@ serve(async (req) => {
         variationIndex: i,
         totalAttempts,
         fallbackLog,
+        referencePhotoUrl,
       });
 
       // ── 6. Save to DB with DNA snapshot ─────────────────────
@@ -487,11 +490,12 @@ async function generateSingleAsset(opts: {
   variationIndex: number;
   totalAttempts: Record<string, number>;
   fallbackLog: string[];
+  referencePhotoUrl?: string;
 }) {
   const {
     LOVABLE_API_KEY, TOGETHER_API_KEY, dnaContext, output, pieceType, profile,
     provider, ratio, destination, intensity, userPrompt,
-    originalAsset, variationIndex, totalAttempts, fallbackLog,
+    originalAsset, variationIndex, totalAttempts, fallbackLog, referencePhotoUrl,
   } = opts;
 
   let headline = "";
@@ -620,6 +624,53 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 
   // ── IMAGE GENERATION ──────────────────────────────────────────
   if (output === "image" || output === "both") {
+    // If referencePhotoUrl is provided, use IP-Adapter for face preservation
+    if (referencePhotoUrl) {
+      const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
+      if (FAL_API_KEY) {
+        console.log("Using IP-Adapter face preservation with reference photo");
+        const imageSize = ratio === "1:1" ? "square_hd" : ratio === "9:16" ? "portrait_16_9" : "landscape_16_9";
+        try {
+          const ipResp = await fetch(`${FAL_API_BASE}/fal-ai/ip-adapter-face-id`, {
+            method: "POST",
+            headers: { Authorization: `Key ${FAL_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: userPrompt || headline || `Professional photo for ${pieceType}`,
+              face_image_url: referencePhotoUrl,
+              image_size: imageSize,
+              num_inference_steps: 28,
+              enable_safety_checker: false,
+            }),
+          });
+          if (ipResp.ok) {
+            const ipData = await ipResp.json();
+            const ipUrl = ipData?.images?.[0]?.url;
+            if (ipUrl) {
+              imageUrl = ipUrl;
+              imageModel = "fal-ai/ip-adapter-face-id";
+              providerUsed = providerUsed ? `${providerUsed} + fal-ai/ip-adapter-face-id` : "fal-ai/ip-adapter-face-id";
+              console.log("IP-Adapter face preservation succeeded");
+              // Skip standard image generation
+              return {
+                headline, body, cta, imageUrl,
+                textModel: providerUsed.split(" + ")[0] || "none",
+                imageModel, providerUsed: providerUsed || "none",
+                attempts, promptUsed, fallbackEvents,
+              };
+            }
+          }
+          const errText = await ipResp.text();
+          console.error("IP-Adapter failed, falling back to standard:", ipResp.status, errText);
+          fallbackEvents.push(`IP-Adapter falhou (HTTP ${ipResp.status}), usando geração padrão`);
+        } catch (ipErr: any) {
+          console.error("IP-Adapter error:", ipErr.message);
+          fallbackEvents.push(`IP-Adapter erro: ${ipErr.message}, usando geração padrão`);
+        }
+      } else {
+        fallbackEvents.push("FAL_API_KEY não configurada, ignorando IP-Adapter");
+      }
+    }
+
     // Always use dedicated image models — text-only models can't generate images
     const IMAGE_CAPABLE = new Set(Object.values(IMAGE_MODELS).flat());
     let models = (provider !== "Auto" && IMAGE_CAPABLE.has(provider))
