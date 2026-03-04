@@ -28,7 +28,7 @@ export default function GlobalLibrary() {
     queryFn: async () => {
       const { data: baseAssets, error: assetsError } = await supabase
         .from("assets")
-        .select("id, title, status, output, created_at, projects(name)")
+        .select("id, title, status, output, created_at, projects!assets_project_id_fkey(name)")
         .order("created_at", { ascending: false })
         .limit(24);
 
