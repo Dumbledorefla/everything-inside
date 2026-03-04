@@ -22,7 +22,7 @@ const projectNav = [
   { to: "ad-factory", icon: Target, label: "Ad Factory" },
   { to: "characters", icon: User, label: "Personagens" },
   { to: "videos", icon: Video, label: "Vídeos" },
-  { to: "adult-studio", icon: Flame, label: "Studio Adulto" },
+  { to: "pro-studio", icon: Flame, label: "Studio Pro" },
   { to: "library", icon: FolderOpen, label: "Biblioteca" },
   { to: "planning", icon: Calendar, label: "Planejamento" },
   { to: "sprints", icon: Layers, label: "Sprints" },

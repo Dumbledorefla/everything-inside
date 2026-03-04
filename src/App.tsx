@@ -27,7 +27,7 @@ import ProjectReferences from "./pages/ProjectReferences";
 import AdFactory from "./pages/AdFactory";
 import Characters from "./pages/Characters";
 import Videos from "./pages/Videos";
-import AdultStudio from "./pages/AdultStudio";
+import ProStudio from "./pages/ProStudio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,7 +64,7 @@ function App() {
                     <Route path="/project/:projectId/ad-factory" element={<AdFactory />} />
                     <Route path="/project/:projectId/characters" element={<Characters />} />
                     <Route path="/project/:projectId/videos" element={<Videos />} />
-                    <Route path="/project/:projectId/adult-studio" element={<AdultStudio />} />
+                    <Route path="/project/:projectId/pro-studio" element={<ProStudio />} />
                     <Route path="/project/:projectId/models" element={<Models />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
