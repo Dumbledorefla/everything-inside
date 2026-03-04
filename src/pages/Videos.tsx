@@ -65,7 +65,7 @@ export default function Videos() {
   const { data: videos = [], isLoading: videosLoading } = useQuery({
     queryKey: ["project-videos", projectId],
     queryFn: async () => {
-      const { data } = await (supabase.from("videos") as any)
+      const { data } = await supabase.from("videos")
         .select("*")
         .eq("project_id", projectId!)
         .order("created_at", { ascending: false });

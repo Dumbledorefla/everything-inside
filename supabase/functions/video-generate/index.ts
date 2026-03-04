@@ -63,7 +63,10 @@ serve(async (req) => {
         aspect_ratio,
       };
       if (negative_prompt) falPayload.negative_prompt = negative_prompt;
-      if (isImageToVideo) falPayload.image_url = image_url;
+      if (isImageToVideo) {
+        falPayload.image_url = image_url;
+        delete falPayload.aspect_ratio; // Kling i2v infers aspect ratio from image
+      }
 
       const result = await callFalApi(FAL_API_KEY, endpoint, falPayload);
       videoUrl = result.video?.url || result.output?.url || "";
@@ -91,7 +94,6 @@ serve(async (req) => {
         prompt: adPrompt,
         image_url: assetVersion.image_url,
         duration: "5",
-        aspect_ratio: "9:16",
       });
       videoUrl = result.video?.url || result.output?.url || "";
       videoTitle = `Anúncio: ${headline_text || assetVersion.headline || "Quick Ad"}`;
@@ -114,7 +116,7 @@ serve(async (req) => {
 
       const result = await callFalApi(FAL_API_KEY, "fal-ai/heygen/avatar4/image-to-video", {
         image_url: charVersion.image_url,
-        speech_text: script_text,
+        prompt: script_text,
         voice_id,
       });
       videoUrl = result.video?.url || result.output?.url || "";
@@ -138,8 +140,8 @@ serve(async (req) => {
         video_type: videoType,
         source_asset_id: sourceAssetId,
         prompt: promptUsed,
-        aspect_ratio: body.aspect_ratio || "16:9",
-        duration: body.duration || "5",
+        aspect_ratio: body.aspect_ratio || (mode === 'quick_ad' ? '9:16' : '16:9'),
+        duration: body.duration || '5',
       })
       .select()
       .single();
