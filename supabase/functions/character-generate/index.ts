@@ -271,6 +271,17 @@ CRITICAL RULES:
         metadata: { job_count: jobs.length, prompt: prompt.substring(0, 200) },
       });
 
+      // Trigger job-processor immediately (fire-and-forget)
+      const jobProcessorUrl = `${SUPABASE_URL}/functions/v1/job-processor`;
+      fetch(jobProcessorUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      }).catch((e) => console.error("Failed to trigger job-processor:", e));
+
       return new Response(JSON.stringify({ job_ids: jobs.map((j: any) => j.id), count: jobs.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
