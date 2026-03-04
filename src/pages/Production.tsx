@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Image, Type, FileText, Sparkles, Layers,
@@ -563,26 +564,35 @@ export default function Production() {
                     <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
                   </label>
                   {/* Influencer Toggle */}
-                  <label className={cn(
-                    "flex items-center justify-between rounded-xl border px-3 py-2 text-[10px] cursor-pointer transition-all",
-                    hasInfluencer
-                      ? useInfluencer
+                  {hasInfluencer ? (
+                    <label className={cn(
+                      "flex items-center justify-between rounded-xl border px-3 py-2 text-[10px] cursor-pointer transition-all",
+                      useInfluencer
                         ? "border-primary/30 bg-primary/10 text-primary"
                         : "border-border bg-secondary text-muted-foreground hover:border-primary/15"
-                      : "border-border bg-secondary/50 text-muted-foreground/50 cursor-not-allowed"
-                  )}>
-                    <span className="flex items-center gap-1.5">
-                      <User className="h-3 w-3" />
-                      Usar Influencer
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={useInfluencer}
-                      onChange={(e) => setUseInfluencer(e.target.checked)}
-                      disabled={!hasInfluencer}
-                      className="accent-primary"
-                    />
-                  </label>
+                    )}>
+                      <span className="flex items-center gap-1.5">
+                        <User className="h-3 w-3" />
+                        Usar Influencer
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={useInfluencer}
+                        onChange={(e) => setUseInfluencer(e.target.checked)}
+                        className="accent-primary"
+                      />
+                    </label>
+                  ) : (
+                    <Link to={`/projects/${activeProjectId}/personas`}>
+                      <div className="flex items-center justify-between rounded-xl border border-dashed border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/30 hover:text-primary transition-all">
+                        <span className="flex items-center gap-1.5">
+                          <User className="h-3 w-3" />
+                          Criar Influencer Virtual
+                        </span>
+                        <ChevronRight className="h-3 w-3" />
+                      </div>
+                    </Link>
+                  )}
                 </div>
               </ConfigSection>
 
