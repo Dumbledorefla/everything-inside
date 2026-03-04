@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Sparkles, Star, Loader2, Check, RotateCcw, ImagePlus, Users, Wand2, ChevronRight, ArrowLeft, Download, Copy } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -184,6 +185,105 @@ function DescriptionBlock({ prompt, setPrompt, suggesting, onSuggest, placeholde
   );
 }
 
+// ── Job Progress Bar ──
+function JobProgressBar({ completed, failed, total }: { completed: number; failed: number; total: number }) {
+  const done = completed + failed;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          <span>
+            {completed}/{total} geradas
+            {failed > 0 && <span className="text-destructive ml-1">({failed} falhas)</span>}
+          </span>
+        </div>
+      </div>
+      <Progress value={pct} className="h-2" />
+      {done === total && completed > 0 && (
+        <p className="text-[10px] text-muted-foreground">
+          ✓ Concluído — {completed} personagens gerados
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Hook: useJobPolling ──
+function useJobPolling(jobIds: string[], onComplete: () => void) {
+  const [jobs, setJobs] = useState<any[]>([]);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    intervalRef.current = null;
+    timeoutRef.current = null;
+  }, []);
+
+  const startPolling = useCallback(() => {
+    if (jobIds.length === 0) return;
+    cleanup();
+
+    const poll = async () => {
+      const { data } = await supabase
+        .from("generation_jobs")
+        .select("id, status, asset_id, error_message")
+        .in("id", jobIds);
+
+      if (data) {
+        setJobs(data);
+        const allDone = data.every((j: any) => j.status === "completed" || j.status === "failed");
+        if (allDone) {
+          cleanup();
+          onComplete();
+        }
+      }
+    };
+
+    // Also trigger the job-processor for each pending job
+    const triggerProcessor = async () => {
+      try {
+        await supabase.functions.invoke("job-processor", { body: {} });
+      } catch (e) {
+        console.error("Error triggering job-processor:", e);
+      }
+    };
+
+    // Start initial processing
+    triggerProcessor();
+
+    // Poll every 5 seconds and trigger processor
+    intervalRef.current = setInterval(async () => {
+      await poll();
+      await triggerProcessor();
+    }, 5000);
+
+    // Safety timeout: 3 minutes
+    timeoutRef.current = setTimeout(() => {
+      cleanup();
+      onComplete();
+    }, 180000);
+
+    // Initial poll
+    poll();
+  }, [jobIds, onComplete, cleanup]);
+
+  useEffect(() => {
+    return cleanup;
+  }, [cleanup]);
+
+  const completed = jobs.filter((j) => j.status === "completed").length;
+  const failed = jobs.filter((j) => j.status === "failed").length;
+  const total = jobIds.length;
+  const isRunning = intervalRef.current !== null;
+
+  return { startPolling, completed, failed, total, isRunning };
+}
+
 export default function Characters() {
   const { activeProjectId } = useAssistant();
   const { session } = useAuth();
@@ -199,8 +299,34 @@ export default function Characters() {
   const [suggestingPrompt, setSuggestingPrompt] = useState(false);
   const [suggestingEvalPrompt, setSuggestingEvalPrompt] = useState(false);
 
+  const [baseJobIds, setBaseJobIds] = useState<string[]>([]);
+  const [variationJobIds, setVariationJobIds] = useState<string[]>([]);
+  const [evalJobIds, setEvalJobIds] = useState<string[]>([]);
+
   const [attributes, setAttributes] = useState<CharacterAttributes>(emptyAttributes());
   const [evalAttributes, setEvalAttributes] = useState<CharacterAttributes>(emptyAttributes());
+
+  // ── Job Polling ──
+  const basePolling = useJobPolling(baseJobIds, () => {
+    setGenerating(false);
+    setBaseJobIds([]);
+    queryClient.invalidateQueries({ queryKey: ["character-candidates", activeProjectId] });
+    toast.success("Candidatos gerados!");
+  });
+
+  const variationPolling = useJobPolling(variationJobIds, () => {
+    setGeneratingVariation(false);
+    setVariationJobIds([]);
+    queryClient.invalidateQueries({ queryKey: ["character-variations", activeProjectId] });
+    toast.success("Variações geradas!");
+  });
+
+  const evalPolling = useJobPolling(evalJobIds, () => {
+    setGeneratingEval(false);
+    setEvalJobIds([]);
+    queryClient.invalidateQueries({ queryKey: ["character-evaluations", activeProjectId] });
+    toast.success("Personagens de avaliação gerados!");
+  });
 
   // ── Queries ──
   const { data: project } = useQuery({
@@ -284,12 +410,14 @@ export default function Characters() {
         body: { mode: "generate_base", project_id: activeProjectId, prompt: basePrompt, num_variations: 4, character_attributes: attributes },
       });
       if (error) throw error;
-      toast.success(`${data.count} candidatos gerados!`);
-      queryClient.invalidateQueries({ queryKey: ["character-candidates", activeProjectId] });
-      setStep(2);
+      if (data?.job_ids) {
+        setBaseJobIds(data.job_ids);
+        basePolling.startPolling();
+        setStep(2);
+        toast.info(`${data.count} jobs de geração criados. Processando...`);
+      }
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar personagens");
-    } finally {
       setGenerating(false);
     }
   };
@@ -316,12 +444,13 @@ export default function Characters() {
         body: { mode: "generate_variation", project_id: activeProjectId, prompt: variationPrompt, reference_image_url: mainInfluencer.final_render_url, num_variations: 4 },
       });
       if (error) throw error;
-      toast.success(`${data.count} variações geradas!`);
-      queryClient.invalidateQueries({ queryKey: ["character-variations", activeProjectId] });
-      setVariationPrompt("");
+      if (data?.job_ids) {
+        setVariationJobIds(data.job_ids);
+        variationPolling.startPolling();
+        toast.info(`${data.count} variações em processamento...`);
+      }
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar variações");
-    } finally {
       setGeneratingVariation(false);
     }
   };
@@ -334,12 +463,13 @@ export default function Characters() {
         body: { mode: "generate_evaluation", project_id: activeProjectId, prompt: evalPrompt, num_variations: 2, character_attributes: evalAttributes },
       });
       if (error) throw error;
-      toast.success(`${data.count} personagens gerados!`);
-      queryClient.invalidateQueries({ queryKey: ["character-evaluations", activeProjectId] });
-      setEvalPrompt("");
+      if (data?.job_ids) {
+        setEvalJobIds(data.job_ids);
+        evalPolling.startPolling();
+        toast.info(`${data.count} personagens em processamento...`);
+      }
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar personagem");
-    } finally {
       setGeneratingEval(false);
     }
   };
@@ -412,6 +542,9 @@ export default function Characters() {
                     {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {generating ? "Gerando candidatos..." : "Gerar Candidatos"}
                   </Button>
+                  {generating && baseJobIds.length > 0 && (
+                    <JobProgressBar completed={basePolling.completed} failed={basePolling.failed} total={basePolling.total} />
+                  )}
                 </div>
                 {candidates.length > 0 && (
                   <div>
@@ -439,17 +572,24 @@ export default function Characters() {
                 <div className="rounded-2xl border border-border bg-card p-6">
                   <h3 className="text-sm font-semibold text-foreground mb-1">Aprove o Melhor Candidato</h3>
                   <p className="text-xs text-muted-foreground mb-4">Clique no personagem que melhor representa sua marca</p>
+                  {generating && baseJobIds.length > 0 && (
+                    <div className="mb-4">
+                      <JobProgressBar completed={basePolling.completed} failed={basePolling.failed} total={basePolling.total} />
+                    </div>
+                  )}
                   {candidates.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                       {candidates.map((c: any) => (
                         <CharacterCard key={c.id} asset={c} onAction={() => handleApproveInfluencer(c.id)} actionLabel="Aprovar como Principal" actionIcon={Check} />
                       ))}
                     </div>
-                  ) : (
+                  ) : generating ? (
                     <div className="text-center py-12">
                       <Loader2 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3 animate-spin" />
                       <p className="text-xs text-muted-foreground">Gerando candidatos...</p>
                     </div>
+                  ) : (
+                    <EmptyState icon={User} title="Nenhum candidato encontrado" subtitle="Volte para a etapa anterior e gere candidatos" />
                   )}
                 </div>
               </motion.div>
@@ -479,6 +619,9 @@ export default function Characters() {
                       {generatingVariation ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                       {generatingVariation ? "Gerando variações..." : "Gerar Variação"}
                     </Button>
+                    {generatingVariation && variationJobIds.length > 0 && (
+                      <JobProgressBar completed={variationPolling.completed} failed={variationPolling.failed} total={variationPolling.total} />
+                    )}
                   </div>
                 </div>
                 {variations.length > 0 && (
@@ -517,6 +660,9 @@ export default function Characters() {
               {generatingEval ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
               {generatingEval ? "Gerando..." : "Gerar Personagem para Avaliação"}
             </Button>
+            {generatingEval && evalJobIds.length > 0 && (
+              <JobProgressBar completed={evalPolling.completed} failed={evalPolling.failed} total={evalPolling.total} />
+            )}
           </div>
 
           {evalCharacters.length > 0 && (
