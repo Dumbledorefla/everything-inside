@@ -115,7 +115,7 @@ interface GenerateRequest {
   output: "text" | "image" | "both";
   pieceType: string;
   quantity: number;
-  profile: "economy" | "standard" | "quality";
+  profile: "economy" | "standard" | "quality" | "unrestricted";
   provider: string;
   destination: string;
   ratio: string;
