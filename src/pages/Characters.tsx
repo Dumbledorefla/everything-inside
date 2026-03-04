@@ -606,12 +606,6 @@ export default function Characters() {
                       </div>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground text-center font-medium">Personagem Principal</p>
-                    <div className="mt-1.5 flex justify-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium border border-primary/20">
-                        <Check className="h-2.5 w-2.5" />
-                        Fixado como Padrão
-                      </span>
-                    </div>
                   </div>
                   <div className="flex-1 space-y-4">
                     <div>

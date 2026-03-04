@@ -114,7 +114,6 @@ export default function Production() {
   const [showAnimateModal, setShowAnimateModal] = useState(false);
   const [useInfluencer, setUseInfluencer] = useState(false);
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
-  const [influencerAutoSet, setInfluencerAutoSet] = useState(false);
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
@@ -154,14 +153,6 @@ export default function Production() {
 
   const hasInfluencer = !!(projectData as any)?.main_influencer_asset_id && !!mainInfluencerAsset;
 
-  // Auto-enable influencer toggles when a main influencer exists
-  useEffect(() => {
-    if (hasInfluencer && !influencerAutoSet) {
-      setUseInfluencer(true);
-      setUseInfluencerForCarousel(true);
-      setInfluencerAutoSet(true);
-    }
-  }, [hasInfluencer, influencerAutoSet]);
 
   useEffect(() => {
     if (projectData?.operation_mode) {
