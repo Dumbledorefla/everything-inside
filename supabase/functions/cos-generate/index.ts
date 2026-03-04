@@ -649,7 +649,10 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       const ctaText = cta || "";
       
 
-      const imagePrompt = `Você é um Diretor de Arte e Designer Gráfico de elite, especialista em tipografia e composição para marketing digital. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada, com o texto perfeitamente integrado à imagem.
+      // Para perfil unrestricted, usar prompt direto sem wrapper de marketing
+      const imagePrompt = isUnrestricted
+        ? `${headlineText}${bodyText ? '. ' + bodyText : ''}${ctaText ? '. ' + ctaText : ''}. Photorealistic, high quality, 8k, detailed. Aspect ratio: ${ratio}.`
+        : `Você é um Diretor de Arte e Designer Gráfico de elite, especialista em tipografia e composição para marketing digital. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada, com o texto perfeitamente integrado à imagem.
 
 **DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
