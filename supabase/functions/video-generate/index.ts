@@ -162,9 +162,10 @@ serve(async (req) => {
 });
 
 async function callFalApi(apiKey: string, endpoint: string, payload: any) {
-  console.log(`[fal.ai] Calling ${endpoint}`, JSON.stringify(payload).substring(0, 200));
+  console.log(`[fal.ai] Submitting to queue: ${endpoint}`, JSON.stringify(payload).substring(0, 200));
 
-  const response = await fetch(`${FAL_API_URL}/${endpoint}`, {
+  // Step 1: Submit to queue
+  const submitResponse = await fetch(`${FAL_API_URL}/${endpoint}`, {
     method: "POST",
     headers: {
       Authorization: `Key ${apiKey}`,
@@ -173,13 +174,63 @@ async function callFalApi(apiKey: string, endpoint: string, payload: any) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error(`[fal.ai] Error ${response.status}: ${errorBody}`);
-    throw new Error(`fal.ai API error (${response.status}): ${errorBody.substring(0, 200)}`);
+  if (!submitResponse.ok) {
+    const errorBody = await submitResponse.text();
+    console.error(`[fal.ai] Submit error ${submitResponse.status}: ${errorBody}`);
+    throw new Error(`fal.ai API error (${submitResponse.status}): ${errorBody.substring(0, 200)}`);
   }
 
-  const result = await response.json();
-  console.log("[fal.ai] Success:", JSON.stringify(result).substring(0, 300));
-  return result;
+  const submitResult = await submitResponse.json();
+  const requestId = submitResult.request_id;
+  const statusUrl = submitResult.status_url;
+  const responseUrl = submitResult.response_url;
+
+  if (!requestId) {
+    // Might be a synchronous response (unlikely for video, but handle it)
+    console.log("[fal.ai] Got synchronous response");
+    return submitResult;
+  }
+
+  console.log(`[fal.ai] Queued request: ${requestId}`);
+
+  // Step 2: Poll for completion (max ~4 minutes)
+  const MAX_POLLS = 48;
+  const POLL_INTERVAL_MS = 5000;
+
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+    const statusResp = await fetch(statusUrl, {
+      headers: { Authorization: `Key ${apiKey}` },
+    });
+
+    if (!statusResp.ok) {
+      console.error(`[fal.ai] Status poll error: ${statusResp.status}`);
+      continue;
+    }
+
+    const status = await statusResp.json();
+    console.log(`[fal.ai] Poll ${i + 1}/${MAX_POLLS}: ${status.status}`);
+
+    if (status.status === "COMPLETED" || status.status === "SUCCEEDED") {
+      // Step 3: Fetch result
+      const resultResp = await fetch(responseUrl, {
+        headers: { Authorization: `Key ${apiKey}` },
+      });
+
+      if (!resultResp.ok) {
+        throw new Error(`fal.ai result fetch failed: ${resultResp.status}`);
+      }
+
+      const result = await resultResp.json();
+      console.log("[fal.ai] Success:", JSON.stringify(result).substring(0, 300));
+      return result;
+    }
+
+    if (status.status === "FAILED") {
+      throw new Error(`fal.ai processing failed: ${JSON.stringify(status).substring(0, 200)}`);
+    }
+  }
+
+  throw new Error("fal.ai processing timed out after 4 minutes");
 }
