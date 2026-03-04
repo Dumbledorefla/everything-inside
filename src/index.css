@@ -14,23 +14,23 @@
      ═══════════════════════════════════════════════ */
   :root {
     /* ── Master Background: Deep Space Blue ── */
-    --background: 216 28% 7%;
-    --foreground: 0 0% 100%;
-    --card: 215 25% 9%;
+    --background: 220 30% 5%;
+    --foreground: 0 0% 98%;
+    --card: 220 25% 10%;
     --card-foreground: 0 0% 93%;
-    --popover: 215 25% 8%;
+    --popover: 220 25% 8%;
     --popover-foreground: 0 0% 93%;
     --primary: 187 94% 43%;
     --primary-foreground: 0 0% 2%;
     --secondary: 215 20% 13%;
     --secondary-foreground: 0 0% 80%;
     --muted: 215 20% 13%;
-    --muted-foreground: 215 10% 55%;
+    --muted-foreground: 220 10% 60%;
     --accent: 215 18% 15%;
     --accent-foreground: 0 0% 88%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 15% 20%;
+    --border: 220 15% 25%;
     --input: 215 15% 22%;
     --ring: 187 94% 43%;
     --radius: 0.75rem;
@@ -59,13 +59,13 @@
     --cos-orange: 30 100% 55%;
 
     /* Sidebar */
-    --sidebar-background: 216 28% 6%;
-    --sidebar-foreground: 0 0% 85%;
+    --sidebar-background: 220 30% 4%;
+    --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 187 94% 43%;
     --sidebar-primary-foreground: 0 0% 2%;
     --sidebar-accent: 215 22% 11%;
     --sidebar-accent-foreground: 0 0% 78%;
-    --sidebar-border: 215 15% 18%;
+    --sidebar-border: 220 15% 22%;
     --sidebar-ring: 187 94% 43%;
 
     /* Glass */
@@ -81,10 +81,10 @@
      RAINY MODE — Light Studio
      ═══════════════════════════════════════════════ */
   .rainy {
-    --background: 210 17% 97%;
-    --foreground: 210 24% 16%;
+    --background: 210 20% 98%;
+    --foreground: 210 25% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 210 24% 16%;
+    --card-foreground: 210 25% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 210 24% 16%;
     --primary: 187 80% 34%;
@@ -97,7 +97,7 @@
     --accent-foreground: 210 24% 16%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 210 14% 83%;
+    --border: 210 15% 88%;
     --input: 210 14% 85%;
     --ring: 187 80% 34%;
 
@@ -121,13 +121,13 @@
     --cos-purple: 270 55% 50%;
     --cos-orange: 30 90% 50%;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 210 18% 20%;
+    --sidebar-background: 210 15% 94%;
+    --sidebar-foreground: 210 20% 15%;
     --sidebar-primary: 187 80% 34%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 14% 95%;
     --sidebar-accent-foreground: 210 18% 15%;
-    --sidebar-border: 210 14% 86%;
+    --sidebar-border: 210 15% 85%;
     --sidebar-ring: 187 80% 34%;
 
     --glass-bg: 0 0% 100% / 0.95;
