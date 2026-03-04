@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractImageUrl, uploadImageToStorage } from "../_shared/ai-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -123,28 +124,10 @@ async function generateImage(apiKey: string, prompt: string, referenceImageUrl?:
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+  return extractImageUrl(data.choices?.[0]?.message);
 }
 
-async function uploadImage(supabase: any, imageData: string, projectId: string, subfolder = "") {
-  const base64Part = imageData.includes(",") ? imageData.split(",")[1] : imageData;
-  const imageBytes = Uint8Array.from(atob(base64Part), (c) => c.charCodeAt(0));
-  const path = subfolder
-    ? `characters/${projectId}/${subfolder}/${crypto.randomUUID()}.png`
-    : `characters/${projectId}/${crypto.randomUUID()}.png`;
-
-  const { error } = await supabase.storage
-    .from("assets")
-    .upload(path, imageBytes, { contentType: "image/png", upsert: true });
-
-  if (error) {
-    console.error("Upload error:", error);
-    return null;
-  }
-
-  const { data: publicUrl } = supabase.storage.from("assets").getPublicUrl(path);
-  return publicUrl.publicUrl;
-}
+// uploadImage is now handled by uploadImageToStorage from _shared/ai-utils.ts
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -272,7 +255,8 @@ REQUIREMENTS:
           const imageData = await generateImage(LOVABLE_API_KEY, imagePrompt);
           if (!imageData) continue;
 
-          const imageUrl = await uploadImage(supabase, imageData, project_id);
+          const path = `characters/${project_id}/${crypto.randomUUID()}.png`;
+          const imageUrl = await uploadImageToStorage(supabase, imageData, "assets", path);
           if (!imageUrl) continue;
 
           const { data: asset, error: assetError } = await supabase
@@ -328,7 +312,8 @@ CRITICAL RULES:
           const imageData = await generateImage(LOVABLE_API_KEY, variationPrompt, reference_image_url);
           if (!imageData) continue;
 
-          const imageUrl = await uploadImage(supabase, imageData, project_id, "variations");
+          const varPath = `characters/${project_id}/variations/${crypto.randomUUID()}.png`;
+          const imageUrl = await uploadImageToStorage(supabase, imageData, "assets", varPath);
           if (!imageUrl) continue;
 
           const { data: refAsset } = await supabase

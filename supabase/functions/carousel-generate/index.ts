@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractImageUrl } from "../_shared/ai-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -307,7 +308,7 @@ Gere a imagem final para este slide como uma peça única, coesa e com a tipogra
             }
 
             const imgData = await imgResp.json();
-            imageUrl = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+            imageUrl = extractImageUrl(imgData.choices?.[0]?.message) || null;
             usedModel = model;
             if (imageUrl) break;
           } catch (fetchErr: any) {
