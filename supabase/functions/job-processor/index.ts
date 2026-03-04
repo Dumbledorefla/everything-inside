@@ -65,13 +65,13 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch pending jobs (process one at a time to avoid timeouts)
+    // Fetch pending jobs (process up to 3 at a time)
     const { data: jobs, error: fetchError } = await supabase
       .from("generation_jobs")
       .select("*")
       .eq("status", "pending")
       .order("created_at", { ascending: true })
-      .limit(1);
+      .limit(3);
 
     if (fetchError) {
       console.error("Error fetching jobs:", fetchError);
@@ -86,124 +86,119 @@ serve(async (req) => {
       });
     }
 
-    const job = jobs[0];
-    console.log(`Processing job ${job.id} (${job.job_type})`);
+    const results = [];
 
-    // Mark as processing
-    await supabase.from("generation_jobs").update({ status: "processing" }).eq("id", job.id);
+    for (const job of jobs) {
+      console.log(`Processing job ${job.id} (${job.job_type})`);
 
-    try {
-      // Generate the image
-      const imageData = await generateImage(LOVABLE_API_KEY, job.prompt, job.reference_image_url);
+      // Mark as processing
+      await supabase.from("generation_jobs").update({ status: "processing" }).eq("id", job.id);
 
-      if (!imageData) {
-        await supabase.from("generation_jobs")
-          .update({ status: "failed", error_message: "AI returned no image data" })
-          .eq("id", job.id);
+      try {
+        // Generate the image
+        const imageData = await generateImage(LOVABLE_API_KEY, job.prompt, job.reference_image_url);
 
-        return new Response(JSON.stringify({ processed: 1, status: "failed", job_id: job.id }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+        if (!imageData) {
+          await supabase.from("generation_jobs")
+            .update({ status: "failed", error_message: "AI returned no image data" })
+            .eq("id", job.id);
+          results.push({ job_id: job.id, status: "failed" });
+          continue;
+        }
 
-      // Upload to storage
-      const subFolder = job.job_type === "character_variation" ? "variations/" : "";
-      const path = `characters/${job.project_id}/${subFolder}${crypto.randomUUID()}.png`;
-      const imageUrl = await uploadImageToStorage(supabase, imageData, "assets", path);
+        // Upload to storage
+        const subFolder = job.job_type === "character_variation" ? "variations/" : "";
+        const path = `characters/${job.project_id}/${subFolder}${crypto.randomUUID()}.png`;
+        const imageUrl = await uploadImageToStorage(supabase, imageData, "assets", path);
 
-      if (!imageUrl) {
-        await supabase.from("generation_jobs")
-          .update({ status: "failed", error_message: "Failed to upload image to storage" })
-          .eq("id", job.id);
+        if (!imageUrl) {
+          await supabase.from("generation_jobs")
+            .update({ status: "failed", error_message: "Failed to upload image to storage" })
+            .eq("id", job.id);
+          results.push({ job_id: job.id, status: "failed" });
+          continue;
+        }
 
-        return new Response(JSON.stringify({ processed: 1, status: "failed", job_id: job.id }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+        // Build asset title
+        const meta = job.metadata as any || {};
+        const originalPrompt = meta.original_prompt || job.prompt.substring(0, 50);
+        const variationIndex = (meta.variation_index ?? 0) + 1;
 
-      // Build asset title
-      const meta = job.metadata as any || {};
-      const originalPrompt = meta.original_prompt || job.prompt.substring(0, 50);
-      const variationIndex = (meta.variation_index ?? 0) + 1;
+        let title: string;
+        if (job.job_type === "character_candidate") {
+          title = `Candidato ${variationIndex} - ${originalPrompt.substring(0, 50)}`;
+        } else if (job.job_type === "character_evaluation") {
+          title = `Personagem ${variationIndex} - ${originalPrompt.substring(0, 50)}`;
+        } else {
+          title = `Variação - ${originalPrompt.substring(0, 50)}`;
+        }
 
-      let title: string;
-      if (job.job_type === "character_candidate") {
-        title = `Candidato ${variationIndex} - ${originalPrompt.substring(0, 50)}`;
-      } else if (job.job_type === "character_evaluation") {
-        title = `Personagem ${variationIndex} - ${originalPrompt.substring(0, 50)}`;
-      } else {
-        title = `Variação - ${originalPrompt.substring(0, 50)}`;
-      }
+        // Find reference asset for variations
+        let referenceAssetId: string | null = null;
+        if (job.job_type === "character_variation" && job.reference_image_url) {
+          const { data: refAsset } = await supabase
+            .from("assets")
+            .select("id")
+            .eq("final_render_url", job.reference_image_url)
+            .eq("project_id", job.project_id)
+            .limit(1)
+            .maybeSingle();
+          referenceAssetId = refAsset?.id || null;
+        }
 
-      // Find reference asset for variations
-      let referenceAssetId: string | null = null;
-      if (job.job_type === "character_variation" && job.reference_image_url) {
-        const { data: refAsset } = await supabase
+        // Create asset record
+        const { data: asset, error: assetError } = await supabase
           .from("assets")
-          .select("id")
-          .eq("final_render_url", job.reference_image_url)
-          .eq("project_id", job.project_id)
-          .limit(1)
+          .insert({
+            project_id: job.project_id,
+            user_id: job.user_id,
+            title,
+            output: "image",
+            status: "draft",
+            persona_type: job.job_type,
+            reference_asset_id: referenceAssetId,
+            final_render_url: imageUrl,
+          })
+          .select()
           .single();
-        referenceAssetId = refAsset?.id || null;
-      }
 
-      // Create asset record
-      const { data: asset, error: assetError } = await supabase
-        .from("assets")
-        .insert({
-          project_id: job.project_id,
-          user_id: job.user_id,
-          title,
-          output: "image",
-          status: "draft",
-          persona_type: job.job_type,
-          reference_asset_id: referenceAssetId,
-          final_render_url: imageUrl,
-        })
-        .select()
-        .single();
+        if (assetError) {
+          console.error("Asset insert error:", assetError);
+          await supabase.from("generation_jobs")
+            .update({ status: "failed", error_message: `Asset insert error: ${assetError.message}` })
+            .eq("id", job.id);
+          results.push({ job_id: job.id, status: "failed" });
+          continue;
+        }
 
-      if (assetError) {
-        console.error("Asset insert error:", assetError);
+        // Create asset version
+        await supabase.from("asset_versions").insert({
+          asset_id: asset.id,
+          image_url: imageUrl,
+          headline: originalPrompt.substring(0, 100),
+          version: 1,
+        });
+
+        // Mark job as completed
         await supabase.from("generation_jobs")
-          .update({ status: "failed", error_message: `Asset insert error: ${assetError.message}` })
+          .update({ status: "completed", asset_id: asset.id })
           .eq("id", job.id);
 
-        return new Response(JSON.stringify({ processed: 1, status: "failed", job_id: job.id }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.log(`Job ${job.id} completed. Asset: ${asset.id}`);
+        results.push({ job_id: job.id, status: "completed", asset_id: asset.id });
+      } catch (err) {
+        console.error(`Job ${job.id} failed:`, err);
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
+        await supabase.from("generation_jobs")
+          .update({ status: "failed", error_message: errorMsg })
+          .eq("id", job.id);
+        results.push({ job_id: job.id, status: "failed", error: errorMsg });
       }
-
-      // Create asset version
-      await supabase.from("asset_versions").insert({
-        asset_id: asset.id,
-        image_url: imageUrl,
-        headline: originalPrompt.substring(0, 100),
-        version: 1,
-      });
-
-      // Mark job as completed
-      await supabase.from("generation_jobs")
-        .update({ status: "completed", asset_id: asset.id })
-        .eq("id", job.id);
-
-      console.log(`Job ${job.id} completed. Asset: ${asset.id}`);
-
-      return new Response(JSON.stringify({ processed: 1, status: "completed", job_id: job.id, asset_id: asset.id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } catch (err) {
-      console.error(`Job ${job.id} failed:`, err);
-      const errorMsg = err instanceof Error ? err.message : "Unknown error";
-      await supabase.from("generation_jobs")
-        .update({ status: "failed", error_message: errorMsg })
-        .eq("id", job.id);
-
-      return new Response(JSON.stringify({ processed: 1, status: "failed", job_id: job.id, error: errorMsg }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
+
+    return new Response(JSON.stringify({ processed: results.length, results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("job-processor error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Internal error" }), {
