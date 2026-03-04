@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Grid3X3, List, Search, Image, Sparkles, Loader2,
-  Check, RefreshCw, Eye, X, Clock, ChevronRight, Layers
+  Grid3X3, List, Search, Image, Loader2,
+  Check, RefreshCw, Eye, ChevronRight, Layers,
+  LayoutGrid, UserCircle, RectangleEllipsis, Video, FileText
 } from "lucide-react";
 import { useAssistant } from "@/contexts/AssistantContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,15 @@ const statusLabels: Record<string, string> = {
   draft: "Rascunho", review: "Revisão", approved: "Aprovado", official: "Oficial", archived: "Arquivado", error: "Erro",
 };
 
+const categories = [
+  { id: "all", label: "Todos", icon: LayoutGrid },
+  { id: "character", label: "Personagens", icon: UserCircle },
+  { id: "feed_post", label: "Posts de Feed", icon: Image },
+  { id: "carousel", label: "Carrosséis", icon: RectangleEllipsis },
+  { id: "video", label: "Vídeos", icon: Video },
+  { id: "text", label: "Textos", icon: FileText },
+];
+
 const pickLatestVersion = (asset: any) => {
   const versions = asset.asset_versions || [];
   if (versions.length <= 1) return versions[0] || null;
@@ -32,25 +42,35 @@ const pickLatestVersion = (asset: any) => {
   )[0] || null;
 };
 
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 export default function ProjectLibrary() {
   const { projectId } = useParams();
   const [view, setView] = useState<"grid" | "masonry" | "list">("masonry");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [drawerAsset, setDrawerAsset] = useState<any>(null);
   const [approvedId, setApprovedId] = useState<string | null>(null);
   const { selectAsset, selectedAsset } = useAssistant();
   const queryClient = useQueryClient();
 
   const { data: assets, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ["project-assets", projectId, statusFilter],
+    queryKey: ["project-assets", projectId, statusFilter, categoryFilter],
     queryFn: async () => {
       let q = supabase
         .from("assets")
-        .select("id, title, status, output, provider_used, profile_used, created_at")
+        .select("id, title, status, output, provider_used, profile_used, created_at, asset_type")
         .eq("project_id", projectId!)
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
+      if (categoryFilter !== "all") q = q.eq("asset_type", categoryFilter);
 
       const { data: baseAssets, error: assetsError } = await q.limit(24);
       if (assetsError) throw assetsError;
@@ -110,255 +130,273 @@ export default function ProjectLibrary() {
   ];
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 p-2.5">
-            <Layers className="h-5 w-5 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold tracking-tight">Biblioteca</h1>
-        </div>
-        <div className="flex items-center gap-1.5 rounded-xl bg-secondary/50 p-1">
-          {[
-            { id: "masonry" as const, icon: Grid3X3, label: "Masonry" },
-            { id: "list" as const, icon: List, label: "Lista" },
-          ].map((v) => (
-            <button
-              key={v.id}
-              onClick={() => setView(v.id)}
-              className={cn(
-                "rounded-lg p-1.5 transition-all",
-                view === v.id ? "bg-card text-primary elevation-1" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <v.icon className="h-4 w-4" />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Search + Filters */}
-      <div className="mb-5 flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar ativos..."
-            className="w-full rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-1.5 rounded-xl bg-card/30 p-1 border border-border/20">
-          {statusFilterOptions.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setStatusFilter(opt.value)}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all",
-                statusFilter === opt.value
-                  ? "bg-card text-primary elevation-1"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Loading skeleton */}
-      {isLoading && (
-        <div className="masonry-grid">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
-              <div className="aspect-square skeleton-space" />
-              <div className="p-4 space-y-2">
-                <div className="h-3 w-3/4 rounded-lg skeleton-space" />
-                <div className="h-2.5 w-1/2 rounded-lg skeleton-space" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!isLoading && error && (
-        <div className="rounded-2xl border border-border/30 bg-card/20 p-8 text-center space-y-3">
-          <p className="text-sm text-muted-foreground">Erro ao carregar a biblioteca deste projeto.</p>
+    <div className="flex h-full">
+      {/* Category Sidebar */}
+      <aside className="w-48 shrink-0 border-r border-border/20 bg-card/10 p-3 space-y-1">
+        <p className="px-3 py-2 text-[9px] font-mono-brand uppercase tracking-widest text-muted-foreground/50">Categorias</p>
+        {categories.map((cat) => (
           <button
-            onClick={() => refetch()}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-secondary/30 transition-colors"
+            key={cat.id}
+            onClick={() => setCategoryFilter(cat.id)}
+            className={cn(
+              "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+              categoryFilter === cat.id
+                ? "bg-primary/10 text-primary border border-primary/20"
+                : "text-muted-foreground hover:bg-secondary/30 hover:text-foreground border border-transparent"
+            )}
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
-            Recarregar
+            <cat.icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{cat.label}</span>
           </button>
-        </div>
-      )}
+        ))}
+      </aside>
 
-      {/* Empty state */}
-      {!isLoading && !error && filtered.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="rounded-2xl border border-dashed border-border/20 bg-card/10 backdrop-blur-sm p-16 text-center relative overflow-hidden"
-        >
-          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary/10 to-cos-purple/10 flex items-center justify-center mb-4 animate-float">
-            <Image className="h-8 w-8 text-primary/50" />
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto p-6">
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 p-2.5">
+              <Layers className="h-5 w-5 text-primary" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight">Biblioteca</h1>
           </div>
-          <h3 className="text-base font-semibold mb-1">Espaço vazio, potencial infinito</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Vá para a aba Produção e gere seus primeiros ativos criativos.
-          </p>
-        </motion.div>
-      )}
+          <div className="flex items-center gap-1.5 rounded-xl bg-secondary/50 p-1">
+            {[
+              { id: "masonry" as const, icon: Grid3X3, label: "Masonry" },
+              { id: "list" as const, icon: List, label: "Lista" },
+            ].map((v) => (
+              <button
+                key={v.id}
+                onClick={() => setView(v.id)}
+                className={cn(
+                  "rounded-lg p-1.5 transition-all",
+                  view === v.id ? "bg-card text-primary elevation-1" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <v.icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {/* ═══ Masonry Grid ═══ */}
-      {!isLoading && !error && filtered.length > 0 && view === "masonry" && (
-        <div className="masonry-grid">
-          <AnimatePresence>
-            {filtered.map((asset, i) => {
-              const version = pickLatestVersion(asset);
-              const hasImage = !!version?.image_url;
-              const isApproved = approvedId === asset.id;
+        {/* Search + Status Filters */}
+        <div className="mb-5 flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar ativos..."
+              className="w-full rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 rounded-xl bg-card/30 p-1 border border-border/20">
+            {statusFilterOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setStatusFilter(opt.value)}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all",
+                  statusFilter === opt.value
+                    ? "bg-card text-primary elevation-1"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-              return (
-                <motion.div
-                  key={asset.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: i * 0.03 }}
-                  className={cn(
-                    "group relative rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden transition-all duration-300",
-                    "hover:border-primary/20 hover:bg-card/50",
-                    selectedAsset?.id === asset.id && "ring-2 ring-primary/50",
-                    isApproved && "ring-2 ring-cos-success"
-                  )}
-                >
-                  {/* Image preview with zoom */}
-                  {hasImage && (
-                    <div className="relative overflow-hidden cursor-pointer" onClick={() => setDrawerAsset(asset)}>
-                      <img
-                        src={version.image_url!}
-                        alt={version.headline || "Asset"}
-                        className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      {/* Quick menu — floats on hover */}
-                      <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); approveMutation.mutate(asset.id); }}
-                          className="flex items-center gap-1.5 rounded-lg bg-cos-success/90 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm hover:bg-cos-success transition-colors"
-                        >
-                          <Check className="h-3 w-3" /> Aprovar
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toast.info("Regenerando..."); }}
-                          className="rounded-lg bg-card/90 p-1.5 backdrop-blur-sm hover:bg-card transition-colors"
-                        >
-                          <RefreshCw className="h-3.5 w-3.5 text-foreground" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDrawerAsset(asset); }}
-                          className="rounded-lg bg-card/90 p-1.5 backdrop-blur-sm hover:bg-card transition-colors"
-                        >
-                          <Eye className="h-3.5 w-3.5 text-foreground" />
-                        </button>
+        {/* Loading skeleton */}
+        {isLoading && (
+          <div className="masonry-grid">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden">
+                <div className="aspect-square skeleton-space" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3 w-3/4 rounded-lg skeleton-space" />
+                  <div className="h-2.5 w-1/2 rounded-lg skeleton-space" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && error && (
+          <div className="rounded-2xl border border-border/30 bg-card/20 p-8 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">Erro ao carregar a biblioteca deste projeto.</p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-secondary/30 transition-colors"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+              Recarregar
+            </button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && !error && filtered.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="rounded-2xl border border-dashed border-border/20 bg-card/10 backdrop-blur-sm p-16 text-center relative overflow-hidden"
+          >
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary/10 to-cos-purple/10 flex items-center justify-center mb-4 animate-float">
+              <Image className="h-8 w-8 text-primary/50" />
+            </div>
+            <h3 className="text-base font-semibold mb-1">Espaço vazio, potencial infinito</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Vá para a aba Produção e gere seus primeiros ativos criativos.
+            </p>
+          </motion.div>
+        )}
+
+        {/* ═══ Masonry Grid ═══ */}
+        {!isLoading && !error && filtered.length > 0 && view === "masonry" && (
+          <div className="masonry-grid">
+            <AnimatePresence>
+              {filtered.map((asset, i) => {
+                const version = pickLatestVersion(asset);
+                const hasImage = !!version?.image_url;
+                const isApproved = approvedId === asset.id;
+
+                return (
+                  <motion.div
+                    key={asset.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={cn(
+                      "group relative rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden transition-all duration-300",
+                      "hover:border-primary/20 hover:bg-card/50",
+                      selectedAsset?.id === asset.id && "ring-2 ring-primary/50",
+                      isApproved && "ring-2 ring-cos-success"
+                    )}
+                  >
+                    {hasImage && (
+                      <div className="relative overflow-hidden cursor-pointer" onClick={() => setDrawerAsset(asset)}>
+                        <img
+                          src={version.image_url!}
+                          alt={version.headline || "Asset"}
+                          className="w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); approveMutation.mutate(asset.id); }}
+                            className="flex items-center gap-1.5 rounded-lg bg-cos-success/90 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm hover:bg-cos-success transition-colors"
+                          >
+                            <Check className="h-3 w-3" /> Aprovar
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toast.info("Regenerando..."); }}
+                            className="rounded-lg bg-card/90 p-1.5 backdrop-blur-sm hover:bg-card transition-colors"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5 text-foreground" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDrawerAsset(asset); }}
+                            className="rounded-lg bg-card/90 p-1.5 backdrop-blur-sm hover:bg-card transition-colors"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-foreground" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-4 space-y-2" onClick={() => {
+                      selectAsset({
+                        id: asset.id,
+                        title: asset.title || version?.headline || "Sem título",
+                        type: asset.output,
+                        status: asset.status,
+                      });
+                      setDrawerAsset(asset);
+                    }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{version?.headline || asset.title || "Sem título"}</p>
+                        <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-mono", statusColors[asset.status])}>
+                          {statusLabels[asset.status]}
+                        </span>
+                      </div>
+                      {version?.body && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">{version.body}</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/60">{formatDate(asset.created_at)}</p>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {asset.provider_used || "auto"} · {asset.output}
+                        </span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
                       </div>
                     </div>
-                  )}
 
-                  {/* Content */}
-                  <div className="p-4 space-y-2" onClick={() => {
-                    selectAsset({
-                      id: asset.id,
-                      title: asset.title || version?.headline || "Sem título",
-                      type: asset.output,
-                      status: asset.status,
-                    });
-                    setDrawerAsset(asset);
-                  }}>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium truncate">{version?.headline || asset.title || "Sem título"}</p>
-                      <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-mono", statusColors[asset.status])}>
-                        {statusLabels[asset.status]}
-                      </span>
-                    </div>
-                    {version?.body && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">{version.body}</p>
+                    {isApproved && (
+                      <motion.div
+                        initial={{ opacity: 1, scale: 0.5 }}
+                        animate={{ opacity: 0, scale: 1.5 }}
+                        transition={{ duration: 0.8 }}
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                      >
+                        <div className="text-4xl animate-confetti">✦</div>
+                      </motion.div>
                     )}
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        {asset.provider_used || "auto"} · {asset.output}
-                      </span>
-                      <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* ═══ List View ═══ */}
+        {!isLoading && !error && filtered.length > 0 && view === "list" && (
+          <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden">
+            <div className="grid grid-cols-[1fr_90px_90px_120px_140px] gap-4 border-b border-border px-5 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              <span>Ativo</span><span>Status</span><span>Perfil</span><span>Provedor</span><span>Data</span>
+            </div>
+            <div className="divide-y divide-border">
+              {filtered.map((asset, i) => {
+                const version = pickLatestVersion(asset);
+                return (
+                  <motion.div
+                    key={asset.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    onClick={() => setDrawerAsset(asset)}
+                    className={cn(
+                      "grid grid-cols-[1fr_90px_90px_120px_140px] gap-4 items-center px-5 py-3.5 hover:bg-secondary/20 transition-colors cursor-pointer",
+                      selectedAsset?.id === asset.id && "bg-primary/5 border-l-2 border-l-primary"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-lg bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{asset.output}</span>
+                      <span className="text-sm truncate">{asset.title || version?.headline || "Sem título"}</span>
                     </div>
-                  </div>
-
-                  {/* Confetti overlay on approve */}
-                  {isApproved && (
-                    <motion.div
-                      initial={{ opacity: 1, scale: 0.5 }}
-                      animate={{ opacity: 0, scale: 1.5 }}
-                      transition={{ duration: 0.8 }}
-                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                    >
-                      <div className="text-4xl animate-confetti">✦</div>
-                    </motion.div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      )}
-
-      {/* ═══ List View ═══ */}
-      {!isLoading && !error && filtered.length > 0 && view === "list" && (
-        <div className="rounded-2xl border border-border/20 bg-card/30 backdrop-blur-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_90px_90px_120px_80px] gap-4 border-b border-border px-5 py-2.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            <span>Ativo</span><span>Status</span><span>Perfil</span><span>Provedor</span><span>Data</span>
+                    <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-mono text-center", statusColors[asset.status])}>{statusLabels[asset.status]}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground">{asset.profile_used || "standard"}</span>
+                    <span className="text-[11px] text-muted-foreground truncate">{asset.provider_used || "—"}</span>
+                    <span className="text-[11px] text-muted-foreground">{formatDate(asset.created_at)}</span>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
-          <div className="divide-y divide-border">
-            {filtered.map((asset, i) => {
-              const version = pickLatestVersion(asset);
-              return (
-                <motion.div
-                  key={asset.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  onClick={() => setDrawerAsset(asset)}
-                  className={cn(
-                    "grid grid-cols-[1fr_90px_90px_120px_80px] gap-4 items-center px-5 py-3.5 hover:bg-secondary/20 transition-colors cursor-pointer",
-                    selectedAsset?.id === asset.id && "bg-primary/5 border-l-2 border-l-primary"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="rounded-lg bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">{asset.output}</span>
-                    <span className="text-sm truncate">{asset.title || version?.headline || "Sem título"}</span>
-                  </div>
-                  <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-mono text-center", statusColors[asset.status])}>{statusLabels[asset.status]}</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">{asset.profile_used || "standard"}</span>
-                  <span className="text-[11px] text-muted-foreground truncate">{asset.provider_used || "—"}</span>
-                  <span className="text-[11px] text-muted-foreground">{new Date(asset.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Asset Drawer */}
-      <AssetDrawer
-        asset={drawerAsset}
-        onClose={() => setDrawerAsset(null)}
-        onApprove={(id) => approveMutation.mutate(id)}
-      />
+        {/* Asset Drawer */}
+        <AssetDrawer
+          asset={drawerAsset}
+          onClose={() => setDrawerAsset(null)}
+          onApprove={(id) => approveMutation.mutate(id)}
+        />
+      </div>
     </div>
   );
 }
