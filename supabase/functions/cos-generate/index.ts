@@ -24,7 +24,7 @@ const IMAGE_MODELS: Record<string, string[]> = {
   standard: ["fal-ai/flux/dev", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
   quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
   text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
-  unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/stabilityai/stable-diffusion-xl-base-1.0", "fal-ai/flux/dev"],
+  unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/black-forest-labs/FLUX.1-krea-dev", "fal-ai/flux/dev"],
 };
 
 // fal.ai model ID mapping (for display → API endpoint)
@@ -36,7 +36,7 @@ const FAL_MODELS = new Set([
 // IDs reais: remover prefixo "together/" antes de chamar a API
 const TOGETHER_MODELS = new Set([
   "together/black-forest-labs/FLUX.1-schnell",
-  "together/stabilityai/stable-diffusion-xl-base-1.0",
+  "together/black-forest-labs/FLUX.1-krea-dev",
 ]);
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -51,7 +51,7 @@ const CREDIT_COSTS: Record<string, number> = {
   "fal-ai/flux-pro/v1.1": 12,
   "fal-ai/ideogram/v2": 8,
   "together/black-forest-labs/FLUX.1-schnell": 3,
-  "together/stabilityai/stable-diffusion-xl-base-1.0": 4,
+  "together/black-forest-labs/FLUX.1-krea-dev": 4,
 };
 
 const PIECE_PROMPTS: Record<string, string> = {
@@ -705,7 +705,7 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
               model: togetherModelId,
               prompt: imagePrompt,
               n: 1,
-              steps: 28,
+              steps: togetherModelId.includes("schnell") ? 4 : 28,
               ...togetherRatio,
               disable_safety_checker: true,
             }),
