@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import cosLogo from "@/assets/cos-logo-wordmark.png";
 
 const globalNav = [
   { to: "/", icon: LayoutDashboard, label: "Projetos" },
@@ -158,9 +159,8 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
             <span className="text-[11px] font-bold text-primary-foreground font-mono-brand">C</span>
           </div>
           {!collapsed && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-baseline gap-1.5">
-              <span className="font-mono-brand text-sm font-bold tracking-wider text-gradient-cyan">COS</span>
-              <span className="text-[8px] font-mono-brand text-muted-foreground/40 tracking-widest">v2</span>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <img src={cosLogo} alt="COS" className="h-5 object-contain" />
             </motion.div>
           )}
         </div>
