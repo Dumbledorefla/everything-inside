@@ -5,8 +5,8 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const profileLabels: Record<string, string> = { economy: "Economia", standard: "Padrão", quality: "Qualidade" };
-const profileColors: Record<string, string> = { economy: "text-cos-warning", standard: "text-primary", quality: "text-cos-purple" };
+const profileLabels: Record<string, string> = { economy: "Economia", standard: "Padrão", quality: "Qualidade", unrestricted: "Sem Restrições" };
+const profileColors: Record<string, string> = { economy: "text-cos-warning", standard: "text-primary", quality: "text-cos-purple", unrestricted: "text-destructive" };
 
 export default function ContextPanel() {
   const { spec, selectedAsset, activeProjectId } = useAssistant();

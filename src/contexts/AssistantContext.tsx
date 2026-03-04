@@ -17,7 +17,7 @@ export interface GenerationSpec {
   output: "text" | "image" | "both";
   pieceType: string;
   quantity: number;
-  profile: "economy" | "standard" | "quality";
+  profile: "economy" | "standard" | "quality" | "unrestricted";
   destination: string;
   ratio: string;
   intensity: string;
