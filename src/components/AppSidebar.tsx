@@ -20,7 +20,7 @@ const projectNav = [
   { to: "references", icon: Eye, label: "Referências" },
   { to: "production", icon: Zap, label: "Produção" },
   { to: "ad-factory", icon: Target, label: "Ad Factory" },
-  { to: "personas", icon: User, label: "Personas" },
+  { to: "characters", icon: User, label: "Personagens" },
   { to: "library", icon: FolderOpen, label: "Biblioteca" },
   { to: "planning", icon: Calendar, label: "Planejamento" },
   { to: "sprints", icon: Layers, label: "Sprints" },
