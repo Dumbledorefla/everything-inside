@@ -295,7 +295,9 @@ export default function ProjectPages() {
             projectId={projectId!}
             onSuccess={(pageId) => {
               setShowCloneModal(false);
-              navigate(`/project/${projectId}/pages`);
+              setExpandedPage(pageId);
+              queryClient.invalidateQueries({ queryKey: ["pages", projectId] });
+              toast.success("Página clonada! Clique nas seções para editar.");
             }}
             onClose={() => setShowCloneModal(false)}
           />

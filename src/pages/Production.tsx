@@ -24,6 +24,7 @@ import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
 import { cn } from "@/lib/utils";
 import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
+import { CarouselIdeaGenerator } from "@/components/creative/CarouselIdeaGenerator";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -114,11 +115,18 @@ export default function Production() {
   const [showAnimateModal, setShowAnimateModal] = useState(false);
   const [useInfluencer, setUseInfluencer] = useState(false);
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
+  const [showCarouselIdeaGenerator, setShowCarouselIdeaGenerator] = useState(false);
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
     setShowIdeaGenerator(false);
     toast.info("Ideia aplicada ao prompt. Clique em 'Gerar' para criar.");
+  };
+
+  const handleCarouselIdeaSelected = (idea: { tema: string; sugestao_roteiro: string }) => {
+    setCarouselTopic(idea.tema);
+    toast.info("Tema aplicado!", { description: idea.sugestao_roteiro });
+    setShowCarouselIdeaGenerator(false);
   };
 
   const [operationMode, setOperationModeLocal] = useState<OperationMode>("social");
@@ -488,7 +496,25 @@ export default function Production() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Tema</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground">Tema</label>
+                  <Dialog open={showCarouselIdeaGenerator} onOpenChange={setShowCarouselIdeaGenerator}>
+                    <Button variant="outline" size="sm" onClick={() => setShowCarouselIdeaGenerator(true)}
+                      className="h-6 text-[9px] gap-1 border-cos-orange/20 text-cos-orange hover:bg-cos-orange/10">
+                      <Lightbulb className="h-3 w-3" /> Ideias
+                    </Button>
+                    <DialogContent className="max-w-md">
+                      {activeProjectId && (
+                        <CarouselIdeaGenerator
+                          projectId={activeProjectId}
+                          onIdeaSelected={(idea) => {
+                            handleCarouselIdeaSelected(idea);
+                          }}
+                        />
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <textarea value={carouselTopic} onChange={(e) => setCarouselTopic(e.target.value)}
                   placeholder="Ex: 5 erros ao investir..."
                   rows={2} className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs placeholder:text-muted-foreground/50 focus:border-primary/40 focus:outline-none resize-none" />

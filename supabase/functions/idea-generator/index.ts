@@ -84,7 +84,51 @@ serve(async (req) => {
 
     const dnaContext = buildDNAPrompt(project, dna);
 
-    const systemPrompt = `Você é um Diretor de Criação e Estrategista de Conteúdo de elite, especialista em marketing digital. Sua missão é gerar 5 ideias criativas e estratégicas para um conteúdo de ${pieceType}.
+    const isCarousel = pieceType === "carousel";
+
+    let systemPrompt: string;
+    let toolSchema: any;
+
+    if (isCarousel) {
+      systemPrompt = `Você é um Diretor de Criação especialista em conteúdo viral para redes sociais. Sua missão é gerar 5 ideias criativas para um **carrossel**.
+
+**DNA DO PROJETO (Guia Criativo Obrigatório):**
+${dnaContext}
+
+**INSTRUÇÕES CRÍTICAS:**
+1.  **Gere 5 Ideias**: Crie exatamente 5 ideias distintas para um carrossel.
+2.  **Alinhamento Estratégico**: As ideias DEVEM estar 100% alinhadas com o DNA do projeto (nicho, público, tom de voz).
+3.  **Foco no Tópico**: As ideias devem ser sobre o tópico: "${topic}".
+4.  **Formato de Saída**: Para cada ideia, forneça um \`tema\` (título curto e magnético para o carrossel) e uma \`sugestao_roteiro\` (um resumo em 3 a 5 passos de como seria o conteúdo dos slides, separados por " → ").`;
+
+      toolSchema = {
+        type: "function",
+        function: {
+          name: "return_ideas",
+          description: "Return 5 creative carousel ideas",
+          parameters: {
+            type: "object",
+            properties: {
+              ideias: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    tema: { type: "string", description: "Short magnetic title for the carousel" },
+                    sugestao_roteiro: { type: "string", description: "3-5 step summary of slide content separated by →" },
+                  },
+                  required: ["tema", "sugestao_roteiro"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["ideias"],
+            additionalProperties: false,
+          },
+        },
+      };
+    } else {
+      systemPrompt = `Você é um Diretor de Criação e Estrategista de Conteúdo de elite, especialista em marketing digital. Sua missão é gerar 5 ideias criativas e estratégicas para um conteúdo de ${pieceType}.
 
 **DNA DO PROJETO (Guia Criativo Obrigatório):**
 ${dnaContext}
@@ -94,6 +138,34 @@ ${dnaContext}
 2.  **Alinhamento Estratégico**: As ideias DEVEM estar 100% alinhadas com o DNA do projeto (nicho, público, tom de voz).
 3.  **Foco no Tópico**: As ideias devem ser sobre o tópico: "${topic}".
 4.  **Formato de Saída**: Para cada ideia, forneça um \`headline\` (título curto e magnético) e um \`body\` (descrição de 1-2 frases explicando a ideia e o visual).`;
+
+      toolSchema = {
+        type: "function",
+        function: {
+          name: "return_ideas",
+          description: "Return 5 creative content ideas",
+          parameters: {
+            type: "object",
+            properties: {
+              ideias: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    headline: { type: "string", description: "Short magnetic title" },
+                    body: { type: "string", description: "1-2 sentence description of the idea and visual" },
+                  },
+                  required: ["headline", "body"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["ideias"],
+            additionalProperties: false,
+          },
+        },
+      };
+    }
 
     const response = await fetch(AI_GATEWAY, {
       method: "POST",
@@ -105,34 +177,9 @@ ${dnaContext}
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Gere 5 ideias criativas sobre: ${topic}` },
+          { role: "user", content: isCarousel ? `Gere 5 ideias de carrossel sobre: ${topic}` : `Gere 5 ideias criativas sobre: ${topic}` },
         ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "return_ideas",
-            description: "Return 5 creative content ideas",
-            parameters: {
-              type: "object",
-              properties: {
-                ideias: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      headline: { type: "string", description: "Short magnetic title" },
-                      body: { type: "string", description: "1-2 sentence description of the idea and visual" },
-                    },
-                    required: ["headline", "body"],
-                    additionalProperties: false,
-                  },
-                },
-              },
-              required: ["ideias"],
-              additionalProperties: false,
-            },
-          },
-        }],
+        tools: [toolSchema],
         tool_choice: { type: "function", function: { name: "return_ideas" } },
       }),
     });

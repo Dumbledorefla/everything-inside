@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Zap, Loader2, ChevronRight, Check, Target, Users, Tag, RefreshCw, Download } from "lucide-react";
+import { Zap, Loader2, ChevronRight, Check, Target, Users, Tag, RefreshCw, Download, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,10 @@ type Step = "briefing" | "angles" | "generate" | "results";
 
 export default function AdFactory() {
   const { projectId } = useParams();
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("briefing");
+  const [savingToLibrary, setSavingToLibrary] = useState(false);
 
   const [campaignGoal, setCampaignGoal] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
@@ -111,6 +115,39 @@ export default function AdFactory() {
     "Facebook/Instagram Feed": 2,
     "Instagram Stories / Reels": 1,
     "Google Display": 2,
+  };
+
+  const saveToLibrary = async () => {
+    if (!projectId || !session?.user?.id) {
+      toast.error("Você precisa estar logado.");
+      return;
+    }
+    setSavingToLibrary(true);
+    try {
+      let saved = 0;
+      for (const result of results) {
+        const { error } = await supabase.from("assets").insert({
+          project_id: projectId,
+          user_id: session.user.id,
+          title: result.headline || `Anúncio ${result.platform}`,
+          output: "image" as const,
+          status: "draft" as const,
+          final_render_url: result.imageUrl,
+          platform: result.platform,
+          preset: result.ratio,
+          format_label: result.format,
+          folder: "Exploração",
+          tags: ["ad-factory", result.angle],
+        });
+        if (!error) saved++;
+      }
+      queryClient.invalidateQueries({ queryKey: ["project-assets", projectId] });
+      toast.success(`${saved} anúncios salvos na biblioteca!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar.");
+    } finally {
+      setSavingToLibrary(false);
+    }
   };
 
   return (
@@ -306,9 +343,15 @@ export default function AdFactory() {
           <motion.div key="results" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">{results.length} Anúncios Gerados</h2>
-              <Button variant="outline" size="sm" onClick={reset} className="gap-1 text-xs">
-                <RefreshCw className="h-3 w-3" /> Nova Campanha
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={saveToLibrary} disabled={savingToLibrary} className="gap-1 text-xs">
+                  {savingToLibrary ? <Loader2 className="h-3 w-3 animate-spin" /> : <Library className="h-3 w-3" />}
+                  Enviar para Biblioteca
+                </Button>
+                <Button variant="outline" size="sm" onClick={reset} className="gap-1 text-xs">
+                  <RefreshCw className="h-3 w-3" /> Nova Campanha
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
