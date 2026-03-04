@@ -19,14 +19,14 @@ import {
 interface DNAForm {
   identity: { nome: string; nicho: string; produto: string; slogan: string; tom: string; personalidade: string; instagram: string; website: string; whatsapp: string };
   audience: { perfil: string; dor_principal: string; desejo_principal: string; objecoes: string; provas: string };
-  strategy: { promessa: string; diferencial: string; mecanismo: string; cta_padrao: string; palavras_proibidas: string; pilares: string };
+  strategy: { promessa: string; diferencial: string; mecanismo: string; cta_padrao: string; palavras_proibidas: string; pilares: string; objetivos_negocio: string };
   visual: { estilo?: string; cores?: string; referencia?: string; colors: { name: string; hex: string }[]; fonts: { role: string; family: string; weight: string; size: string }[]; references: string[] };
 }
 
 const DEFAULT_DNA: DNAForm = {
   identity: { nome: "", nicho: "", produto: "", slogan: "", tom: "Profissional", personalidade: "", instagram: "", website: "", whatsapp: "" },
   audience: { perfil: "", dor_principal: "", desejo_principal: "", objecoes: "", provas: "" },
-  strategy: { promessa: "", diferencial: "", mecanismo: "", cta_padrao: "", palavras_proibidas: "", pilares: "" },
+  strategy: { promessa: "", diferencial: "", mecanismo: "", cta_padrao: "", palavras_proibidas: "", pilares: "", objetivos_negocio: "" },
   visual: {
     colors: [
       { name: "Primária", hex: "#06B6D4" },
@@ -187,6 +187,7 @@ export default function ProjectDNA() {
       { k: "objecoes", label: "Objeções" }, { k: "provas", label: "Provas Sociais" },
     ]},
     { key: "strategy" as const, title: "Estratégia", icon: Sparkles, fields: [
+      { k: "objetivos_negocio", label: "Objetivos de Negócio" },
       { k: "promessa", label: "Promessa" }, { k: "diferencial", label: "Diferencial" }, { k: "mecanismo", label: "Mecanismo" },
       { k: "cta_padrao", label: "CTA Padrão" }, { k: "palavras_proibidas", label: "Palavras Proibidas" }, { k: "pilares", label: "Pilares de Conteúdo" },
     ]},
