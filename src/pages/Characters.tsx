@@ -329,10 +329,10 @@ export default function Characters() {
   });
 
   // ── Queries ──
-  const { data: project } = useQuery({
+  const { data: project, isLoading: isLoadingProject } = useQuery({
     queryKey: ["project-character", activeProjectId],
     queryFn: async () => {
-      const { data } = await supabase.from("projects").select("id, name, main_influencer_asset_id").eq("id", activeProjectId!).single();
+      const { data } = await supabase.from("projects").select("id, name, main_influencer_asset_id").eq("id", activeProjectId!).maybeSingle();
       return data;
     },
     enabled: !!activeProjectId,
@@ -341,7 +341,7 @@ export default function Characters() {
   const { data: mainInfluencer } = useQuery({
     queryKey: ["main-influencer", project?.main_influencer_asset_id],
     queryFn: async () => {
-      const { data } = await supabase.from("assets").select("id, title, final_render_url").eq("id", project!.main_influencer_asset_id!).single();
+      const { data } = await supabase.from("assets").select("id, title, final_render_url").eq("id", project!.main_influencer_asset_id!).maybeSingle();
       return data;
     },
     enabled: !!project?.main_influencer_asset_id,
@@ -504,6 +504,22 @@ export default function Characters() {
       ))}
     </div>
   );
+
+  if (!activeProjectId) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground">Selecione um projeto para gerenciar personagens.</p>
+      </div>
+    );
+  }
+
+  if (isLoadingProject) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
