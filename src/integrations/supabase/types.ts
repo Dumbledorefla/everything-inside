@@ -55,6 +55,65 @@ export type Database = {
           },
         ]
       }
+      adult_studio_jobs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          lora_model_id: string | null
+          metadata: Json | null
+          mode: string
+          model: string
+          project_id: string
+          prompt: string
+          reference_photo_url: string | null
+          result_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lora_model_id?: string | null
+          metadata?: Json | null
+          mode: string
+          model: string
+          project_id: string
+          prompt: string
+          reference_photo_url?: string | null
+          result_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lora_model_id?: string | null
+          metadata?: Json | null
+          mode?: string
+          model?: string
+          project_id?: string
+          prompt?: string
+          reference_photo_url?: string | null
+          result_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adult_studio_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_versions: {
         Row: {
           asset_id: string
@@ -855,8 +914,10 @@ export type Database = {
           niche: string | null
           operation_mode: string
           performance_rating: number | null
+          primary_reference_photo_url: string | null
           product: string | null
           updated_at: string
+          use_real_photos: boolean | null
           user_id: string
           workspace_folder: string | null
         }
@@ -870,8 +931,10 @@ export type Database = {
           niche?: string | null
           operation_mode?: string
           performance_rating?: number | null
+          primary_reference_photo_url?: string | null
           product?: string | null
           updated_at?: string
+          use_real_photos?: boolean | null
           user_id: string
           workspace_folder?: string | null
         }
@@ -885,8 +948,10 @@ export type Database = {
           niche?: string | null
           operation_mode?: string
           performance_rating?: number | null
+          primary_reference_photo_url?: string | null
           product?: string | null
           updated_at?: string
+          use_real_photos?: boolean | null
           user_id?: string
           workspace_folder?: string | null
         }
@@ -1003,6 +1068,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "reference_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reference_photos: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          photo_url: string
+          project_id: string
+          sort_order: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          photo_url: string
+          project_id: string
+          sort_order?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          photo_url?: string
+          project_id?: string
+          sort_order?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_photos_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
