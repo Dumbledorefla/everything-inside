@@ -287,9 +287,10 @@ export default function Production() {
     }
     setSelectedResultId(null);
 
-    // If character mode is active, use character-generate variation
+    // If character mode is active, use character-generate variation (async jobs)
     if (useInfluencer && hasInfluencer && mainInfluencerAsset?.final_render_url) {
       try {
+        toast.info("Iniciando geração com personagem...");
         const { data, error } = await supabase.functions.invoke("character-generate", {
           body: {
             mode: "generate_variation",
@@ -300,21 +301,72 @@ export default function Production() {
           },
         });
         if (error) throw error;
-        if (data?.results) {
-          const mapped = data.results.map((r: any) => ({
-            id: r.id,
-            headline: r.title || "",
-            body: "",
-            cta: "",
-            imageUrl: r.imageUrl,
-            provider: "character-generate",
-            profile: spec.profile,
-            status: "draft",
-            creditCost: 10,
-          }));
-          setResults(mapped);
-          toast.success(`${data.count} variações com influencer geradas!`);
-        }
+        if (!data?.job_ids?.length) throw new Error("Nenhum job criado");
+
+        const jobIds: string[] = data.job_ids;
+        toast.info(`${jobIds.length} variações em processamento...`);
+
+        // Trigger job-processor
+        supabase.functions.invoke("job-processor", { body: {} }).catch(() => {});
+
+        // Poll for completed jobs
+        const pollResults = async (): Promise<void> => {
+          const maxAttempts = 36; // 3 minutes
+          for (let i = 0; i < maxAttempts; i++) {
+            await new Promise((r) => setTimeout(r, 5000));
+
+            // Trigger processor again
+            if (i % 2 === 0) {
+              supabase.functions.invoke("job-processor", { body: {} }).catch(() => {});
+            }
+
+            const { data: jobs } = await supabase
+              .from("generation_jobs")
+              .select("id, status, asset_id")
+              .in("id", jobIds);
+
+            if (!jobs) continue;
+
+            const completed = jobs.filter((j) => j.status === "completed" && j.asset_id);
+            const failed = jobs.filter((j) => j.status === "failed");
+
+            if (completed.length > 0) {
+              const assetIds = completed.map((j) => j.asset_id!);
+              const { data: assets } = await supabase
+                .from("assets")
+                .select("id, title, final_render_url")
+                .in("id", assetIds);
+
+              if (assets?.length) {
+                const mapped = assets.map((a) => ({
+                  id: a.id,
+                  headline: a.title || "",
+                  body: "",
+                  cta: "",
+                  imageUrl: a.final_render_url,
+                  provider: "character-generate",
+                  profile: spec.profile,
+                  status: "draft",
+                  creditCost: 10,
+                }));
+                setResults(mapped);
+              }
+            }
+
+            if (completed.length + failed.length >= jobIds.length) {
+              if (completed.length > 0) {
+                toast.success(`${completed.length} variações com personagem geradas!`);
+              }
+              if (failed.length > 0) {
+                toast.error(`${failed.length} variações falharam`);
+              }
+              return;
+            }
+          }
+          toast.error("Tempo limite atingido. Verifique a biblioteca.");
+        };
+
+        await pollResults();
       } catch (err: any) {
         toast.error(err.message || "Erro ao gerar com influencer");
       }
