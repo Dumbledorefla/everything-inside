@@ -757,6 +757,12 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       const bodyText = body || "";
       const ctaText = cta || "";
       
+      // Evitar duplicação: se o CTA já estiver contido no headline, não renderizá-lo separadamente
+      let finalCtaText = ctaText;
+      if (headlineText && ctaText && headlineText.toLowerCase().includes(ctaText.toLowerCase())) {
+        finalCtaText = "";
+      }
+      
       // Determine if text should be rendered on the image
       const shouldRenderText = output === "both" && !!(headline || cta);
 
@@ -771,7 +777,7 @@ ${dnaContext}
 
 **TEXTO A SER INTEGRADO NA IMAGEM (REGRAS DE CONCISÃO):**
 -   **Headline**: "${headlineText}" (Renderize esta frase com destaque máximo).
--   **CTA (Opcional e Curto)**: Se houver um CTA, renderize-o de forma discreta e com no máximo 10 palavras: "${ctaText}".
+-   **CTA (Opcional e Curto)**: Se houver um CTA e ele NÃO estiver contido no headline, renderize-o de forma discreta e com no máximo 10 palavras: "${finalCtaText}".
 -   **NÃO RENDERIZE O BODY**: O corpo do texto (\`body\`) NÃO deve ser incluído na imagem. Ele serve apenas como contexto para a IA entender o tema.
 
 **INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO (EXTREMAMENTE CRÍTICO):**
