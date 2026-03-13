@@ -3,12 +3,14 @@ import {
   LayoutDashboard, Zap, Calendar, Library, FileStack, Settings,
   ChevronLeft, ChevronRight, FolderOpen, Dna, Home, History,
   Layers, FileText, Sparkles, ScrollText, Eye, Target, User,
-  Video, Flame, ChevronDown,
+  Video, Flame, ChevronDown, PauseCircle, Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import cosLogo from "@/assets/cos-logo-wordmark.png";
+import { Switch } from "@/components/ui/switch";
+import { useAIGuard } from "@/hooks/useAIGuard";
 
 const globalNav = [
   { to: "/", icon: LayoutDashboard, label: "Projetos" },
@@ -217,11 +219,44 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
         </div>
       </nav>
 
+      <SidebarFooterSection collapsed={collapsed} />
+    </aside>
+  );
+}
+
+function SidebarFooterSection({ collapsed }: { collapsed: boolean }) {
+  const { isAIPaused, creditBalance, monthlySpent, monthlyBudget, togglePause } = useAIGuard();
+
+  return (
+    <div className="border-t border-sidebar-border shrink-0 px-2 py-2.5 space-y-2">
+      {/* AI Pause Toggle */}
+      <div className={cn("flex items-center gap-2", collapsed ? "justify-center" : "px-1.5")}>
+        {!collapsed && (
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <PauseCircle className={cn("h-3.5 w-3.5 shrink-0", isAIPaused ? "text-destructive" : "text-muted-foreground")} />
+            <span className="text-[10px] font-mono-brand text-muted-foreground truncate">Pausar IA</span>
+          </div>
+        )}
+        <Switch
+          checked={isAIPaused}
+          onCheckedChange={(val) => togglePause.mutate(val)}
+          className="scale-75"
+        />
+      </div>
+
+      {/* Credit Balance */}
       {!collapsed && (
-        <div className="px-4 py-2.5 border-t border-sidebar-border shrink-0">
-          <p className="text-[8px] text-muted-foreground/30 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
+        <div className="px-1.5 flex items-center gap-1.5">
+          <Coins className="h-3 w-3 text-cos-warning shrink-0" />
+          <span className="text-[10px] font-mono-brand text-muted-foreground">
+            {monthlySpent.toFixed(0)}{monthlyBudget ? ` / ${monthlyBudget.toFixed(0)}` : ""} créditos
+          </span>
         </div>
       )}
-    </aside>
+
+      {!collapsed && (
+        <p className="text-[8px] text-muted-foreground/30 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
+      )}
+    </div>
   );
 }

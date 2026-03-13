@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkAIGuard, guardErrorResponse } from "../_shared/guard-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,10 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const guard = await checkAIGuard(serviceClient, user.id, 3);
+    if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
 
     const { projectId, autoTriggered } = await req.json();
     if (!projectId) throw new Error("projectId required");

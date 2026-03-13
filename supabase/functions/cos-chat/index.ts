@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkAIGuard, guardErrorResponse } from "../_shared/guard-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +73,10 @@ Deno.serve(async (req) => {
     const { messages, projectId, selectedAssetId, agentMode } = await req.json();
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ── AI Guard: check pause & budget ──────────────────────────
+    const guard = await checkAIGuard(serviceClient, user.id, 1);
+    if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
+
     // ── Build context based on agent mode ────────────────────────
     let dnaContext = "";
     let projectName = "";
@@ -119,24 +124,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ═══ PHASE 1: LLM INTENT CLASSIFICATION (project mode only) ═══
+    // ═══ PHASE 1: QUICK INTENT CLASSIFICATION (regex only — no LLM call) ═══
     if (agentMode === "project") {
       const lastUserMsg = messages[messages.length - 1]?.content || "";
-      const intent = await classifyIntentLLM(lastUserMsg, LOVABLE_API_KEY);
+      const intent = quickClassify(lastUserMsg);
 
-      // Log telemetry
-      if (projectId) {
-        await serviceClient.from("cos_ledger").insert({
-          project_id: projectId, user_id: user.id,
-          provider_used: "gemini-2.5-flash-lite", operation_type: "INTENT_CLASSIFY",
-          credits_cost: CREDIT_COSTS.intent_classify.credits,
-          estimated_usd: CREDIT_COSTS.intent_classify.usd,
-          metadata: { intent: intent.intent },
-        });
-      }
-
-      // ═══ PHASE 2: EXECUTE COMMANDS ═══
-      if (intent.intent !== "CHAT_STRATEGY") {
+      // Only execute commands for regex-matched intents (no LLM classification call)
+      if (intent && intent.intent !== "CHAT_STRATEGY") {
         const result = await executeCommand(
           intent, projectId, user.id, serviceClient, LOVABLE_API_KEY, dnaContext, selectedAssetId
         );

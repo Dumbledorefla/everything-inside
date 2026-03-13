@@ -4,8 +4,12 @@ import { Settings2, Shield, Zap, CreditCard, ScrollText, SlidersHorizontal, Togg
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAIGuard } from "@/hooks/useAIGuard";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const roleColors: Record<string, string> = {
@@ -140,20 +144,7 @@ export default function SettingsPage() {
               <CardContent>{renderProviders(textProviders)}</CardContent>
             </Card>
           )}
-          {activeTab === "budget" && (
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-mono-brand">COS Credits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-xl border border-border bg-secondary p-6">
-                  <p className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-2">Saldo atual</p>
-                  <p className="text-4xl font-bold font-mono-brand text-foreground">{credits?.toFixed(0) || "0"}</p>
-                  <p className="text-xs text-muted-foreground mt-1">créditos consumidos</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {activeTab === "budget" && <BudgetTab credits={credits} />}
           {activeTab === "logs" && (
             <Card>
               <CardHeader className="pb-4">
@@ -186,5 +177,81 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function BudgetTab({ credits }: { credits?: number }) {
+  const { monthlyBudget, monthlySpent, updateBudget } = useAIGuard();
+  const [budgetInput, setBudgetInput] = useState(monthlyBudget?.toString() || "");
+  const usagePercent = monthlyBudget ? Math.min((monthlySpent / monthlyBudget) * 100, 100) : 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-sm font-mono-brand">COS Credits & Orçamento</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Current balance */}
+        <div className="rounded-xl border border-border bg-secondary p-6">
+          <p className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-2">Total consumido</p>
+          <p className="text-4xl font-bold font-mono-brand text-foreground">{credits?.toFixed(0) || "0"}</p>
+          <p className="text-xs text-muted-foreground mt-1">créditos totais</p>
+        </div>
+
+        {/* Monthly usage vs budget */}
+        <div className="rounded-xl border border-border p-5 space-y-3">
+          <p className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground">Consumo mensal</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold font-mono-brand">{monthlySpent.toFixed(0)}</span>
+            {monthlyBudget && (
+              <span className="text-sm text-muted-foreground font-mono-brand">/ {monthlyBudget.toFixed(0)} créditos</span>
+            )}
+          </div>
+          {monthlyBudget && (
+            <Progress value={usagePercent} className="h-2" />
+          )}
+          {monthlyBudget && usagePercent >= 80 && (
+            <p className="text-[10px] text-destructive font-medium">
+              ⚠️ {usagePercent >= 100 ? "Orçamento excedido!" : "Próximo do limite!"}
+            </p>
+          )}
+        </div>
+
+        {/* Set monthly budget */}
+        <div className="rounded-xl border border-border p-5 space-y-3">
+          <p className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground">Limite mensal</p>
+          <p className="text-xs text-muted-foreground">Defina um orçamento máximo de créditos por mês. Novas gerações serão bloqueadas ao atingir o limite.</p>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              placeholder="Ex: 5000"
+              value={budgetInput}
+              onChange={(e) => setBudgetInput(e.target.value)}
+              className="flex-1 h-9 text-sm font-mono-brand"
+            />
+            <Button
+              variant="outline"
+              className="h-9 text-xs"
+              onClick={() => {
+                const val = budgetInput ? Number(budgetInput) : null;
+                updateBudget.mutate(val, {
+                  onSuccess: () => toast.success(val ? `Limite definido: ${val} créditos/mês` : "Limite removido"),
+                });
+              }}
+            >
+              Salvar
+            </Button>
+          </div>
+          {monthlyBudget && (
+            <button
+              onClick={() => { setBudgetInput(""); updateBudget.mutate(null); }}
+              className="text-[10px] text-destructive hover:underline"
+            >
+              Remover limite
+            </button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

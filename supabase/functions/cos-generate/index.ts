@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractImageUrlFromResponse } from "../_shared/ai-utils.ts";
+import { checkAIGuard, guardErrorResponse } from "../_shared/guard-utils.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -158,6 +159,11 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // ── AI Guard: check pause & budget ──────────────────────────
+    const guard = await checkAIGuard(supabase, user.id, 5);
+    if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
+
     const body: GenerateRequest = await req.json();
     const {
       projectId, mode, output, pieceType, quantity, profile,
