@@ -159,6 +159,11 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // ── AI Guard: check pause & budget ──────────────────────────
+    const guard = await checkAIGuard(supabase, user.id, 5);
+    if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
+
     const body: GenerateRequest = await req.json();
     const {
       projectId, mode, output, pieceType, quantity, profile,

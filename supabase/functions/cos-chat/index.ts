@@ -73,6 +73,10 @@ Deno.serve(async (req) => {
     const { messages, projectId, selectedAssetId, agentMode } = await req.json();
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ── AI Guard: check pause & budget ──────────────────────────
+    const guard = await checkAIGuard(serviceClient, user.id, 1);
+    if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
+
     // ── Build context based on agent mode ────────────────────────
     let dnaContext = "";
     let projectName = "";
