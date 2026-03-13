@@ -219,11 +219,7 @@ export default function AppSidebar({ collapsed, onToggle }: { collapsed: boolean
         </div>
       </nav>
 
-      {!collapsed && (
-        <div className="px-4 py-2.5 border-t border-sidebar-border shrink-0">
-          <p className="text-[8px] text-muted-foreground/30 font-mono-brand text-center tracking-[0.3em] uppercase">Creative OS v2</p>
-        </div>
-      )}
+      <SidebarFooter collapsed={collapsed} />
     </aside>
   );
 }
