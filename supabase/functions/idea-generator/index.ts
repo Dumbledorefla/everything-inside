@@ -75,6 +75,10 @@ serve(async (req) => {
       });
     }
 
+    const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const guard = await checkAIGuard(serviceClient, user.id, 3);
+    if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
+
     const { projectId, topic, pieceType }: IdeaRequest = await req.json();
     if (!projectId || !topic) throw new Error("projectId and topic are required");
 

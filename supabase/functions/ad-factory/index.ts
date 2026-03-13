@@ -188,6 +188,11 @@ Para cada ângulo, forneça:
         global: { headers: { Authorization: authHeader } },
       });
       const { data: { user } } = await supabaseUser.auth.getUser();
+      if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+
+      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const guard = await checkAIGuard(serviceClient, user.id, 5);
+      if (!guard.allowed) return guardErrorResponse(guard.reason!, corsHeaders);
 
       const results: any[] = [];
       const imageModelList = IMAGE_MODELS[profile];
