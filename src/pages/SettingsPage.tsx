@@ -144,20 +144,7 @@ export default function SettingsPage() {
               <CardContent>{renderProviders(textProviders)}</CardContent>
             </Card>
           )}
-          {activeTab === "budget" && (
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-sm font-mono-brand">COS Credits</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-xl border border-border bg-secondary p-6">
-                  <p className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-2">Saldo atual</p>
-                  <p className="text-4xl font-bold font-mono-brand text-foreground">{credits?.toFixed(0) || "0"}</p>
-                  <p className="text-xs text-muted-foreground mt-1">créditos consumidos</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {activeTab === "budget" && <BudgetTab credits={credits} />}
           {activeTab === "logs" && (
             <Card>
               <CardHeader className="pb-4">
