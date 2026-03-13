@@ -783,33 +783,42 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          credit_balance: number
           default_profile_level:
             | Database["public"]["Enums"]["profile_level"]
             | null
           display_name: string | null
           id: string
+          is_ai_paused: boolean
+          monthly_budget: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          credit_balance?: number
           default_profile_level?:
             | Database["public"]["Enums"]["profile_level"]
             | null
           display_name?: string | null
           id?: string
+          is_ai_paused?: boolean
+          monthly_budget?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          credit_balance?: number
           default_profile_level?:
             | Database["public"]["Enums"]["profile_level"]
             | null
           display_name?: string | null
           id?: string
+          is_ai_paused?: boolean
+          monthly_budget?: number | null
           updated_at?: string
           user_id?: string
         }
