@@ -3,12 +3,14 @@ import {
   LayoutDashboard, Zap, Calendar, Library, FileStack, Settings,
   ChevronLeft, ChevronRight, FolderOpen, Dna, Home, History,
   Layers, FileText, Sparkles, ScrollText, Eye, Target, User,
-  Video, Flame, ChevronDown,
+  Video, Flame, ChevronDown, PauseCircle, Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import cosLogo from "@/assets/cos-logo-wordmark.png";
+import { Switch } from "@/components/ui/switch";
+import { useAIGuard } from "@/hooks/useAIGuard";
 
 const globalNav = [
   { to: "/", icon: LayoutDashboard, label: "Projetos" },
