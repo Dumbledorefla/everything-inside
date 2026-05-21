@@ -7,6 +7,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function generateOpenAIImage(apiKey: string, modelId: string, prompt: string, ratio: string): Promise<string | null> {
+  const size = ratio === "9:16" ? "1024x1536" : ratio === "16:9" ? "1536x1024" : "1024x1024";
+  const model = modelId.replace("openai/", "");
+  const resp = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, prompt, n: 1, size, quality: "high" }),
+  });
+  if (!resp.ok) { console.error("openai image error:", resp.status, await resp.text()); return null; }
+  const data = await resp.json();
+  const item = data?.data?.[0];
+  if (item?.url) return item.url;
+  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  return null;
+}
+
 async function generateText2Img(apiKey: string, modelId: string, prompt: string, ratio: string): Promise<string | null> {
   const model = modelId.replace("together/", "");
   const isSchnell = model.includes("schnell");
@@ -79,6 +95,7 @@ serve(async (req) => {
   try {
     const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
     const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { project_id, user_id, mode, model_id, prompt, reference_photo_url, lora_model_id, ratio = "1:1", num_variations = 1 } = await req.json();
     if (!project_id || !user_id || !mode || !model_id || !prompt) {
@@ -91,8 +108,13 @@ serve(async (req) => {
       let resultUrl: string | null = null;
       try {
         if (mode === "text2img") {
-          if (!TOGETHER_API_KEY) throw new Error("TOGETHER_API_KEY not configured");
-          resultUrl = await generateText2Img(TOGETHER_API_KEY, model_id, prompt, ratio);
+          if (model_id.startsWith("openai/")) {
+            if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
+            resultUrl = await generateOpenAIImage(OPENAI_API_KEY, model_id, prompt, ratio);
+          } else {
+            if (!TOGETHER_API_KEY) throw new Error("TOGETHER_API_KEY not configured");
+            resultUrl = await generateText2Img(TOGETHER_API_KEY, model_id, prompt, ratio);
+          }
         } else if (mode === "ip_adapter") {
           if (!FAL_API_KEY) throw new Error("FAL_API_KEY not configured");
           if (!reference_photo_url) throw new Error("Reference photo required for IP-Adapter");

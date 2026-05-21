@@ -20,7 +20,7 @@ type Ratio = "1:1" | "9:16" | "16:9";
 interface ModelOption {
   id: string;
   name: string;
-  provider: "together" | "fal";
+  provider: "together" | "fal" | "openai";
   cost: "pago" | "premium";
   quality: "boa" | "ótima" | "máxima";
   description: string;
@@ -29,6 +29,7 @@ interface ModelOption {
 
 const MODELS: Record<StudioMode, ModelOption[]> = {
   text2img: [
+    { id: "openai/gpt-image-1", name: "GPT Image 1 (OpenAI)", provider: "openai", cost: "premium", quality: "máxima", description: "Novo gerador da OpenAI. Excelente em texto legível, composição e fotorealismo." },
     { id: "together/black-forest-labs/FLUX.1-schnell", name: "FLUX.1 Schnell", provider: "together", cost: "pago", quality: "boa", description: "Rápido, sem filtros. Ideal para testes e iterações rápidas." },
     { id: "together/black-forest-labs/FLUX.2-dev", name: "FLUX.2 Dev", provider: "together", cost: "premium", quality: "máxima", description: "Última geração FLUX. Qualidade máxima, sem nenhum filtro." },
   ],
@@ -76,9 +77,12 @@ function CostBadge({ cost }: { cost: "pago" | "premium" }) {
   );
 }
 
-function ProviderBadge({ provider }: { provider: "together" | "fal" }) {
+function ProviderBadge({ provider }: { provider: "together" | "fal" | "openai" }) {
   if (provider === "together") return (
     <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">together.ai</span>
+  );
+  if (provider === "openai") return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">openai</span>
   );
   return (
     <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">fal.ai</span>
