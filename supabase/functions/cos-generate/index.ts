@@ -21,10 +21,10 @@ const TEXT_MODELS: Record<string, string[]> = {
 };
 
 const IMAGE_MODELS: Record<string, string[]> = {
-  economy: ["fal-ai/flux/schnell", "google/gemini-2.5-flash-image"],
-  standard: ["fal-ai/flux/dev", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
-  quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
-  text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview"],
+  economy: ["fal-ai/flux/schnell", "google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image-preview"],
+  standard: ["fal-ai/flux/dev", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
+  quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
+  text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
   unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/black-forest-labs/FLUX.2-dev", "fal-ai/flux/dev"],
 };
 
