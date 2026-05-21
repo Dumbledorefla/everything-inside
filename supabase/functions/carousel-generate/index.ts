@@ -43,9 +43,9 @@ const TEXT_MODELS: Record<string, string> = {
 };
 
 const IMAGE_MODELS: Record<string, string[]> = {
-  economy: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
-  standard: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
-  quality: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
+  economy: ["google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"],
+  standard: ["google/gemini-3.1-flash-image-preview", "google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
+  quality: ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"],
 };
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -53,6 +53,7 @@ const CREDIT_COSTS: Record<string, number> = {
   "google/gemini-3-flash-preview": 3,
   "google/gemini-2.5-pro": 8,
   "google/gemini-2.5-flash-image": 3,
+  "google/gemini-3.1-flash-image-preview": 5,
   "google/gemini-3-pro-image-preview": 10,
 };
 

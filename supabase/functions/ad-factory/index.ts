@@ -55,9 +55,9 @@ const TEXT_MODELS: Record<string, string> = {
 };
 
 const IMAGE_MODELS: Record<string, string[]> = {
-  economy: ["google/gemini-2.5-flash-image"],
-  standard: ["google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
-  quality: ["google/gemini-3-pro-image-preview", "google/gemini-2.5-flash-image"],
+  economy: ["google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image-preview"],
+  standard: ["google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
+  quality: ["google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image"],
 };
 
 const PLATFORM_FORMATS: Record<string, { ratio: string; label: string; safeZone: string }[]> = {
