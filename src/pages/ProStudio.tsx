@@ -77,9 +77,12 @@ function CostBadge({ cost }: { cost: "pago" | "premium" }) {
   );
 }
 
-function ProviderBadge({ provider }: { provider: "together" | "fal" }) {
+function ProviderBadge({ provider }: { provider: "together" | "fal" | "openai" }) {
   if (provider === "together") return (
     <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">together.ai</span>
+  );
+  if (provider === "openai") return (
+    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">openai</span>
   );
   return (
     <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">fal.ai</span>
