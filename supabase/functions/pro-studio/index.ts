@@ -7,6 +7,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function generateOpenAIImage(apiKey: string, modelId: string, prompt: string, ratio: string): Promise<string | null> {
+  const size = ratio === "9:16" ? "1024x1536" : ratio === "16:9" ? "1536x1024" : "1024x1024";
+  const model = modelId.replace("openai/", "");
+  const resp = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, prompt, n: 1, size, quality: "high" }),
+  });
+  if (!resp.ok) { console.error("openai image error:", resp.status, await resp.text()); return null; }
+  const data = await resp.json();
+  const item = data?.data?.[0];
+  if (item?.url) return item.url;
+  if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  return null;
+}
+
 async function generateText2Img(apiKey: string, modelId: string, prompt: string, ratio: string): Promise<string | null> {
   const model = modelId.replace("together/", "");
   const isSchnell = model.includes("schnell");
