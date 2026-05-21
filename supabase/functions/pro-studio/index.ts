@@ -95,6 +95,7 @@ serve(async (req) => {
   try {
     const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY");
     const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { project_id, user_id, mode, model_id, prompt, reference_photo_url, lora_model_id, ratio = "1:1", num_variations = 1 } = await req.json();
     if (!project_id || !user_id || !mode || !model_id || !prompt) {
@@ -107,8 +108,13 @@ serve(async (req) => {
       let resultUrl: string | null = null;
       try {
         if (mode === "text2img") {
-          if (!TOGETHER_API_KEY) throw new Error("TOGETHER_API_KEY not configured");
-          resultUrl = await generateText2Img(TOGETHER_API_KEY, model_id, prompt, ratio);
+          if (model_id.startsWith("openai/")) {
+            if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
+            resultUrl = await generateOpenAIImage(OPENAI_API_KEY, model_id, prompt, ratio);
+          } else {
+            if (!TOGETHER_API_KEY) throw new Error("TOGETHER_API_KEY not configured");
+            resultUrl = await generateText2Img(TOGETHER_API_KEY, model_id, prompt, ratio);
+          }
         } else if (mode === "ip_adapter") {
           if (!FAL_API_KEY) throw new Error("FAL_API_KEY not configured");
           if (!reference_photo_url) throw new Error("Reference photo required for IP-Adapter");
