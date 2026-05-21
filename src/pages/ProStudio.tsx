@@ -20,7 +20,7 @@ type Ratio = "1:1" | "9:16" | "16:9";
 interface ModelOption {
   id: string;
   name: string;
-  provider: "together" | "fal";
+  provider: "together" | "fal" | "openai";
   cost: "pago" | "premium";
   quality: "boa" | "ótima" | "máxima";
   description: string;
