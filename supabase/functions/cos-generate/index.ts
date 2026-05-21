@@ -46,6 +46,7 @@ const CREDIT_COSTS: Record<string, number> = {
   "google/gemini-3-flash-preview": 3,
   "google/gemini-2.5-pro": 8,
   "google/gemini-2.5-flash-image": 3,
+  "google/gemini-3.1-flash-image-preview": 5,
   "google/gemini-3-pro-image-preview": 10,
   "fal-ai/flux/schnell": 2,
   "fal-ai/flux/dev": 4,
