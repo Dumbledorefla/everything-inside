@@ -252,6 +252,13 @@ export default function Production() {
   useEffect(() => {
     if (results.length > 0 && !selectedResultId) {
       setSelectedResultId(results[0].id);
+      // Canvas First: se tem imagem + texto, mostra o editor por padrão
+      const first = results[0];
+      const hasBoth = !!(first.imageUrl && (first.headline || first.body || first.cta));
+      setIsEditorMode(hasBoth);
+      if (hasBoth) {
+        toast.success("Imagem e texto gerados! Clique no texto para editar ou arrastar antes de baixar.");
+      }
     }
   }, [results]);
 
