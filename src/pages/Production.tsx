@@ -452,6 +452,11 @@ export default function Production() {
       return;
     }
 
+    // If campaign angle is selected, prepend its strategic copy as guidance
+    const promptWithAngle = selectedAdAngle
+      ? `[ÂNGULO DA CAMPANHA — "${selectedAdAngle.title}"]\nAbordagem: ${selectedAdAngle.approach}\nHook: ${selectedAdAngle.hook}\nCopy base: ${selectedAdAngle.copy}\nDireção visual: ${selectedAdAngle.visualDirection}\n\n${userPrompt || ""}`.trim()
+      : userPrompt || undefined;
+
     await generate({
       projectId: activeProjectId,
       mode: spec.mode,
@@ -465,13 +470,57 @@ export default function Production() {
       intensity: spec.intensity,
       useModel: spec.useModel,
       useVisualProfile: spec.useVisualProfile,
-      userPrompt: userPrompt || undefined,
+      userPrompt: promptWithAngle,
       operationMode,
       formatLabel: currentPieceLabel,
       copyTone,
       referencePhotoUrl: referencePhotoUrl || undefined,
       selectedModelId: spec.useModel ? selectedModelId : undefined,
     } as any);
+  };
+
+  const handleGenerateAngles = async () => {
+    if (!activeProjectId) { toast.error("Projeto inválido."); return; }
+    if (!campaignGoal.trim()) { toast.error("Descreva o objetivo da campanha primeiro."); return; }
+    setLoadingAngles(true);
+    setAdAngles([]);
+    setSelectedAdAngle(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ad-factory", {
+        body: {
+          projectId: activeProjectId,
+          mode: "angles",
+          campaignGoal,
+          targetAudience: campaignAudience,
+          offer: campaignOffer,
+          profile: spec.profile,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.angles?.length) throw new Error("Nenhum ângulo retornado.");
+      setAdAngles(data.angles);
+      toast.success(`${data.angles.length} ângulos estratégicos gerados!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar ângulos.");
+    } finally {
+      setLoadingAngles(false);
+    }
+  };
+
+  const handleExportCarouselZip = async () => {
+    if (!carousel.slides.length) return;
+    try {
+      toast.info("Renderizando slides para ZIP...");
+      await exportCarouselZip(
+        carousel.slides,
+        carouselLayerStyles,
+        spec.ratio,
+        projectDna?.niche,
+      );
+      toast.success("Carrossel exportado!");
+    } catch (err: any) {
+      toast.error("Erro ao exportar: " + (err?.message || "desconhecido"));
+    }
   };
 
   const handleCarouselStoryline = async () => {
