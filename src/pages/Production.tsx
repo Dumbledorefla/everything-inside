@@ -305,6 +305,20 @@ export default function Production() {
     enabled: !!activeProjectId,
   });
 
+  const { data: customModels } = useQuery({
+    queryKey: ["custom-models", activeProjectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("templates")
+        .select("id, name")
+        .eq("project_id", activeProjectId!)
+        .eq("is_custom_model", true)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!activeProjectId,
+  });
+
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | undefined>();
 
   const currentPieceLabel = availablePieceTypes.find((t) => t.id === spec.pieceType)?.label || spec.pieceType;
