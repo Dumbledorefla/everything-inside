@@ -23,8 +23,8 @@ const TEXT_MODELS: Record<string, string[]> = {
 const IMAGE_MODELS: Record<string, string[]> = {
   economy: ["fal-ai/flux/schnell", "google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image-preview"],
   standard: ["fal-ai/flux/dev", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
-  quality: ["openai/gpt-image-1", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
-  text_focused: ["openai/gpt-image-1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
+  quality: ["openai/gpt-image-2", "openai/gpt-image-1", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
+  text_focused: ["openai/gpt-image-2", "openai/gpt-image-1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
   unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/black-forest-labs/FLUX.2-dev", "fal-ai/flux/dev"],
 };
 
@@ -43,6 +43,7 @@ const TOGETHER_MODELS = new Set([
 // OpenAI image models (prefix: openai/)
 const OPENAI_MODELS = new Set([
   "openai/gpt-image-1",
+  "openai/gpt-image-2",
 ]);
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -61,7 +62,9 @@ const CREDIT_COSTS: Record<string, number> = {
   "together/black-forest-labs/FLUX.1-schnell": 3,
   "together/black-forest-labs/FLUX.2-dev": 6,
   "openai/gpt-image-1": 15,
+  "openai/gpt-image-2": 18,
 };
+
 
 
 const PIECE_PROMPTS: Record<string, string> = {
