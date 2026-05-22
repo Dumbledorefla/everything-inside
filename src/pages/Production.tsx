@@ -75,6 +75,7 @@ const TEXT_PROVIDER_OPTIONS = [
 const IMAGE_PROVIDER_OPTIONS = [
   { value: "google/gemini-2.5-flash-image", label: "Nano Banana" },
   { value: "google/gemini-3-pro-image-preview", label: "Nano Banana Pro" },
+  { value: "openai/gpt-image-1", label: "GPT Image (OpenAI)" },
   { value: "fal-ai/flux/schnell", label: "FLUX Schnell" },
   { value: "fal-ai/flux/dev", label: "FLUX Dev" },
   { value: "fal-ai/flux-pro/v1.1", label: "FLUX Pro" },
@@ -656,7 +657,7 @@ export default function Production() {
                   </label>
                   <select value={spec.provider} onChange={(e) => setSpec({ provider: e.target.value })}
                     className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
-                    <option value="Auto">Auto (Fallback)</option>
+                    <option value="Auto">Automático</option>
                     {providerOptions.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
