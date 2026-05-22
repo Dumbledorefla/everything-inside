@@ -5,8 +5,9 @@ import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
   Check, RotateCcw, ChevronRight, ChevronDown, Lightbulb, Film,
-  Minus, Plus, User, Copy, MessageSquareText,
+  Minus, Plus, User, Copy, MessageSquareText, Download, Target,
 } from "lucide-react";
+import { exportCarouselZip } from "@/lib/slideBaker";
 import { AnimateVideoModal } from "@/components/creative/AnimateVideoModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAssistant } from "@/contexts/AssistantContext";
