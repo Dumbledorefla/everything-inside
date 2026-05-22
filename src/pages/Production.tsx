@@ -455,6 +455,7 @@ export default function Production() {
       formatLabel: currentPieceLabel,
       copyTone,
       referencePhotoUrl: referencePhotoUrl || undefined,
+      selectedModelId: spec.useModel ? selectedModelId : undefined,
     } as any);
   };
 
