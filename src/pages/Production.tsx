@@ -441,6 +441,7 @@ export default function Production() {
       operationMode,
       formatLabel: currentPieceLabel,
       copyTone,
+      referencePhotoUrl: referencePhotoUrl || undefined,
     } as any);
   };
 
