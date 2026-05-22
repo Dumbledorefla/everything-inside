@@ -23,7 +23,7 @@ import ShimmerCanvas from "@/components/production/ShimmerCanvas";
 import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
 import { cn } from "@/lib/utils";
-import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
+
 import { CarouselIdeaGenerator } from "@/components/creative/CarouselIdeaGenerator";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
