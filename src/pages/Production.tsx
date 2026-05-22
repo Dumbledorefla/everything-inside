@@ -657,7 +657,7 @@ export default function Production() {
                   </label>
                   <select value={spec.provider} onChange={(e) => setSpec({ provider: e.target.value })}
                     className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-xs text-foreground focus:border-primary/40 focus:outline-none">
-                    <option value="Auto">Auto (Fallback)</option>
+                    <option value="Auto">Automático</option>
                     {providerOptions.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
