@@ -77,12 +77,14 @@ const TEXT_PROVIDER_OPTIONS = [
 const IMAGE_PROVIDER_OPTIONS = [
   { value: "google/gemini-2.5-flash-image", label: "Nano Banana" },
   { value: "google/gemini-3-pro-image-preview", label: "Nano Banana Pro" },
-  { value: "openai/gpt-image-1", label: "GPT Image (OpenAI)" },
+  { value: "openai/gpt-image-2", label: "GPT Image 2.0 (OpenAI)" },
+  { value: "openai/gpt-image-1", label: "GPT Image 1 (OpenAI)" },
   { value: "fal-ai/flux/schnell", label: "FLUX Schnell" },
   { value: "fal-ai/flux/dev", label: "FLUX Dev" },
   { value: "fal-ai/flux-pro/v1.1", label: "FLUX Pro" },
   { value: "fal-ai/ideogram/v2", label: "Ideogram V2" },
 ];
+
 
 /* ── Collapsible Section helper ── */
 function ConfigSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
