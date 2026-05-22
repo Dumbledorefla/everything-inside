@@ -44,6 +44,7 @@ interface BatchGenerateParams {
   formatLabel?: string;
   copyTone?: string;
   referencePhotoUrl?: string;
+  selectedModelId?: string;
 }
 
 export function useBatchGenerate() {
