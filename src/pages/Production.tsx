@@ -572,12 +572,11 @@ export default function Production() {
                     <User className="h-3 w-3" />
                     Usar Personagem
                   </span>
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={useInfluencerForCarousel}
-                    onChange={(e) => setUseInfluencerForCarousel(e.target.checked)}
-                    className="accent-primary"
+                    onCheckedChange={setUseInfluencerForCarousel}
                   />
+
                 </label>
               ) : null}
             </ConfigSection>
