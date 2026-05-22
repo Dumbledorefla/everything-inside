@@ -804,8 +804,10 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
         finalCtaText = "";
       }
       
-      // Determine if text should be rendered on the image
-      const shouldRenderText = output === "both" && !!(headline || cta);
+      // CANVAS FIRST: nunca renderizar texto na imagem. Texto será posicionado
+      // por cima via LayerEditor no frontend (evita erros ortográficos e tipografia torta).
+      const shouldRenderText = false;
+      const isCanvasFirst = output === "both";
 
       // Para perfil unrestricted, usar prompt direto sem wrapper de marketing
       const imagePrompt = isUnrestricted
