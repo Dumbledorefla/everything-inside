@@ -123,6 +123,13 @@ export default function Production() {
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
   const [showCarouselIdeaGenerator, setShowCarouselIdeaGenerator] = useState(false);
   const [copyTone, setCopyTone] = useState("auto");
+  // ── Ad Campaign (Performance > Ad) — angles pre-step ──
+  const [adAngles, setAdAngles] = useState<any[]>([]);
+  const [selectedAdAngle, setSelectedAdAngle] = useState<any | null>(null);
+  const [loadingAngles, setLoadingAngles] = useState(false);
+  const [campaignGoal, setCampaignGoal] = useState("");
+  const [campaignAudience, setCampaignAudience] = useState("");
+  const [campaignOffer, setCampaignOffer] = useState("");
   const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
   const [uploadingRef, setUploadingRef] = useState(false);
 
