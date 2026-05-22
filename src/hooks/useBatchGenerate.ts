@@ -43,6 +43,7 @@ interface BatchGenerateParams {
   operationMode?: string;
   formatLabel?: string;
   copyTone?: string;
+  referencePhotoUrl?: string;
 }
 
 export function useBatchGenerate() {
