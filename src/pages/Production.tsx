@@ -1132,7 +1132,7 @@ export default function Production() {
                     </motion.div>
                   ) : null}
                 </div>
-              ) : (
+              ) : spec.pieceType === "ad" ? null : (
                 /* ── Enhanced empty state ── */
                 <div className="flex flex-col items-center justify-center h-full text-center px-8">
                   <motion.div
