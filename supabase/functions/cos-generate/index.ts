@@ -813,7 +813,7 @@ Gere a imagem final como uma peça única, coesa e com a tipografia perfeitament
 ${dnaContext}
 
 **CONTEXTO TEMÁTICO:**
-${userPrompt || headlineText || `Crie uma imagem visualmente impactante para o nicho e projeto descrito acima.`}
+${userPromptForImage || headlineText || `Crie uma imagem visualmente impactante para o nicho e projeto descrito acima.`}
 
 **INSTRUÇÕES VISUAIS (SEM TEXTO NA IMAGEM):**
 1.  **NÃO RENDERIZE NENHUM TEXTO NA IMAGEM**: A imagem deve ser puramente visual, sem nenhuma palavra, letra, frase ou tipografia. Apenas a fotografia/ilustração.
