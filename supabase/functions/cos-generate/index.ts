@@ -144,6 +144,7 @@ interface GenerateRequest {
   formatLabel?: string;   // human-readable format tag
   referencePhotoUrl?: string; // URL of reference photo for IP-Adapter face preservation
   copyTone?: string; // auto | professional | fun | informative | salesy
+  selectedModelId?: string; // ID of a saved template (templates.id) to enforce structure
 }
 
 serve(async (req) => {
