@@ -1159,8 +1159,13 @@ export default function Production() {
 /* ═══════ Carousel sub-view ═══════ */
 function CarouselView({
   carousel, spec, roleLabels, projectDna, activeProjectId, carouselLayerStyles, setCarouselLayerStyles,
-  activeEditorSlide, setActiveEditorSlide, handleApplyToAll,
+  activeEditorSlide, setActiveEditorSlide, handleApplyToAll, onExportZip,
 }: any) {
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try { await onExportZip?.(); } finally { setExporting(false); }
+  };
   return (
     <>
       <div className="mb-4">
