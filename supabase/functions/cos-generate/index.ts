@@ -956,8 +956,13 @@ Gere uma imagem profissional puramente visual, SEM nenhum texto renderizado.`;
           extractedUrl = data.images[0].url;
         } else if (isTogetherModel && data.data?.[0]?.url) {
           extractedUrl = data.data[0].url;
+        } else if (isOpenAIModel) {
+          const item = data?.data?.[0];
+          if (item?.url) extractedUrl = item.url;
+          else if (item?.b64_json) extractedUrl = `data:image/png;base64,${item.b64_json}`;
         } else {
           extractedUrl = extractImageUrlFromResponse(data);
+
         }
 
         if (extractedUrl) {
