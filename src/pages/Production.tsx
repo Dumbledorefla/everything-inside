@@ -26,11 +26,13 @@ import { cn } from "@/lib/utils";
 import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
 import { CarouselIdeaGenerator } from "@/components/creative/CarouselIdeaGenerator";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
 
 const PIECE_ICONS: Record<string, React.ElementType> = {
   post: LayoutGrid, banner: Rows3, story: FileText, ad: Sparkles,
@@ -75,12 +77,14 @@ const TEXT_PROVIDER_OPTIONS = [
 const IMAGE_PROVIDER_OPTIONS = [
   { value: "google/gemini-2.5-flash-image", label: "Nano Banana" },
   { value: "google/gemini-3-pro-image-preview", label: "Nano Banana Pro" },
-  { value: "openai/gpt-image-1", label: "GPT Image (OpenAI)" },
+  { value: "openai/gpt-image-2", label: "GPT Image 2.0 (OpenAI)" },
+  { value: "openai/gpt-image-1", label: "GPT Image 1 (OpenAI)" },
   { value: "fal-ai/flux/schnell", label: "FLUX Schnell" },
   { value: "fal-ai/flux/dev", label: "FLUX Dev" },
   { value: "fal-ai/flux-pro/v1.1", label: "FLUX Pro" },
   { value: "fal-ai/ideogram/v2", label: "Ideogram V2" },
 ];
+
 
 /* ── Collapsible Section helper ── */
 function ConfigSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
@@ -568,19 +572,18 @@ export default function Production() {
                     <User className="h-3 w-3" />
                     Usar Personagem
                   </span>
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={useInfluencerForCarousel}
-                    onChange={(e) => setUseInfluencerForCarousel(e.target.checked)}
-                    className="accent-primary"
+                    onCheckedChange={setUseInfluencerForCarousel}
                   />
+
                 </label>
               ) : null}
             </ConfigSection>
           ) : (
             <>
-              {/* ── Section: Style & Variations ── */}
-              <ConfigSection title="Estilo e Variações" defaultOpen={true}>
+              {/* ── Section: Saída e Variações ── */}
+              <ConfigSection title="Saída e Variações" defaultOpen={true}>
                 {/* Output type */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Saída</label>
@@ -631,7 +634,10 @@ export default function Production() {
                     </button>
                   </div>
                 </div>
+              </ConfigSection>
 
+              {/* ── Section: Motor de IA (Perfil + Provedor) ── */}
+              <ConfigSection title="Motor de IA" defaultOpen={true}>
                 {/* Profile */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Perfil</label>
@@ -663,16 +669,18 @@ export default function Production() {
                     ))}
                   </select>
                 </div>
+              </ConfigSection>
 
-                {/* Toggles */}
+              {/* ── Section: Opções Avançadas ── */}
+              <ConfigSection title="Opções Avançadas" defaultOpen={false}>
                 <div className="space-y-1.5">
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
-                    Usar Modelo
-                    <input type="checkbox" checked={spec.useModel} onChange={(e) => setSpec({ useModel: e.target.checked })} className="accent-primary" />
+                    <span>Usar Modelo</span>
+                    <Switch checked={spec.useModel} onCheckedChange={(v) => setSpec({ useModel: v })} />
                   </label>
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
-                    Perfil Visual
-                    <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
+                    <span>Perfil Visual</span>
+                    <Switch checked={spec.useVisualProfile} onCheckedChange={(v) => setSpec({ useVisualProfile: v })} />
                   </label>
                   {/* Influencer Toggle */}
                   {hasInfluencer ? (
@@ -686,12 +694,7 @@ export default function Production() {
                         <User className="h-3 w-3" />
                         Usar Personagem
                       </span>
-                      <input
-                        type="checkbox"
-                        checked={useInfluencer}
-                        onChange={(e) => setUseInfluencer(e.target.checked)}
-                        className="accent-primary"
-                      />
+                      <Switch checked={useInfluencer} onCheckedChange={setUseInfluencer} />
                     </label>
                   ) : (
                     <Link to={`/project/${activeProjectId}/characters`}>
@@ -706,6 +709,7 @@ export default function Production() {
                   )}
                 </div>
               </ConfigSection>
+
 
               {/* ── Section: Copy Tone ── */}
               <ConfigSection title="Tom da Legenda" defaultOpen={false}>
