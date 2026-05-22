@@ -122,6 +122,41 @@ export default function Production() {
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
   const [showCarouselIdeaGenerator, setShowCarouselIdeaGenerator] = useState(false);
   const [copyTone, setCopyTone] = useState("auto");
+  const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
+  const [uploadingRef, setUploadingRef] = useState(false);
+
+  const TEXT_ONLY_PIECES = new Set(["vsl", "brand_manual"]);
+  const IMAGE_ONLY_PIECES = new Set(["palette", "typography", "logo", "highlight"]);
+
+  useEffect(() => {
+    const desired = TEXT_ONLY_PIECES.has(spec.pieceType)
+      ? "text"
+      : IMAGE_ONLY_PIECES.has(spec.pieceType)
+        ? "image"
+        : "both";
+    if (spec.output !== desired) setSpec({ output: desired as any });
+  }, [spec.pieceType]);
+
+  const handleReferenceUpload = async (file: File) => {
+    if (!file || !session) return;
+    setUploadingRef(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `style-refs/${session.user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("assets").upload(path, file, {
+        contentType: file.type || "image/png",
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("assets").getPublicUrl(path);
+      setReferencePhotoUrl(data.publicUrl);
+      toast.success("Referência de estilo enviada!");
+    } catch (e: any) {
+      toast.error(e?.message || "Falha no upload da referência");
+    } finally {
+      setUploadingRef(false);
+    }
+  };
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
