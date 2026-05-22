@@ -782,7 +782,7 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
 
       // Para perfil unrestricted, usar prompt direto sem wrapper de marketing
       const imagePrompt = isUnrestricted
-        ? `${userPrompt || headlineText}${bodyText ? '. ' + bodyText : ''}. Photorealistic, high quality, 8k, detailed. Aspect ratio: ${ratio}.`
+        ? `${userPromptForImage || headlineText}${bodyText ? '. ' + bodyText : ''}. Photorealistic, high quality, 8k, detailed. Aspect ratio: ${ratio}.`
         : shouldRenderText
         ? `Você é um Diretor de Arte e Designer Gráfico de elite, especialista em tipografia e composição para marketing digital. Sua missão é criar uma peça de marketing visual completa (imagem + texto) para um ${pieceType}, pronta para ser postada, com o texto perfeitamente integrado à imagem.
 
