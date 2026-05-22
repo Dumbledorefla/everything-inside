@@ -233,6 +233,28 @@ serve(async (req) => {
     const safeZoneContext = operationMode && SAFE_ZONE_RULES[operationMode]?.[ratio] ? `\n${SAFE_ZONE_RULES[operationMode][ratio]}` : "";
     const dnaContext = buildDNAPrompt(project, dna) + deepPerceptionContext + modeContext + safeZoneContext;
 
+    // ── 2b. Fetch saved custom model (template) if requested ────
+    let templateInstruction = "";
+    if (body.useModel && selectedModelId) {
+      const { data: tpl } = await supabase
+        .from("templates")
+        .select("name, template_content, slots")
+        .eq("id", selectedModelId)
+        .eq("is_custom_model", true)
+        .maybeSingle();
+      if (tpl) {
+        const structure = tpl.template_content && Object.keys(tpl.template_content).length > 0
+          ? tpl.template_content
+          : tpl.slots;
+        if (structure) {
+          templateInstruction = `\n\n[INSTRUÇÃO OBRIGATÓRIA — MODELO "${tpl.name}"]: Você DEVE escrever a copy seguindo EXATAMENTE esta estrutura/fórmula salva pelo usuário: ${JSON.stringify(structure)}. Não desvie deste formato. Preserve o tom, hierarquia de campos e padrão de redação.`;
+          console.log(`Modelo aplicado: ${tpl.name} (${selectedModelId})`);
+        }
+      } else {
+        console.warn(`Modelo ${selectedModelId} não encontrado, ignorando.`);
+      }
+    }
+
     // ── 3. Handle "Regerar com Qualidade" ───────────────────────
     let originalAsset: any = null;
     if (regenerateAssetId) {
