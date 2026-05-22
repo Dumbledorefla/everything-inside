@@ -23,8 +23,8 @@ const TEXT_MODELS: Record<string, string[]> = {
 const IMAGE_MODELS: Record<string, string[]> = {
   economy: ["fal-ai/flux/schnell", "google/gemini-2.5-flash-image", "google/gemini-3.1-flash-image-preview"],
   standard: ["fal-ai/flux/dev", "google/gemini-3.1-flash-image-preview", "google/gemini-2.5-flash-image", "google/gemini-3-pro-image-preview"],
-  quality: ["fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
-  text_focused: ["fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
+  quality: ["openai/gpt-image-1", "fal-ai/flux-pro/v1.1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
+  text_focused: ["openai/gpt-image-1", "fal-ai/ideogram/v2", "google/gemini-3-pro-image-preview", "google/gemini-3.1-flash-image-preview"],
   unrestricted: ["together/black-forest-labs/FLUX.1-schnell", "together/black-forest-labs/FLUX.2-dev", "fal-ai/flux/dev"],
 };
 
@@ -38,6 +38,11 @@ const FAL_MODELS = new Set([
 const TOGETHER_MODELS = new Set([
   "together/black-forest-labs/FLUX.1-schnell",
   "together/black-forest-labs/FLUX.2-dev",
+]);
+
+// OpenAI image models (prefix: openai/)
+const OPENAI_MODELS = new Set([
+  "openai/gpt-image-1",
 ]);
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -55,7 +60,9 @@ const CREDIT_COSTS: Record<string, number> = {
   "fal-ai/ip-adapter-face-id": 5,
   "together/black-forest-labs/FLUX.1-schnell": 3,
   "together/black-forest-labs/FLUX.2-dev": 6,
+  "openai/gpt-image-1": 15,
 };
+
 
 const PIECE_PROMPTS: Record<string, string> = {
   post: "O objetivo é engajar o público nas redes sociais com conteúdo relevante e uma chamada para ação clara.",
@@ -827,8 +834,36 @@ Gere uma imagem profissional puramente visual, SEM nenhum texto renderizado.`;
         let resp: Response;
         const isFalModel = FAL_MODELS.has(model);
         const isTogetherModel = TOGETHER_MODELS.has(model);
+        const isOpenAIModel = OPENAI_MODELS.has(model);
 
-        if (isTogetherModel) {
+        if (isOpenAIModel) {
+          const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+          if (!OPENAI_API_KEY) {
+            const event = `Imagem: OPENAI_API_KEY não configurada, pulando ${model}`;
+            console.error(event);
+            fallbackEvents.push(event);
+            fallbackLog.push(event);
+            usedFallback = true;
+            continue;
+          }
+          const openaiModelId = model.replace("openai/", "");
+          const openaiSize = ratio === "9:16" ? "1024x1536" : ratio === "16:9" ? "1536x1024" : "1024x1024";
+          resp = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: openaiModelId,
+              prompt: imagePrompt,
+              n: 1,
+              size: openaiSize,
+              quality: "high",
+            }),
+          });
+        } else if (isTogetherModel) {
+
           // ── together.ai API call (sem filtros de conteúdo) ──
           if (!TOGETHER_API_KEY) {
             const event = `Imagem: TOGETHER_API_KEY não configurada, pulando ${model}`;
@@ -921,8 +956,13 @@ Gere uma imagem profissional puramente visual, SEM nenhum texto renderizado.`;
           extractedUrl = data.images[0].url;
         } else if (isTogetherModel && data.data?.[0]?.url) {
           extractedUrl = data.data[0].url;
+        } else if (isOpenAIModel) {
+          const item = data?.data?.[0];
+          if (item?.url) extractedUrl = item.url;
+          else if (item?.b64_json) extractedUrl = `data:image/png;base64,${item.b64_json}`;
         } else {
           extractedUrl = extractImageUrlFromResponse(data);
+
         }
 
         if (extractedUrl) {
