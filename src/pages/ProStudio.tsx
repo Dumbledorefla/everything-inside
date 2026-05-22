@@ -29,10 +29,12 @@ interface ModelOption {
 
 const MODELS: Record<StudioMode, ModelOption[]> = {
   text2img: [
-    { id: "openai/gpt-image-1", name: "GPT Image 1 (OpenAI)", provider: "openai", cost: "premium", quality: "máxima", description: "Novo gerador da OpenAI. Excelente em texto legível, composição e fotorealismo." },
+    { id: "openai/gpt-image-2", name: "GPT Image 2.0 (OpenAI)", provider: "openai", cost: "premium", quality: "máxima", description: "Última geração da OpenAI. Texto legível impecável, composição e fotorealismo de ponta." },
+    { id: "openai/gpt-image-1", name: "GPT Image 1 (OpenAI)", provider: "openai", cost: "premium", quality: "máxima", description: "Gerador OpenAI estável. Excelente em texto, composição e fotorealismo." },
     { id: "together/black-forest-labs/FLUX.1-schnell", name: "FLUX.1 Schnell", provider: "together", cost: "pago", quality: "boa", description: "Rápido, sem filtros. Ideal para testes e iterações rápidas." },
     { id: "together/black-forest-labs/FLUX.2-dev", name: "FLUX.2 Dev", provider: "together", cost: "premium", quality: "máxima", description: "Última geração FLUX. Qualidade máxima, sem nenhum filtro." },
   ],
+
   ip_adapter: [
     { id: "fal-ai/ip-adapter-face-id", name: "IP-Adapter Face ID", provider: "fal", cost: "pago", quality: "ótima", description: "Preserva sua identidade facial com alta fidelidade. Recomendado para retratos." },
     { id: "fal-ai/flux/dev/image-to-image", name: "FLUX img2img", provider: "fal", cost: "pago", quality: "boa", description: "Usa sua foto como base e transforma a cena mantendo elementos visuais." },
