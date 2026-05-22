@@ -752,6 +752,26 @@ export default function Production() {
                     <span>Usar Modelo</span>
                     <Switch checked={spec.useModel} onCheckedChange={(v) => setSpec({ useModel: v })} />
                   </label>
+                  {spec.useModel && (
+                    <div className="pl-1">
+                      {customModels && customModels.length > 0 ? (
+                        <select
+                          value={selectedModelId || ""}
+                          onChange={(e) => setSelectedModelId(e.target.value || undefined)}
+                          className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-[11px] text-foreground focus:border-primary/40 focus:outline-none"
+                        >
+                          <option value="">Selecione um modelo...</option>
+                          {customModels.map((m: any) => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground/70 px-2 py-1.5 italic">
+                          Nenhum modelo salvo neste projeto ainda.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
                     <span>Perfil Visual</span>
                     <Switch checked={spec.useVisualProfile} onCheckedChange={(v) => setSpec({ useVisualProfile: v })} />
