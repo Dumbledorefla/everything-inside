@@ -989,6 +989,7 @@ export default function Production() {
               activeEditorSlide={activeEditorSlide}
               setActiveEditorSlide={setActiveEditorSlide}
               handleApplyToAll={handleApplyToAll}
+              onExportZip={handleExportCarouselZip}
             />
           ) : (
             <>
