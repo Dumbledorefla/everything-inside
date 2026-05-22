@@ -590,11 +590,13 @@ async function generateSingleAsset(opts: {
   totalAttempts: Record<string, number>;
   fallbackLog: string[];
   referencePhotoUrl?: string;
+  templateInstruction?: string;
 }) {
   const {
     LOVABLE_API_KEY, TOGETHER_API_KEY, dnaContext, output, pieceType, profile,
     provider, ratio, destination, intensity, userPrompt,
     originalAsset, variationIndex, totalAttempts, fallbackLog, referencePhotoUrl,
+    templateInstruction,
   } = opts;
 
   let headline = "";
