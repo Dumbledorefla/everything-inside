@@ -5,8 +5,9 @@ import {
   Zap, Image, Type, FileText, Sparkles, Layers,
   LayoutGrid, Rows3, Loader2, GalleryHorizontalEnd,
   Check, RotateCcw, ChevronRight, ChevronDown, Lightbulb, Film,
-  Minus, Plus, User, Copy, MessageSquareText,
+  Minus, Plus, User, Copy, MessageSquareText, Download, Target,
 } from "lucide-react";
+import { exportCarouselZip } from "@/lib/slideBaker";
 import { AnimateVideoModal } from "@/components/creative/AnimateVideoModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAssistant } from "@/contexts/AssistantContext";
@@ -122,6 +123,13 @@ export default function Production() {
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
   const [showCarouselIdeaGenerator, setShowCarouselIdeaGenerator] = useState(false);
   const [copyTone, setCopyTone] = useState("auto");
+  // ── Ad Campaign (Performance > Ad) — angles pre-step ──
+  const [adAngles, setAdAngles] = useState<any[]>([]);
+  const [selectedAdAngle, setSelectedAdAngle] = useState<any | null>(null);
+  const [loadingAngles, setLoadingAngles] = useState(false);
+  const [campaignGoal, setCampaignGoal] = useState("");
+  const [campaignAudience, setCampaignAudience] = useState("");
+  const [campaignOffer, setCampaignOffer] = useState("");
   const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
   const [uploadingRef, setUploadingRef] = useState(false);
 
@@ -444,6 +452,11 @@ export default function Production() {
       return;
     }
 
+    // If campaign angle is selected, prepend its strategic copy as guidance
+    const promptWithAngle = selectedAdAngle
+      ? `[ÂNGULO DA CAMPANHA — "${selectedAdAngle.title}"]\nAbordagem: ${selectedAdAngle.approach}\nHook: ${selectedAdAngle.hook}\nCopy base: ${selectedAdAngle.copy}\nDireção visual: ${selectedAdAngle.visualDirection}\n\n${userPrompt || ""}`.trim()
+      : userPrompt || undefined;
+
     await generate({
       projectId: activeProjectId,
       mode: spec.mode,
@@ -457,13 +470,57 @@ export default function Production() {
       intensity: spec.intensity,
       useModel: spec.useModel,
       useVisualProfile: spec.useVisualProfile,
-      userPrompt: userPrompt || undefined,
+      userPrompt: promptWithAngle,
       operationMode,
       formatLabel: currentPieceLabel,
       copyTone,
       referencePhotoUrl: referencePhotoUrl || undefined,
       selectedModelId: spec.useModel ? selectedModelId : undefined,
     } as any);
+  };
+
+  const handleGenerateAngles = async () => {
+    if (!activeProjectId) { toast.error("Projeto inválido."); return; }
+    if (!campaignGoal.trim()) { toast.error("Descreva o objetivo da campanha primeiro."); return; }
+    setLoadingAngles(true);
+    setAdAngles([]);
+    setSelectedAdAngle(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("ad-factory", {
+        body: {
+          projectId: activeProjectId,
+          mode: "angles",
+          campaignGoal,
+          targetAudience: campaignAudience,
+          offer: campaignOffer,
+          profile: spec.profile,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.angles?.length) throw new Error("Nenhum ângulo retornado.");
+      setAdAngles(data.angles);
+      toast.success(`${data.angles.length} ângulos estratégicos gerados!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao gerar ângulos.");
+    } finally {
+      setLoadingAngles(false);
+    }
+  };
+
+  const handleExportCarouselZip = async () => {
+    if (!carousel.slides.length) return;
+    try {
+      toast.info("Renderizando slides para ZIP...");
+      await exportCarouselZip(
+        carousel.slides,
+        carouselLayerStyles,
+        spec.ratio,
+        projectDna?.niche,
+      );
+      toast.success("Carrossel exportado!");
+    } catch (err: any) {
+      toast.error("Erro ao exportar: " + (err?.message || "desconhecido"));
+    }
   };
 
   const handleCarouselStoryline = async () => {
@@ -932,9 +989,89 @@ export default function Production() {
               activeEditorSlide={activeEditorSlide}
               setActiveEditorSlide={setActiveEditorSlide}
               handleApplyToAll={handleApplyToAll}
+              onExportZip={handleExportCarouselZip}
             />
           ) : (
             <>
+              {/* ═══════ AD CAMPAIGN — Angles pre-step (Performance > Ad) ═══════ */}
+              {spec.pieceType === "ad" && !selectedAdAngle && !selectedResult && !progress.running && (
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    <h2 className="text-base font-semibold font-mono-brand">Campanha de Anúncios — Ângulos Estratégicos</h2>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Antes de gerar o criativo, vamos definir <span className="text-primary font-medium">5 ângulos de copy</span> diferentes para sua campanha. Você escolhe o melhor e o sistema gera os visuais com base nele.
+                  </p>
+
+                  {adAngles.length === 0 ? (
+                    <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+                      <div>
+                        <label className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1.5 block">Objetivo da campanha *</label>
+                        <textarea value={campaignGoal} onChange={(e) => setCampaignGoal(e.target.value)}
+                          placeholder="Ex: Vender curso de tarot intuitivo para iniciantes; meta de 50 vendas em 30 dias."
+                          rows={2} className="w-full rounded-lg bg-secondary border border-border px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/40" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1.5 block">Público-alvo</label>
+                        <input value={campaignAudience} onChange={(e) => setCampaignAudience(e.target.value)}
+                          placeholder="Ex: Mulheres 30-50, interessadas em espiritualidade"
+                          className="w-full rounded-lg bg-secondary border border-border px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/40" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1.5 block">Oferta</label>
+                        <input value={campaignOffer} onChange={(e) => setCampaignOffer(e.target.value)}
+                          placeholder="Ex: Curso completo + bônus por R$ 297"
+                          className="w-full rounded-lg bg-secondary border border-border px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/40" />
+                      </div>
+                      <Button onClick={handleGenerateAngles} disabled={loadingAngles || !campaignGoal.trim()} className="w-full gap-2">
+                        {loadingAngles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        {loadingAngles ? "Gerando ângulos..." : "Gerar 5 Ângulos Estratégicos"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
+                        Escolha um ângulo · clique para selecionar
+                      </p>
+                      {adAngles.map((angle, idx) => (
+                        <motion.button
+                          key={idx}
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                          onClick={() => { setSelectedAdAngle(angle); toast.success(`Ângulo "${angle.title}" selecionado — agora clique em Gerar.`); }}
+                          className="w-full text-left rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-all p-4 group"
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-mono-brand text-primary">#{idx + 1}</span>
+                            <h4 className="text-sm font-semibold text-foreground">{angle.title}</h4>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mb-2">{angle.approach}</p>
+                          <p className="text-xs text-foreground/90 italic">"{angle.hook}"</p>
+                        </motion.button>
+                      ))}
+                      <button onClick={() => setAdAngles([])} className="text-[10px] font-mono-brand text-muted-foreground hover:text-foreground underline mt-2">
+                        ← Refazer briefing
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Selected angle banner */}
+              {spec.pieceType === "ad" && selectedAdAngle && !progress.running && (
+                <div className="max-w-[600px] mx-auto mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-start gap-3">
+                  <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono-brand uppercase tracking-widest text-primary mb-0.5">Ângulo ativo</p>
+                    <p className="text-xs font-semibold text-foreground truncate">{selectedAdAngle.title}</p>
+                    <p className="text-[11px] text-muted-foreground italic line-clamp-1">"{selectedAdAngle.hook}"</p>
+                  </div>
+                  <button onClick={() => setSelectedAdAngle(null)} className="text-[10px] font-mono-brand text-muted-foreground hover:text-foreground shrink-0">
+                    Trocar
+                  </button>
+                </div>
+              )}
+
               {progress.running ? (
                 <ShimmerCanvas ratio={spec.ratio} progress={{ completed: progress.completed, total: progress.total }} />
               ) : selectedResult ? (
@@ -995,7 +1132,7 @@ export default function Production() {
                     </motion.div>
                   ) : null}
                 </div>
-              ) : (
+              ) : spec.pieceType === "ad" ? null : (
                 /* ── Enhanced empty state ── */
                 <div className="flex flex-col items-center justify-center h-full text-center px-8">
                   <motion.div
@@ -1101,8 +1238,13 @@ export default function Production() {
 /* ═══════ Carousel sub-view ═══════ */
 function CarouselView({
   carousel, spec, roleLabels, projectDna, activeProjectId, carouselLayerStyles, setCarouselLayerStyles,
-  activeEditorSlide, setActiveEditorSlide, handleApplyToAll,
+  activeEditorSlide, setActiveEditorSlide, handleApplyToAll, onExportZip,
 }: any) {
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try { await onExportZip?.(); } finally { setExporting(false); }
+  };
   return (
     <>
       <div className="mb-4">
@@ -1147,20 +1289,41 @@ function CarouselView({
       {/* Generated Slides */}
       {carousel.step === "done" && carousel.slides.length > 0 && (
         <div className="space-y-6 max-w-3xl mx-auto">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
+              {carousel.slides.length} slides • clique para editar texto • exporte como ZIP
+            </p>
+            <Button onClick={handleExport} disabled={exporting} size="sm" className="gap-2">
+              {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              {exporting ? "Renderizando..." : "Exportar Carrossel (ZIP)"}
+            </Button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {carousel.slides.map((slide: any) => (
               <motion.div key={slide.slideNumber} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: slide.slideNumber * 0.05 }}
                 onClick={() => setActiveEditorSlide(slide.slideNumber)}
                 className={cn(
-                  "rounded-xl border overflow-hidden cursor-pointer transition-all hover:shadow-lg",
+                  "relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:shadow-lg group",
                   activeEditorSlide === slide.slideNumber ? "border-primary ring-2 ring-primary/20" : "border-border"
                 )}>
-                {slide.imageUrl && <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="w-full aspect-square object-cover" />}
-                <div className="p-2">
-                  <p className="text-[10px] font-mono-brand text-primary">Slide {slide.slideNumber}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{slide.headline}</p>
-                </div>
+                {slide.imageUrl && (
+                  <div className="relative aspect-square">
+                    <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="absolute inset-0 w-full h-full object-cover" />
+                    {/* Canvas-First text overlay preview */}
+                    <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+                      <p className="text-white text-[11px] font-bold leading-tight drop-shadow-md line-clamp-3">
+                        {slide.headline}
+                      </p>
+                      {slide.body && (
+                        <p className="text-white/85 text-[9px] mt-1 leading-snug drop-shadow line-clamp-2">{slide.body}</p>
+                      )}
+                    </div>
+                    <div className="absolute top-2 left-2 rounded-md bg-black/60 backdrop-blur px-1.5 py-0.5 text-[9px] font-mono-brand text-white">
+                      {String(slide.slideNumber).padStart(2, "0")}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
