@@ -993,6 +993,85 @@ export default function Production() {
             />
           ) : (
             <>
+              {/* ═══════ AD CAMPAIGN — Angles pre-step (Performance > Ad) ═══════ */}
+              {spec.pieceType === "ad" && !selectedAdAngle && !selectedResult && !progress.running && (
+                <div className="max-w-2xl mx-auto space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    <h2 className="text-base font-semibold font-mono-brand">Campanha de Anúncios — Ângulos Estratégicos</h2>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Antes de gerar o criativo, vamos definir <span className="text-primary font-medium">5 ângulos de copy</span> diferentes para sua campanha. Você escolhe o melhor e o sistema gera os visuais com base nele.
+                  </p>
+
+                  {adAngles.length === 0 ? (
+                    <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+                      <div>
+                        <label className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1.5 block">Objetivo da campanha *</label>
+                        <textarea value={campaignGoal} onChange={(e) => setCampaignGoal(e.target.value)}
+                          placeholder="Ex: Vender curso de tarot intuitivo para iniciantes; meta de 50 vendas em 30 dias."
+                          rows={2} className="w-full rounded-lg bg-secondary border border-border px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/40" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1.5 block">Público-alvo</label>
+                        <input value={campaignAudience} onChange={(e) => setCampaignAudience(e.target.value)}
+                          placeholder="Ex: Mulheres 30-50, interessadas em espiritualidade"
+                          className="w-full rounded-lg bg-secondary border border-border px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/40" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground mb-1.5 block">Oferta</label>
+                        <input value={campaignOffer} onChange={(e) => setCampaignOffer(e.target.value)}
+                          placeholder="Ex: Curso completo + bônus por R$ 297"
+                          className="w-full rounded-lg bg-secondary border border-border px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary/40" />
+                      </div>
+                      <Button onClick={handleGenerateAngles} disabled={loadingAngles || !campaignGoal.trim()} className="w-full gap-2">
+                        {loadingAngles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        {loadingAngles ? "Gerando ângulos..." : "Gerar 5 Ângulos Estratégicos"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
+                        Escolha um ângulo · clique para selecionar
+                      </p>
+                      {adAngles.map((angle, idx) => (
+                        <motion.button
+                          key={idx}
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                          onClick={() => { setSelectedAdAngle(angle); toast.success(`Ângulo "${angle.title}" selecionado — agora clique em Gerar.`); }}
+                          className="w-full text-left rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-all p-4 group"
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-mono-brand text-primary">#{idx + 1}</span>
+                            <h4 className="text-sm font-semibold text-foreground">{angle.title}</h4>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mb-2">{angle.approach}</p>
+                          <p className="text-xs text-foreground/90 italic">"{angle.hook}"</p>
+                        </motion.button>
+                      ))}
+                      <button onClick={() => setAdAngles([])} className="text-[10px] font-mono-brand text-muted-foreground hover:text-foreground underline mt-2">
+                        ← Refazer briefing
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Selected angle banner */}
+              {spec.pieceType === "ad" && selectedAdAngle && !progress.running && (
+                <div className="max-w-[600px] mx-auto mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-start gap-3">
+                  <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono-brand uppercase tracking-widest text-primary mb-0.5">Ângulo ativo</p>
+                    <p className="text-xs font-semibold text-foreground truncate">{selectedAdAngle.title}</p>
+                    <p className="text-[11px] text-muted-foreground italic line-clamp-1">"{selectedAdAngle.hook}"</p>
+                  </div>
+                  <button onClick={() => setSelectedAdAngle(null)} className="text-[10px] font-mono-brand text-muted-foreground hover:text-foreground shrink-0">
+                    Trocar
+                  </button>
+                </div>
+              )}
+
               {progress.running ? (
                 <ShimmerCanvas ratio={spec.ratio} progress={{ completed: progress.completed, total: progress.total }} />
               ) : selectedResult ? (
