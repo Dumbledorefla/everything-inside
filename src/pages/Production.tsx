@@ -116,7 +116,7 @@ export default function Production() {
   const [carouselLayerStyles, setCarouselLayerStyles] = useState<Record<number, TextLayer[]>>({});
   const [refining, setRefining] = useState(false);
   const [isEditorMode, setIsEditorMode] = useState(false);
-  const [showIdeaGenerator, setShowIdeaGenerator] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string | undefined>(undefined);
   const [showAnimateModal, setShowAnimateModal] = useState(false);
   const [useInfluencer, setUseInfluencer] = useState(false);
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
