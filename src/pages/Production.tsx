@@ -1210,20 +1210,41 @@ function CarouselView({
       {/* Generated Slides */}
       {carousel.step === "done" && carousel.slides.length > 0 && (
         <div className="space-y-6 max-w-3xl mx-auto">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-mono-brand uppercase tracking-widest text-muted-foreground">
+              {carousel.slides.length} slides • clique para editar texto • exporte como ZIP
+            </p>
+            <Button onClick={handleExport} disabled={exporting} size="sm" className="gap-2">
+              {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              {exporting ? "Renderizando..." : "Exportar Carrossel (ZIP)"}
+            </Button>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {carousel.slides.map((slide: any) => (
               <motion.div key={slide.slideNumber} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: slide.slideNumber * 0.05 }}
                 onClick={() => setActiveEditorSlide(slide.slideNumber)}
                 className={cn(
-                  "rounded-xl border overflow-hidden cursor-pointer transition-all hover:shadow-lg",
+                  "relative rounded-xl border overflow-hidden cursor-pointer transition-all hover:shadow-lg group",
                   activeEditorSlide === slide.slideNumber ? "border-primary ring-2 ring-primary/20" : "border-border"
                 )}>
-                {slide.imageUrl && <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="w-full aspect-square object-cover" />}
-                <div className="p-2">
-                  <p className="text-[10px] font-mono-brand text-primary">Slide {slide.slideNumber}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{slide.headline}</p>
-                </div>
+                {slide.imageUrl && (
+                  <div className="relative aspect-square">
+                    <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="absolute inset-0 w-full h-full object-cover" />
+                    {/* Canvas-First text overlay preview */}
+                    <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+                      <p className="text-white text-[11px] font-bold leading-tight drop-shadow-md line-clamp-3">
+                        {slide.headline}
+                      </p>
+                      {slide.body && (
+                        <p className="text-white/85 text-[9px] mt-1 leading-snug drop-shadow line-clamp-2">{slide.body}</p>
+                      )}
+                    </div>
+                    <div className="absolute top-2 left-2 rounded-md bg-black/60 backdrop-blur px-1.5 py-0.5 text-[9px] font-mono-brand text-white">
+                      {String(slide.slideNumber).padStart(2, "0")}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
