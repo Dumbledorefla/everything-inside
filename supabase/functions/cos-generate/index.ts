@@ -144,6 +144,7 @@ interface GenerateRequest {
   formatLabel?: string;   // human-readable format tag
   referencePhotoUrl?: string; // URL of reference photo for IP-Adapter face preservation
   copyTone?: string; // auto | professional | fun | informative | salesy
+  selectedModelId?: string; // ID of a saved template (templates.id) to enforce structure
 }
 
 serve(async (req) => {
@@ -180,7 +181,7 @@ serve(async (req) => {
       projectId, mode, output, pieceType, quantity, profile,
       provider, destination, ratio, intensity, userPrompt,
       regenerateAssetId, pipelineMode = "simple", referenceId,
-      operationMode, formatLabel, referencePhotoUrl, copyTone,
+      operationMode, formatLabel, referencePhotoUrl, copyTone, selectedModelId,
     } = body;
 
     // ── 1. Fetch Project DNA (latest version) ───────────────────
@@ -232,6 +233,28 @@ serve(async (req) => {
     const safeZoneContext = operationMode && SAFE_ZONE_RULES[operationMode]?.[ratio] ? `\n${SAFE_ZONE_RULES[operationMode][ratio]}` : "";
     const dnaContext = buildDNAPrompt(project, dna) + deepPerceptionContext + modeContext + safeZoneContext;
 
+    // ── 2b. Fetch saved custom model (template) if requested ────
+    let templateInstruction = "";
+    if (body.useModel && selectedModelId) {
+      const { data: tpl } = await supabase
+        .from("templates")
+        .select("name, template_content, slots")
+        .eq("id", selectedModelId)
+        .eq("is_custom_model", true)
+        .maybeSingle();
+      if (tpl) {
+        const structure = tpl.template_content && Object.keys(tpl.template_content).length > 0
+          ? tpl.template_content
+          : tpl.slots;
+        if (structure) {
+          templateInstruction = `\n\n[INSTRUÇÃO OBRIGATÓRIA — MODELO "${tpl.name}"]: Você DEVE escrever a copy seguindo EXATAMENTE esta estrutura/fórmula salva pelo usuário: ${JSON.stringify(structure)}. Não desvie deste formato. Preserve o tom, hierarquia de campos e padrão de redação.`;
+          console.log(`Modelo aplicado: ${tpl.name} (${selectedModelId})`);
+        }
+      } else {
+        console.warn(`Modelo ${selectedModelId} não encontrado, ignorando.`);
+      }
+    }
+
     // ── 3. Handle "Regerar com Qualidade" ───────────────────────
     let originalAsset: any = null;
     if (regenerateAssetId) {
@@ -272,6 +295,7 @@ serve(async (req) => {
         totalAttempts,
         fallbackLog,
         referencePhotoUrl,
+        templateInstruction,
       });
 
       // ── 6. Save to DB with DNA snapshot ─────────────────────
@@ -566,11 +590,13 @@ async function generateSingleAsset(opts: {
   totalAttempts: Record<string, number>;
   fallbackLog: string[];
   referencePhotoUrl?: string;
+  templateInstruction?: string;
 }) {
   const {
     LOVABLE_API_KEY, TOGETHER_API_KEY, dnaContext, output, pieceType, profile,
     provider, ratio, destination, intensity, userPrompt,
     originalAsset, variationIndex, totalAttempts, fallbackLog, referencePhotoUrl,
+    templateInstruction,
   } = opts;
 
   let headline = "";
@@ -624,6 +650,7 @@ REGRAS:
 ${qualityFinishing}
 ${regenerateNote}
 ${variationNote}
+${templateInstruction || ""}
 
 FORMATO DE RESPOSTA (JSON):
 {"headline": "...", "body": "...", "cta": "..."}

@@ -23,7 +23,7 @@ import ShimmerCanvas from "@/components/production/ShimmerCanvas";
 import { useBatchGenerate, type BatchResult } from "@/hooks/useBatchGenerate";
 import { useCarouselGenerate } from "@/hooks/useCarouselGenerate";
 import { cn } from "@/lib/utils";
-import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
+
 import { CarouselIdeaGenerator } from "@/components/creative/CarouselIdeaGenerator";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -116,7 +116,7 @@ export default function Production() {
   const [carouselLayerStyles, setCarouselLayerStyles] = useState<Record<number, TextLayer[]>>({});
   const [refining, setRefining] = useState(false);
   const [isEditorMode, setIsEditorMode] = useState(false);
-  const [showIdeaGenerator, setShowIdeaGenerator] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState<string | undefined>(undefined);
   const [showAnimateModal, setShowAnimateModal] = useState(false);
   const [useInfluencer, setUseInfluencer] = useState(false);
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
@@ -160,7 +160,6 @@ export default function Production() {
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
-    setShowIdeaGenerator(false);
     toast.info("Ideia aplicada ao prompt. Clique em 'Gerar' para criar.");
   };
 
@@ -306,6 +305,20 @@ export default function Production() {
     enabled: !!activeProjectId,
   });
 
+  const { data: customModels } = useQuery({
+    queryKey: ["custom-models", activeProjectId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("templates")
+        .select("id, name")
+        .eq("project_id", activeProjectId!)
+        .eq("is_custom_model", true)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!activeProjectId,
+  });
+
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | undefined>();
 
   const currentPieceLabel = availablePieceTypes.find((t) => t.id === spec.pieceType)?.label || spec.pieceType;
@@ -442,6 +455,7 @@ export default function Production() {
       formatLabel: currentPieceLabel,
       copyTone,
       referencePhotoUrl: referencePhotoUrl || undefined,
+      selectedModelId: spec.useModel ? selectedModelId : undefined,
     } as any);
   };
 
@@ -739,6 +753,26 @@ export default function Production() {
                     <span>Usar Modelo</span>
                     <Switch checked={spec.useModel} onCheckedChange={(v) => setSpec({ useModel: v })} />
                   </label>
+                  {spec.useModel && (
+                    <div className="pl-1">
+                      {customModels && customModels.length > 0 ? (
+                        <select
+                          value={selectedModelId || ""}
+                          onChange={(e) => setSelectedModelId(e.target.value || undefined)}
+                          className="w-full rounded-xl border border-border bg-secondary px-3 py-2 text-[11px] text-foreground focus:border-primary/40 focus:outline-none"
+                        >
+                          <option value="">Selecione um modelo...</option>
+                          {customModels.map((m: any) => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground/70 px-2 py-1.5 italic">
+                          Nenhum modelo salvo neste projeto ainda.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
                     <span>Perfil Visual</span>
                     <Switch checked={spec.useVisualProfile} onCheckedChange={(v) => setSpec({ useVisualProfile: v })} />
@@ -786,37 +820,18 @@ export default function Production() {
 
               {/* ── Section: Prompt & Generation ── */}
               <ConfigSection title="Prompt e Geração" defaultOpen={true}>
-                {/* Idea Generator - opens as modal via button */}
-                <div className="flex gap-2">
-                  <Dialog open={showIdeaGenerator} onOpenChange={setShowIdeaGenerator}>
-                    <Button variant="outline" onClick={() => setShowIdeaGenerator(true)} className="flex-1 gap-2 border-cos-orange/20 text-cos-orange hover:bg-cos-orange/10 hover:text-cos-orange">
-                      <Lightbulb className="h-4 w-4" />
-                      Gerador de Ideias
-                    </Button>
-                    <DialogContent className="max-w-md">
-                      {activeProjectId && (
-                        <IdeaGenerator
-                          projectId={activeProjectId}
-                          pieceType={spec.pieceType}
-                          onIdeaSelected={(idea) => {
-                            handleIdeaSelected(idea);
-                            setShowIdeaGenerator(false);
-                          }}
-                        />
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                {/* Smart Prompt — taller */}
+                {/* Smart Prompt with integrated Idea Generator */}
                 <SmartPromptInput
                   value={userPrompt}
                   onChange={setUserPrompt}
                   disabled={progress.running}
                   onRefine={handleRefinePrompt}
                   refining={refining}
+                  projectId={activeProjectId || undefined}
+                  pieceType={spec.pieceType}
                 />
               </ConfigSection>
+
             </>
           )}
         </div>
