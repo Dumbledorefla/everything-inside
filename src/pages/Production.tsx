@@ -160,7 +160,6 @@ export default function Production() {
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
-    setShowIdeaGenerator(false);
     toast.info("Ideia aplicada ao prompt. Clique em 'Gerar' para criar.");
   };
 
