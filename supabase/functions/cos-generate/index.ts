@@ -767,7 +767,7 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
       attempts++;
 
       // Build concise text overlay instructions
-      const headlineText = headline || userPrompt || "";
+      const headlineText = headline || userPromptForImage || "";
       const bodyText = body || "";
       const ctaText = cta || "";
       
