@@ -650,6 +650,7 @@ REGRAS:
 ${qualityFinishing}
 ${regenerateNote}
 ${variationNote}
+${templateInstruction || ""}
 
 FORMATO DE RESPOSTA (JSON):
 {"headline": "...", "body": "...", "cta": "..."}
