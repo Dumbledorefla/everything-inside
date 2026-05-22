@@ -698,53 +698,50 @@ Retorne APENAS o JSON, sem markdown ou explicações.`;
   }
 
   // ── IMAGE GENERATION ──────────────────────────────────────────
+  let userPromptForImage = userPrompt || "";
   if (output === "image" || output === "both") {
-    // If referencePhotoUrl is provided, use IP-Adapter for face preservation
+    // ── Clonagem de Estilo: descrever a referência visual via Gemini Vision ──
     if (referencePhotoUrl) {
-      const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
-      if (FAL_API_KEY) {
-        console.log("Using IP-Adapter face preservation with reference photo");
-        const imageSize = ratio === "1:1" ? "square_hd" : ratio === "9:16" ? "portrait_16_9" : "landscape_16_9";
-        try {
-          const ipResp = await fetch(`${FAL_API_BASE}/fal-ai/ip-adapter-face-id`, {
-            method: "POST",
-            headers: { Authorization: `Key ${FAL_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: userPrompt || headline || `Professional photo for ${pieceType}`,
-              face_image_url: referencePhotoUrl,
-              image_size: imageSize,
-              num_inference_steps: 28,
-              enable_safety_checker: false,
-            }),
-          });
-          if (ipResp.ok) {
-            const ipData = await ipResp.json();
-            const ipUrl = ipData?.images?.[0]?.url;
-            if (ipUrl) {
-              imageUrl = ipUrl;
-              imageModel = "fal-ai/ip-adapter-face-id";
-              providerUsed = providerUsed ? `${providerUsed} + fal-ai/ip-adapter-face-id` : "fal-ai/ip-adapter-face-id";
-              console.log("IP-Adapter face preservation succeeded");
-              // Skip standard image generation
-              return {
-                headline, body, cta, imageUrl,
-                textModel: providerUsed.split(" + ")[0] || "none",
-                imageModel, providerUsed: providerUsed || "none",
-                attempts, promptUsed, fallbackEvents,
-              };
-            }
+      try {
+        console.log("Descrevendo imagem de referência para clonagem de estilo:", referencePhotoUrl);
+        const visionResp = await fetch(AI_GATEWAY, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: "Descreva detalhadamente a composição, cores, estilo visual e iluminação desta imagem. Não descreva o texto presente na imagem. Seja conciso (até 80 palavras) e técnico, focando em elementos que um diretor de arte usaria para replicar o estilo." },
+                  { type: "image_url", image_url: { url: referencePhotoUrl } },
+                ],
+              },
+            ],
+          }),
+        });
+        if (visionResp.ok) {
+          const visionData = await visionResp.json();
+          const styleDesc: string = visionData?.choices?.[0]?.message?.content?.trim() || "";
+          if (styleDesc) {
+            userPromptForImage = `[ESTILO VISUAL OBRIGATÓRIO: ${styleDesc}] ${userPrompt || ""}`.trim();
+            console.log("Estilo de referência extraído:", styleDesc.substring(0, 120));
           }
-          const errText = await ipResp.text();
-          console.error("IP-Adapter failed, falling back to standard:", ipResp.status, errText);
-          fallbackEvents.push(`IP-Adapter falhou (HTTP ${ipResp.status}), usando geração padrão`);
-        } catch (ipErr: any) {
-          console.error("IP-Adapter error:", ipErr.message);
-          fallbackEvents.push(`IP-Adapter erro: ${ipErr.message}, usando geração padrão`);
+        } else {
+          const errText = await visionResp.text();
+          console.error("Falha ao descrever referência:", visionResp.status, errText);
+          fallbackEvents.push(`Descrição da referência falhou (HTTP ${visionResp.status})`);
         }
-      } else {
-        fallbackEvents.push("FAL_API_KEY não configurada, ignorando IP-Adapter");
+      } catch (e: any) {
+        console.error("Erro ao descrever referência:", e.message);
+        fallbackEvents.push(`Descrição da referência erro: ${e.message}`);
       }
     }
+
+
 
     // Always use dedicated image models — text-only models can't generate images
     const IMAGE_CAPABLE = new Set(Object.values(IMAGE_MODELS).flat());
