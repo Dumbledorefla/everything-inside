@@ -845,8 +845,8 @@ ${dnaContext}
 ${userPromptForImage || headlineText || `Crie uma imagem visualmente impactante para o nicho e projeto descrito acima.`}
 
 **INSTRUÇÕES VISUAIS (SEM TEXTO NA IMAGEM):**
-1.  **NÃO RENDERIZE NENHUM TEXTO NA IMAGEM**: A imagem deve ser puramente visual, sem nenhuma palavra, letra, frase ou tipografia. Apenas a fotografia/ilustração.
-2.  **Composição Profissional**: Use regra dos terços, linhas guia e espaço negativo inteligente. A composição deve ser equilibrada e visualmente atraente.
+1.  **IMPORTANTE — APENAS BACKGROUND LIMPO**: Gere APENAS a imagem de fundo (background). NÃO inclua nenhum texto, letras, palavras, números ou logotipos na imagem. Deixe espaço vazio (negative space) generoso ${isCanvasFirst ? "para que o texto seja adicionado posteriormente por cima via canvas editor" : "para respiro visual"}.
+2.  **Composição Profissional**: Use regra dos terços, linhas guia e espaço negativo inteligente. ${isCanvasFirst ? "Concentre o foco visual em um lado da composição (ex: lateral direita) deixando a região oposta livre para receber tipografia." : "A composição deve ser equilibrada e visualmente atraente."}
 3.  **Qualidade Fotográfica de Estúdio**: Iluminação cinematográfica, alta definição, resolução 8k, cores ricas e profundidade de campo adequada.
 4.  **Respeito ao DNA Visual**: As cores, mood e estética devem seguir o DNA do projeto.
 
