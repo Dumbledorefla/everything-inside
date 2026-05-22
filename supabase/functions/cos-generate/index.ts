@@ -834,8 +834,36 @@ Gere uma imagem profissional puramente visual, SEM nenhum texto renderizado.`;
         let resp: Response;
         const isFalModel = FAL_MODELS.has(model);
         const isTogetherModel = TOGETHER_MODELS.has(model);
+        const isOpenAIModel = OPENAI_MODELS.has(model);
 
-        if (isTogetherModel) {
+        if (isOpenAIModel) {
+          const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+          if (!OPENAI_API_KEY) {
+            const event = `Imagem: OPENAI_API_KEY não configurada, pulando ${model}`;
+            console.error(event);
+            fallbackEvents.push(event);
+            fallbackLog.push(event);
+            usedFallback = true;
+            continue;
+          }
+          const openaiModelId = model.replace("openai/", "");
+          const openaiSize = ratio === "9:16" ? "1024x1536" : ratio === "16:9" ? "1536x1024" : "1024x1024";
+          resp = await fetch("https://api.openai.com/v1/images/generations", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: openaiModelId,
+              prompt: imagePrompt,
+              n: 1,
+              size: openaiSize,
+              quality: "high",
+            }),
+          });
+        } else if (isTogetherModel) {
+
           // ── together.ai API call (sem filtros de conteúdo) ──
           if (!TOGETHER_API_KEY) {
             const event = `Imagem: TOGETHER_API_KEY não configurada, pulando ${model}`;
