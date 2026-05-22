@@ -273,22 +273,21 @@ ${styleAnchor}
 - **Direção Visual:** ${slide.visualDirection}
 - **Posicionamento do Texto:** ${slide.copyPlacement}
 
-**TEXTO A SER INTEGRADO NA IMAGEM:**
-- **Headline:** "${slide.headline}"
-- **Body (se houver):** "${(slide as any).body || ''}"
+**CONTEXTO TEMÁTICO DO SLIDE (apenas para inspirar o visual — NÃO renderizar como texto):**
+- Tema do Headline: "${slide.headline}"
+- Tema do Body: "${(slide as any).body || ''}"
 
-**INSTRUÇÕES DE COMPOSIÇÃO E RENDERIZAÇÃO (EXTREMAMENTE CRÍTICO):**
-1.  **Renderização Direta e Perfeita do Texto**: O texto DEVE ser renderizado diretamente na imagem, com soletração e gramática perfeitas. Ele precisa parecer parte da cena, não um adesivo. A qualidade da tipografia é o critério número 1 de sucesso.
-2.  **Respeito ao DNA Visual**: A tipografia (família, peso, estilo) e as cores devem seguir ESTRITAMENTE o que está definido no DNA do projeto.
-3.  **Integração Orgânica e Realista**: O texto deve respeitar a iluminação, perspectiva e textura da cena. Deve parecer que foi filmado junto com a cena.
-4.  **Hierarquia e Legibilidade Profissional**: Organize o texto de forma profissional, seguindo o posicionamento definido (${slide.copyPlacement}). Use o espaço negativo de forma inteligente.
-5.  **Consistência Visual**: Mantenha EXATAMENTE a mesma iluminação, paleta de cores, estilo e mood visual de todos os outros slides.
+**INSTRUÇÕES DE COMPOSIÇÃO (CANVAS FIRST — EXTREMAMENTE CRÍTICO):**
+1.  **APENAS BACKGROUND LIMPO — SEM TEXTO**: Gere SOMENTE a imagem de fundo (background) deste slide. NÃO inclua nenhum texto, letra, palavra, número ou logotipo na imagem. O texto será adicionado por cima depois, via canvas editor.
+2.  **Espaço Negativo Reservado**: Deixe a região "${slide.copyPlacement}" da composição visualmente limpa (céu, parede lisa, superfície uniforme, blur, etc.) para receber a tipografia depois. Concentre o foco visual no lado oposto.
+3.  **Respeito ao DNA Visual**: Cores, mood, paleta e estética devem seguir ESTRITAMENTE o DNA do projeto.
+4.  **Consistência Visual**: Mantenha EXATAMENTE a mesma iluminação, paleta de cores, estilo e mood visual de todos os outros slides do carrossel.
+5.  **Qualidade Fotográfica de Estúdio**: Iluminação cinematográfica, alta definição, resolução 8k, profundidade de campo adequada.
 
 **REQUERIMENTOS TÉCNICOS:**
 - Aspect Ratio: ${ratio || "1:1"}
-- Qualidade Fotográfica: Qualidade de estúdio, iluminação cinematográfica, alta definição.
 
-Gere a imagem final para este slide como uma peça única, coesa e com a tipografia perfeitamente renderizada.`;
+Gere uma imagem puramente visual, SEM nenhum texto renderizado — o texto será posicionado por cima no frontend.`;
 
         try {
         let imageUrl: string | null = null;
