@@ -699,62 +699,8 @@ export default function Production() {
             </ConfigSection>
           ) : (
             <>
-              {/* ── Section: Saída e Variações ── */}
-              <ConfigSection title="Saída e Variações" defaultOpen={true}>
-                {/* Output type */}
-                <div>
-                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Saída</label>
-                  <div className="flex gap-1">
-                    {([
-                      { id: "text" as const, label: "Texto", icon: Type },
-                      { id: "image" as const, label: "Imagem", icon: Image },
-                      { id: "both" as const, label: "Ambos", icon: Zap },
-                    ]).map((o) => (
-                      <button key={o.id} onClick={() => setSpec({ output: o.id })}
-                        className={cn(
-                          "flex-1 flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[10px] transition-all",
-                          spec.output === o.id
-                            ? "border-primary/30 bg-primary/10 text-primary font-medium"
-                            : "border-border text-muted-foreground hover:border-primary/20"
-                        )}>
-                        <o.icon className="h-4 w-4" />{o.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quantity — numeric input with +/- */}
-                <div>
-                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
-                    Variações
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSpec({ quantity: Math.max(1, spec.quantity - 1) })}
-                      className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={spec.quantity}
-                      onChange={(e) => setSpec({ quantity: Math.min(50, Math.max(1, +e.target.value)) })}
-                      className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-center text-sm font-mono-brand text-foreground focus:border-primary/40 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <button
-                      onClick={() => setSpec({ quantity: Math.min(50, spec.quantity + 1) })}
-                      className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </ConfigSection>
-
-              {/* ── Section: Motor de IA (Perfil + Provedor) ── */}
-              <ConfigSection title="Motor de IA" defaultOpen={true}>
+              {/* ── Section: Configurações Avançadas (unified) ── */}
+              <ConfigSection title="Configurações Avançadas" defaultOpen={false}>
                 {/* Profile */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Perfil</label>
@@ -786,10 +732,8 @@ export default function Production() {
                     ))}
                   </select>
                 </div>
-              </ConfigSection>
 
-              {/* ── Section: Opções Avançadas ── */}
-              <ConfigSection title="Opções Avançadas" defaultOpen={false}>
+                {/* Toggles */}
                 <div className="space-y-1.5">
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
                     <span>Usar Modelo</span>
@@ -799,7 +743,6 @@ export default function Production() {
                     <span>Perfil Visual</span>
                     <Switch checked={spec.useVisualProfile} onCheckedChange={(v) => setSpec({ useVisualProfile: v })} />
                   </label>
-                  {/* Influencer Toggle */}
                   {hasInfluencer ? (
                     <label className={cn(
                       "flex items-center justify-between rounded-xl border px-3 py-2 text-[10px] cursor-pointer transition-all",
@@ -825,11 +768,8 @@ export default function Production() {
                     </Link>
                   )}
                 </div>
-              </ConfigSection>
 
-
-              {/* ── Section: Copy Tone ── */}
-              <ConfigSection title="Tom da Legenda" defaultOpen={false}>
+                {/* Copy tone */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Tom da Copy</label>
                   <select value={copyTone} onChange={(e) => setCopyTone(e.target.value)}
@@ -842,6 +782,7 @@ export default function Production() {
                   </select>
                 </div>
               </ConfigSection>
+
 
               {/* ── Section: Prompt & Generation ── */}
               <ConfigSection title="Prompt e Geração" defaultOpen={true}>
