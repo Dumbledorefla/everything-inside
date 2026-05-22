@@ -862,8 +862,10 @@ Gere uma imagem profissional puramente visual, SEM nenhum texto renderizado.`;
               prompt: imagePrompt,
               n: 1,
               size: openaiSize,
-              quality: "high",
+              // gpt-image-2 não aceita o param `quality`; apenas gpt-image-1
+              ...(openaiModelId === "gpt-image-1" ? { quality: "high" } : {}),
             }),
+
           });
         } else if (isTogetherModel) {
 
