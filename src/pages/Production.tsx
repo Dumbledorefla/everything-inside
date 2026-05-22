@@ -26,11 +26,13 @@ import { cn } from "@/lib/utils";
 import { IdeaGenerator } from "@/components/creative/IdeaGenerator";
 import { CarouselIdeaGenerator } from "@/components/creative/CarouselIdeaGenerator";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
 
 const PIECE_ICONS: Record<string, React.ElementType> = {
   post: LayoutGrid, banner: Rows3, story: FileText, ad: Sparkles,
