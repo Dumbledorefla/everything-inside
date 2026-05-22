@@ -583,8 +583,8 @@ export default function Production() {
             </ConfigSection>
           ) : (
             <>
-              {/* ── Section: Style & Variations ── */}
-              <ConfigSection title="Estilo e Variações" defaultOpen={true}>
+              {/* ── Section: Saída e Variações ── */}
+              <ConfigSection title="Saída e Variações" defaultOpen={true}>
                 {/* Output type */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Saída</label>
@@ -635,7 +635,10 @@ export default function Production() {
                     </button>
                   </div>
                 </div>
+              </ConfigSection>
 
+              {/* ── Section: Motor de IA (Perfil + Provedor) ── */}
+              <ConfigSection title="Motor de IA" defaultOpen={true}>
                 {/* Profile */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Perfil</label>
@@ -667,16 +670,18 @@ export default function Production() {
                     ))}
                   </select>
                 </div>
+              </ConfigSection>
 
-                {/* Toggles */}
+              {/* ── Section: Opções Avançadas ── */}
+              <ConfigSection title="Opções Avançadas" defaultOpen={false}>
                 <div className="space-y-1.5">
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
-                    Usar Modelo
-                    <input type="checkbox" checked={spec.useModel} onChange={(e) => setSpec({ useModel: e.target.checked })} className="accent-primary" />
+                    <span>Usar Modelo</span>
+                    <Switch checked={spec.useModel} onCheckedChange={(v) => setSpec({ useModel: v })} />
                   </label>
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
-                    Perfil Visual
-                    <input type="checkbox" checked={spec.useVisualProfile} onChange={(e) => setSpec({ useVisualProfile: e.target.checked })} className="accent-primary" />
+                    <span>Perfil Visual</span>
+                    <Switch checked={spec.useVisualProfile} onCheckedChange={(v) => setSpec({ useVisualProfile: v })} />
                   </label>
                   {/* Influencer Toggle */}
                   {hasInfluencer ? (
@@ -690,12 +695,7 @@ export default function Production() {
                         <User className="h-3 w-3" />
                         Usar Personagem
                       </span>
-                      <input
-                        type="checkbox"
-                        checked={useInfluencer}
-                        onChange={(e) => setUseInfluencer(e.target.checked)}
-                        className="accent-primary"
-                      />
+                      <Switch checked={useInfluencer} onCheckedChange={setUseInfluencer} />
                     </label>
                   ) : (
                     <Link to={`/project/${activeProjectId}/characters`}>
@@ -710,6 +710,7 @@ export default function Production() {
                   )}
                 </div>
               </ConfigSection>
+
 
               {/* ── Section: Copy Tone ── */}
               <ConfigSection title="Tom da Legenda" defaultOpen={false}>
