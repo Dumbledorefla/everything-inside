@@ -10,11 +10,15 @@ const corsHeaders = {
 async function generateOpenAIImage(apiKey: string, modelId: string, prompt: string, ratio: string): Promise<string | null> {
   const size = ratio === "9:16" ? "1024x1536" : ratio === "16:9" ? "1536x1024" : "1024x1024";
   const model = modelId.replace("openai/", "");
+  // gpt-image-2 não aceita `quality`; apenas gpt-image-1
+  const body: Record<string, unknown> = { model, prompt, n: 1, size };
+  if (model === "gpt-image-1") body.quality = "high";
   const resp = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, prompt, n: 1, size, quality: "high" }),
+    body: JSON.stringify(body),
   });
+
   if (!resp.ok) { console.error("openai image error:", resp.status, await resp.text()); return null; }
   const data = await resp.json();
   const item = data?.data?.[0];
