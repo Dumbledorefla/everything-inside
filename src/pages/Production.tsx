@@ -786,37 +786,18 @@ export default function Production() {
 
               {/* ── Section: Prompt & Generation ── */}
               <ConfigSection title="Prompt e Geração" defaultOpen={true}>
-                {/* Idea Generator - opens as modal via button */}
-                <div className="flex gap-2">
-                  <Dialog open={showIdeaGenerator} onOpenChange={setShowIdeaGenerator}>
-                    <Button variant="outline" onClick={() => setShowIdeaGenerator(true)} className="flex-1 gap-2 border-cos-orange/20 text-cos-orange hover:bg-cos-orange/10 hover:text-cos-orange">
-                      <Lightbulb className="h-4 w-4" />
-                      Gerador de Ideias
-                    </Button>
-                    <DialogContent className="max-w-md">
-                      {activeProjectId && (
-                        <IdeaGenerator
-                          projectId={activeProjectId}
-                          pieceType={spec.pieceType}
-                          onIdeaSelected={(idea) => {
-                            handleIdeaSelected(idea);
-                            setShowIdeaGenerator(false);
-                          }}
-                        />
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                {/* Smart Prompt — taller */}
+                {/* Smart Prompt with integrated Idea Generator */}
                 <SmartPromptInput
                   value={userPrompt}
                   onChange={setUserPrompt}
                   disabled={progress.running}
                   onRefine={handleRefinePrompt}
                   refining={refining}
+                  projectId={activeProjectId || undefined}
+                  pieceType={spec.pieceType}
                 />
               </ConfigSection>
+
             </>
           )}
         </div>
