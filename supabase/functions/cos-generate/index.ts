@@ -181,7 +181,7 @@ serve(async (req) => {
       projectId, mode, output, pieceType, quantity, profile,
       provider, destination, ratio, intensity, userPrompt,
       regenerateAssetId, pipelineMode = "simple", referenceId,
-      operationMode, formatLabel, referencePhotoUrl, copyTone,
+      operationMode, formatLabel, referencePhotoUrl, copyTone, selectedModelId,
     } = body;
 
     // ── 1. Fetch Project DNA (latest version) ───────────────────
