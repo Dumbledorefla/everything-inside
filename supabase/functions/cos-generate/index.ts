@@ -295,6 +295,7 @@ serve(async (req) => {
         totalAttempts,
         fallbackLog,
         referencePhotoUrl,
+        templateInstruction,
       });
 
       // ── 6. Save to DB with DNA snapshot ─────────────────────
