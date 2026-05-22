@@ -122,6 +122,41 @@ export default function Production() {
   const [useInfluencerForCarousel, setUseInfluencerForCarousel] = useState(false);
   const [showCarouselIdeaGenerator, setShowCarouselIdeaGenerator] = useState(false);
   const [copyTone, setCopyTone] = useState("auto");
+  const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
+  const [uploadingRef, setUploadingRef] = useState(false);
+
+  const TEXT_ONLY_PIECES = new Set(["vsl", "brand_manual"]);
+  const IMAGE_ONLY_PIECES = new Set(["palette", "typography", "logo", "highlight"]);
+
+  useEffect(() => {
+    const desired = TEXT_ONLY_PIECES.has(spec.pieceType)
+      ? "text"
+      : IMAGE_ONLY_PIECES.has(spec.pieceType)
+        ? "image"
+        : "both";
+    if (spec.output !== desired) setSpec({ output: desired as any });
+  }, [spec.pieceType]);
+
+  const handleReferenceUpload = async (file: File) => {
+    if (!file || !session) return;
+    setUploadingRef(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `style-refs/${session.user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("assets").upload(path, file, {
+        contentType: file.type || "image/png",
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("assets").getPublicUrl(path);
+      setReferencePhotoUrl(data.publicUrl);
+      toast.success("Referência de estilo enviada!");
+    } catch (e: any) {
+      toast.error(e?.message || "Falha no upload da referência");
+    } finally {
+      setUploadingRef(false);
+    }
+  };
 
   const handleIdeaSelected = (idea: { headline: string; body: string }) => {
     setUserPrompt(idea.headline + ": " + idea.body);
@@ -406,6 +441,7 @@ export default function Production() {
       operationMode,
       formatLabel: currentPieceLabel,
       copyTone,
+      referencePhotoUrl: referencePhotoUrl || undefined,
     } as any);
   };
 
@@ -488,7 +524,88 @@ export default function Production() {
                 ))}
               </div>
             </div>
+
+            {/* Quantity (moved here from "Saída e Variações") */}
+            {!isCarousel && (
+              <div>
+                <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
+                  Variações
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSpec({ quantity: Math.max(1, spec.quantity - 1) })}
+                    className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={spec.quantity}
+                    onChange={(e) => setSpec({ quantity: Math.min(50, Math.max(1, +e.target.value)) })}
+                    className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-center text-sm font-mono-brand text-foreground focus:border-primary/40 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button
+                    onClick={() => setSpec({ quantity: Math.min(50, spec.quantity + 1) })}
+                    className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </ConfigSection>
+
+          {/* ── Section: Clonagem de Estilo (Image-to-Image reference) ── */}
+          {!isCarousel && (spec.output === "image" || spec.output === "both") && (
+            <ConfigSection title="Clonagem de Estilo" defaultOpen={true}>
+              {referencePhotoUrl ? (
+                <div className="relative group">
+                  <img
+                    src={referencePhotoUrl}
+                    alt="Referência de estilo"
+                    className="w-full h-32 object-cover rounded-xl border border-primary/30"
+                  />
+                  <button
+                    onClick={() => setReferencePhotoUrl(null)}
+                    className="absolute top-1.5 right-1.5 rounded-full bg-background/80 backdrop-blur p-1 text-foreground hover:bg-destructive hover:text-destructive-foreground transition-all"
+                    title="Remover referência"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-secondary px-3 py-4 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/30 hover:text-primary transition-all",
+                    uploadingRef && "opacity-50 pointer-events-none"
+                  )}
+                >
+                  {uploadingRef ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Image className="h-4 w-4" />
+                  )}
+                  <span>{uploadingRef ? "Enviando..." : "Enviar imagem de referência"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleReferenceUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+              <p className="text-[9px] text-muted-foreground/70 leading-snug">
+                Faça upload de um anúncio ou post que você gostou. A IA usará a estrutura e o estilo dessa imagem como base.
+              </p>
+            </ConfigSection>
+          )}
+
 
           {/* Carousel-specific controls */}
           {isCarousel ? (
@@ -582,62 +699,8 @@ export default function Production() {
             </ConfigSection>
           ) : (
             <>
-              {/* ── Section: Saída e Variações ── */}
-              <ConfigSection title="Saída e Variações" defaultOpen={true}>
-                {/* Output type */}
-                <div>
-                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Saída</label>
-                  <div className="flex gap-1">
-                    {([
-                      { id: "text" as const, label: "Texto", icon: Type },
-                      { id: "image" as const, label: "Imagem", icon: Image },
-                      { id: "both" as const, label: "Ambos", icon: Zap },
-                    ]).map((o) => (
-                      <button key={o.id} onClick={() => setSpec({ output: o.id })}
-                        className={cn(
-                          "flex-1 flex flex-col items-center gap-1 rounded-xl border py-2.5 text-[10px] transition-all",
-                          spec.output === o.id
-                            ? "border-primary/30 bg-primary/10 text-primary font-medium"
-                            : "border-border text-muted-foreground hover:border-primary/20"
-                        )}>
-                        <o.icon className="h-4 w-4" />{o.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quantity — numeric input with +/- */}
-                <div>
-                  <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">
-                    Variações
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSpec({ quantity: Math.max(1, spec.quantity - 1) })}
-                      className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={spec.quantity}
-                      onChange={(e) => setSpec({ quantity: Math.min(50, Math.max(1, +e.target.value)) })}
-                      className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-center text-sm font-mono-brand text-foreground focus:border-primary/40 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <button
-                      onClick={() => setSpec({ quantity: Math.min(50, spec.quantity + 1) })}
-                      className="rounded-lg border border-border bg-secondary p-1.5 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </ConfigSection>
-
-              {/* ── Section: Motor de IA (Perfil + Provedor) ── */}
-              <ConfigSection title="Motor de IA" defaultOpen={true}>
+              {/* ── Section: Configurações Avançadas (unified) ── */}
+              <ConfigSection title="Configurações Avançadas" defaultOpen={false}>
                 {/* Profile */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Perfil</label>
@@ -669,10 +732,8 @@ export default function Production() {
                     ))}
                   </select>
                 </div>
-              </ConfigSection>
 
-              {/* ── Section: Opções Avançadas ── */}
-              <ConfigSection title="Opções Avançadas" defaultOpen={false}>
+                {/* Toggles */}
                 <div className="space-y-1.5">
                   <label className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2 text-[10px] text-muted-foreground cursor-pointer hover:border-primary/15 transition-all">
                     <span>Usar Modelo</span>
@@ -682,7 +743,6 @@ export default function Production() {
                     <span>Perfil Visual</span>
                     <Switch checked={spec.useVisualProfile} onCheckedChange={(v) => setSpec({ useVisualProfile: v })} />
                   </label>
-                  {/* Influencer Toggle */}
                   {hasInfluencer ? (
                     <label className={cn(
                       "flex items-center justify-between rounded-xl border px-3 py-2 text-[10px] cursor-pointer transition-all",
@@ -708,11 +768,8 @@ export default function Production() {
                     </Link>
                   )}
                 </div>
-              </ConfigSection>
 
-
-              {/* ── Section: Copy Tone ── */}
-              <ConfigSection title="Tom da Legenda" defaultOpen={false}>
+                {/* Copy tone */}
                 <div>
                   <label className="text-[10px] font-mono-brand uppercase tracking-[0.12em] text-muted-foreground mb-1.5 block">Tom da Copy</label>
                   <select value={copyTone} onChange={(e) => setCopyTone(e.target.value)}
@@ -725,6 +782,7 @@ export default function Production() {
                   </select>
                 </div>
               </ConfigSection>
+
 
               {/* ── Section: Prompt & Generation ── */}
               <ConfigSection title="Prompt e Geração" defaultOpen={true}>
