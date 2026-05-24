@@ -14,32 +14,32 @@
      ═══════════════════════════════════════════════ */
   :root {
     /* ── Master Background: Deep Space Blue ── */
-    --background: 220 30% 5%;
-    --foreground: 0 0% 98%;
-    --card: 220 25% 10%;
-    --card-foreground: 0 0% 93%;
-    --popover: 220 25% 8%;
-    --popover-foreground: 0 0% 93%;
-    --primary: 187 94% 43%;
-    --primary-foreground: 0 0% 2%;
-    --secondary: 215 20% 13%;
-    --secondary-foreground: 0 0% 80%;
-    --muted: 215 20% 13%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 215 18% 15%;
-    --accent-foreground: 0 0% 88%;
-    --destructive: 0 72% 51%;
+    --background: 222 35% 4%;
+    --foreground: 210 20% 98%;
+    --card: 220 22% 11%;
+    --card-foreground: 210 20% 96%;
+    --popover: 220 24% 9%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 187 94% 50%;
+    --primary-foreground: 220 30% 6%;
+    --secondary: 215 18% 16%;
+    --secondary-foreground: 210 15% 88%;
+    --muted: 215 18% 16%;
+    --muted-foreground: 215 16% 72%;
+    --accent: 215 18% 18%;
+    --accent-foreground: 210 18% 94%;
+    --destructive: 0 75% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 25%;
-    --input: 215 15% 22%;
-    --ring: 187 94% 43%;
+    --border: 215 18% 28%;
+    --input: 215 16% 24%;
+    --ring: 187 94% 50%;
     --radius: 0.75rem;
 
-    /* Elevation surfaces */
-    --surface-0: 216 28% 7%;
-    --surface-1: 215 25% 9%;
-    --surface-2: 215 22% 12%;
-    --surface-3: 215 18% 15%;
+    /* Elevation surfaces — clear luminosity steps for hierarchy */
+    --surface-0: 222 32% 6%;
+    --surface-1: 220 25% 10%;
+    --surface-2: 218 22% 14%;
+    --surface-3: 216 20% 18%;
 
     /* Shadows */
     --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.5);
