@@ -59,18 +59,18 @@
     --cos-orange: 30 100% 55%;
 
     /* Sidebar */
-    --sidebar-background: 220 30% 4%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 187 94% 43%;
-    --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 215 22% 11%;
-    --sidebar-accent-foreground: 0 0% 78%;
-    --sidebar-border: 220 15% 22%;
-    --sidebar-ring: 187 94% 43%;
+    --sidebar-background: 222 32% 5%;
+    --sidebar-foreground: 210 18% 92%;
+    --sidebar-primary: 187 94% 50%;
+    --sidebar-primary-foreground: 220 30% 6%;
+    --sidebar-accent: 218 22% 13%;
+    --sidebar-accent-foreground: 210 18% 90%;
+    --sidebar-border: 215 18% 22%;
+    --sidebar-ring: 187 94% 50%;
 
     /* Glass */
-    --glass-bg: 215 25% 8% / 0.92;
-    --glass-border: 215 15% 20%;
+    --glass-bg: 218 25% 10% / 0.94;
+    --glass-border: 215 18% 26%;
 
     /* Star field */
     --star-color: 0 0% 100%;
