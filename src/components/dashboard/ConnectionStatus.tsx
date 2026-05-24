@@ -25,7 +25,9 @@ export default function ConnectionStatus() {
         }
       );
       clearTimeout(timeout);
-      setStatus(res.ok ? "online" : "offline");
+      // Qualquer resposta HTTP do servidor (200, 401, 404, etc.) prova que o backend está vivo.
+      // Só consideramos "offline" se houver erro de rede/timeout (catch) ou erro de servidor (5xx).
+      setStatus(res.status < 500 ? "online" : "offline");
     } catch {
       setStatus("offline");
     } finally {
