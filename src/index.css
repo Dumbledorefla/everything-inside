@@ -2,7 +2,7 @@
   display: none !important;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -14,32 +14,32 @@
      ═══════════════════════════════════════════════ */
   :root {
     /* ── Master Background: Deep Space Blue ── */
-    --background: 220 30% 5%;
-    --foreground: 0 0% 98%;
-    --card: 220 25% 10%;
-    --card-foreground: 0 0% 93%;
-    --popover: 220 25% 8%;
-    --popover-foreground: 0 0% 93%;
-    --primary: 187 94% 43%;
-    --primary-foreground: 0 0% 2%;
-    --secondary: 215 20% 13%;
-    --secondary-foreground: 0 0% 80%;
-    --muted: 215 20% 13%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 215 18% 15%;
-    --accent-foreground: 0 0% 88%;
-    --destructive: 0 72% 51%;
+    --background: 222 35% 4%;
+    --foreground: 210 20% 98%;
+    --card: 220 22% 11%;
+    --card-foreground: 210 20% 96%;
+    --popover: 220 24% 9%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 187 94% 50%;
+    --primary-foreground: 220 30% 6%;
+    --secondary: 215 18% 16%;
+    --secondary-foreground: 210 15% 88%;
+    --muted: 215 18% 16%;
+    --muted-foreground: 215 16% 72%;
+    --accent: 215 18% 18%;
+    --accent-foreground: 210 18% 94%;
+    --destructive: 0 75% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 25%;
-    --input: 215 15% 22%;
-    --ring: 187 94% 43%;
+    --border: 215 18% 28%;
+    --input: 215 16% 24%;
+    --ring: 187 94% 50%;
     --radius: 0.75rem;
 
-    /* Elevation surfaces */
-    --surface-0: 216 28% 7%;
-    --surface-1: 215 25% 9%;
-    --surface-2: 215 22% 12%;
-    --surface-3: 215 18% 15%;
+    /* Elevation surfaces — clear luminosity steps for hierarchy */
+    --surface-0: 222 32% 6%;
+    --surface-1: 220 25% 10%;
+    --surface-2: 218 22% 14%;
+    --surface-3: 216 20% 18%;
 
     /* Shadows */
     --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.5);
@@ -59,18 +59,18 @@
     --cos-orange: 30 100% 55%;
 
     /* Sidebar */
-    --sidebar-background: 220 30% 4%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 187 94% 43%;
-    --sidebar-primary-foreground: 0 0% 2%;
-    --sidebar-accent: 215 22% 11%;
-    --sidebar-accent-foreground: 0 0% 78%;
-    --sidebar-border: 220 15% 22%;
-    --sidebar-ring: 187 94% 43%;
+    --sidebar-background: 222 32% 5%;
+    --sidebar-foreground: 210 18% 92%;
+    --sidebar-primary: 187 94% 50%;
+    --sidebar-primary-foreground: 220 30% 6%;
+    --sidebar-accent: 218 22% 13%;
+    --sidebar-accent-foreground: 210 18% 90%;
+    --sidebar-border: 215 18% 22%;
+    --sidebar-ring: 187 94% 50%;
 
     /* Glass */
-    --glass-bg: 215 25% 8% / 0.92;
-    --glass-border: 215 15% 20%;
+    --glass-bg: 218 25% 10% / 0.94;
+    --glass-border: 215 18% 26%;
 
     /* Star field */
     --star-color: 0 0% 100%;
@@ -91,14 +91,14 @@
     --primary-foreground: 0 0% 100%;
     --secondary: 210 14% 93%;
     --secondary-foreground: 210 18% 22%;
-    --muted: 210 14% 93%;
-    --muted-foreground: 210 11% 42%;
-    --accent: 210 14% 94%;
-    --accent-foreground: 210 24% 16%;
+    --muted: 210 16% 94%;
+    --muted-foreground: 215 16% 35%;
+    --accent: 210 16% 95%;
+    --accent-foreground: 210 25% 14%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 210 15% 88%;
-    --input: 210 14% 85%;
+    --border: 215 18% 82%;
+    --input: 215 16% 80%;
     --ring: 187 80% 34%;
 
     --surface-0: 210 17% 97%;
@@ -149,7 +149,8 @@
     -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-weight: 600;
     letter-spacing: -0.02em;
   }
 }
