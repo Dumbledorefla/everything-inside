@@ -41,7 +41,7 @@ export default function AdaptiveMemoryObserver() {
       return (data || []) as PendingUpdate[];
     },
     enabled: !!pid,
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60_000, // 5 min — antes era 30s
   });
 
   // Fetch existing memory patterns (local detection)

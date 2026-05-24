@@ -17,7 +17,8 @@ export function useAIGuard() {
       return data;
     },
     enabled: !!user,
-    refetchInterval: 15_000,
+    refetchInterval: 5 * 60_000, // 5 min — antes era 15s (gerava 240 queries/h por aba)
+    refetchOnWindowFocus: true,
   });
 
   const { data: monthlySpent } = useQuery({
@@ -33,7 +34,8 @@ export function useAIGuard() {
       return (data || []).reduce((sum, row) => sum + Number(row.credits_cost || 0), 0);
     },
     enabled: !!user,
-    refetchInterval: 30_000,
+    refetchInterval: 10 * 60_000, // 10 min — antes era 30s
+    refetchOnWindowFocus: true,
   });
 
   const togglePause = useMutation({

@@ -36,7 +36,8 @@ export default function ConnectionStatus() {
 
   useEffect(() => {
     check();
-    const interval = setInterval(check, 30_000);
+    // Antes: 30s (2.880 hits/dia por aba). Agora: 5 min + reage a online/offline do browser.
+    const interval = setInterval(check, 5 * 60_000);
     return () => clearInterval(interval);
   }, [check]);
 

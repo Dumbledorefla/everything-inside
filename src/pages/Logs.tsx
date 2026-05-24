@@ -124,7 +124,8 @@ export default function Logs() {
       return data || [];
     },
     enabled: !!user,
-    refetchInterval: 15000,
+    refetchInterval: 60_000, // 1 min — antes era 15s. Use o botão de refresh pra forçar.
+    refetchOnWindowFocus: true,
   });
 
   // ── Fetch activity log ─────────────────────────────
@@ -147,7 +148,8 @@ export default function Logs() {
       return data || [];
     },
     enabled: !!user,
-    refetchInterval: 15000,
+    refetchInterval: 60_000, // 1 min — antes era 15s
+    refetchOnWindowFocus: true,
   });
 
   // ── Filtered data ──────────────────────────────────

@@ -228,24 +228,49 @@ function useJobPolling(jobIds: string[], onComplete: () => void) {
     if (jobIds.length === 0) return;
     cleanup();
 
+    // Circuit breaker: se status não mudar em N polls seguidos, espaça mais.
+    let lastSignature = "";
+    let stagnantPolls = 0;
+    let currentInterval = 8000; // começa em 8s (era 5s)
+    let processorBudget = 3;    // dispara o job-processor no máximo 3 vezes por sessão
+
     const poll = async () => {
       const { data } = await supabase
         .from("generation_jobs")
         .select("id, status, asset_id, error_message")
         .in("id", jobIds);
 
-      if (data) {
-        setJobs(data);
-        const allDone = data.every((j: any) => j.status === "completed" || j.status === "failed");
-        if (allDone) {
-          cleanup();
-          onComplete();
-        }
+      if (!data) return;
+
+      setJobs(data);
+      const signature = data.map((j: any) => `${j.id}:${j.status}`).join("|");
+      if (signature === lastSignature) {
+        stagnantPolls++;
+      } else {
+        stagnantPolls = 0;
+        lastSignature = signature;
+      }
+
+      const allDone = data.every((j: any) => j.status === "completed" || j.status === "failed");
+      if (allDone) {
+        cleanup();
+        onComplete();
+        return;
+      }
+
+      // Se ficou parado por 3 polls, dobra o intervalo (até teto de 60s).
+      if (stagnantPolls >= 3 && currentInterval < 60000) {
+        currentInterval = Math.min(currentInterval * 2, 60000);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(tick, currentInterval);
+        stagnantPolls = 0;
       }
     };
 
-    // Also trigger the job-processor for each pending job
-    const triggerProcessor = async () => {
+    // Dispara job-processor com orçamento limitado (antes: a cada 5s sem limite).
+    const triggerProcessorOnce = async () => {
+      if (processorBudget <= 0) return;
+      processorBudget--;
       try {
         await supabase.functions.invoke("job-processor", { body: {} });
       } catch (e) {
@@ -253,23 +278,24 @@ function useJobPolling(jobIds: string[], onComplete: () => void) {
       }
     };
 
-    // Start initial processing
-    triggerProcessor();
-
-    // Poll every 5 seconds and trigger processor
-    intervalRef.current = setInterval(async () => {
+    const tick = async () => {
       await poll();
-      await triggerProcessor();
-    }, 5000);
+      // Só re-dispara o processor se ainda houver jobs pendentes E o orçamento permitir.
+      const hasPending = jobs.some((j: any) => j.status !== "completed" && j.status !== "failed");
+      if (hasPending) await triggerProcessorOnce();
+    };
 
-    // Safety timeout: 3 minutes
+    // Disparo inicial
+    triggerProcessorOnce();
+    poll();
+
+    intervalRef.current = setInterval(tick, currentInterval);
+
+    // Safety timeout: 3 minutos
     timeoutRef.current = setTimeout(() => {
       cleanup();
       onComplete();
     }, 180000);
-
-    // Initial poll
-    poll();
   }, [jobIds, onComplete, cleanup]);
 
   useEffect(() => {
