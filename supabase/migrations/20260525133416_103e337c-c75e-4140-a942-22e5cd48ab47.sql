@@ -1,0 +1,1 @@
+UPDATE public.profiles SET is_ai_paused = true WHERE user_id = 'e67c42d1-ae26-4ae9-ba22-b7c844d1b3a4';
